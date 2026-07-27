@@ -26,12 +26,14 @@ import {
     "in progress": "In Progress",
     in_progress: "In Progress",
     resolved: "Resolved",
+    dismissed: "Dismissed",
   };
 
   const STATUS_TO_FIRESTORE = {
     "Pending Verification": "pending",
     "In Progress": "in_progress",
     Resolved: "resolved",
+    Dismissed: "dismissed",
   };
 
   const PLACEHOLDER_IMAGE =
@@ -125,6 +127,8 @@ import {
       notes: data.notes || "",
       imageUrl: data.imageUrl || null,
       createdAt: data.createdAt?.toDate?.() || null,
+      hashScanUrl: data.hashScanUrl || null,
+      dismissalReason: data.dismissalReason || "",
     };
   }
 
@@ -190,6 +194,10 @@ import {
   const modalStatusBadge = document.getElementById("modal-status-badge");
   const modalStatusSelect = document.getElementById("modal-status-select");
   const modalReportImage = document.getElementById("modal-report-image");
+  const dismissalReasonContainer = document.getElementById("dismissal-reason-container");
+  const dismissalReasonInput = document.getElementById("dismissal-reason");
+  const modalBlockchainUrl = document.getElementById("modal-blockchain-url");
+  const blockchainUrlContainer = document.getElementById("modal-blockchain-url-container");
 
   const closeModalBtn = document.getElementById("close-modal-btn");
   const modalBtnCloseSecondary = document.getElementById("modal-btn-close-secondary");
@@ -246,6 +254,7 @@ import {
         if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
         if (typeof renderMapMarkers === "function") renderMapMarkers();
         if (typeof updateAnalyticsMetrics === "function") updateAnalyticsMetrics();
+        if (typeof renderBlockchainActivity === "function") renderBlockchainActivity(reports);
 
         if (selectedReport) {
           const fresh = reports.find((r) => r.docId === selectedReport.docId);
@@ -583,7 +592,7 @@ import {
 
     const arrow = current > previous ? "↑" : "↓";
     const colorClass = isBetter ? "text-emerald-700" : "text-rose-700";
-    
+
     container.className = `mt-3 flex items-center gap-1 text-[10px] font-semibold ${colorClass}`;
     el.textContent = `${arrow} ${Math.abs(percent)}%`;
   }
@@ -619,7 +628,7 @@ import {
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 7);
       prevEnd.setHours(0, 0, 0, 0);
-      
+
       filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
       prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
       subtextLabel = "from last week";
@@ -630,7 +639,7 @@ import {
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
-      
+
       filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
       prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
       subtextLabel = "from last month";
@@ -643,7 +652,7 @@ import {
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
-      
+
       prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
       subtextLabel = "from last month";
     }
@@ -685,11 +694,11 @@ import {
     if (prevTotal > 0) {
       avgTimePrev = Math.max(4, Math.round(10 + (prevPending * 0.8)));
     }
-    
+
     if (document.getElementById("analytics-stat-time")) {
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
     }
-    
+
     // Update response time trend
     const timeDiff = avgTimeCurrent - avgTimePrev;
     const trendTimeEl = document.getElementById("analytics-trend-time");
@@ -1439,6 +1448,82 @@ import {
   }
 
   // ==========================================
+  // 7b. BLOCKCHAIN ACTIVITY LOGIC
+  // ==========================================
+  function renderBlockchainActivity(reportsList) {
+    const timelineContainer = document.getElementById("blockchain-timeline");
+    const tableBody = document.getElementById("blockchain-table-body");
+
+    if (!timelineContainer || !tableBody) return;
+
+    timelineContainer.innerHTML = "";
+    tableBody.innerHTML = "";
+
+    // Filter to only those with a blockchain hashScanUrl
+    const blockchainReports = reportsList.filter(r => r.hashScanUrl);
+
+    if (blockchainReports.length === 0) {
+      timelineContainer.innerHTML = `<p class="text-xs text-slate-500 py-4 italic">No on-chain activity recorded yet.</p>`;
+      tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-500 italic">No blockchain transactions found.</td></tr>`;
+      return;
+    }
+
+    // TIMELINE RENDERING (Top 3 recent)
+    const timelineReports = blockchainReports.slice(0, 3);
+    timelineReports.forEach((r, index) => {
+      const timeStr = r.createdAt ? r.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
+      const dateStr = r.createdAt ? r.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+      const isFirst = index === 0;
+      const statusLabel = r.status === "Pending Verification" ? "Report Submitted" : r.status;
+
+      const itemHTML = `
+        <div class="flex items-start gap-4">
+          <div class="w-6 h-6 rounded-full ${isFirst ? 'bg-emerald-700' : 'bg-slate-300'} flex items-center justify-center relative z-10 shrink-0">
+            ${isFirst ? '<div class="w-2 h-2 rounded-full bg-white"></div>' : ''}
+          </div>
+          <div>
+            <h4 class="text-xs font-bold ${isFirst ? 'text-slate-800' : 'text-slate-500'}">${statusLabel}</h4>
+            <p class="text-[10px] text-slate-500 mb-1">${dateStr} • ${timeStr}</p>
+            ${r.hashScanUrl ? `<a href="${r.hashScanUrl}" target="_blank" class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-[9px] font-bold rounded transition-colors">Confirmed</a>` : ''}
+            <p class="text-[9px] text-slate-400 font-mono mt-1 truncate max-w-[120px]" title="${r.hashScanUrl || ''}">Tx: ${r.hashScanUrl ? r.hashScanUrl.split('/').pop().substring(0, 10) + '...' : 'N/A'}</p>
+          </div>
+        </div>
+      `;
+      timelineContainer.insertAdjacentHTML('beforeend', itemHTML);
+    });
+
+    // TABLE RENDERING (Top 5 recent)
+    const tableReports = blockchainReports.slice(0, 5);
+    tableReports.forEach(r => {
+      let timeAgo = "Just now";
+      if (r.createdAt) {
+        const diffMs = Date.now() - r.createdAt.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays > 0) timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        else if (diffHours > 0) timeAgo = `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+        else if (diffMins > 0) timeAgo = `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+      }
+
+      const typeLabel = r.status === "Pending Verification" ? "New Report" : "Status Update";
+      const txHashDisplay = r.hashScanUrl ? r.hashScanUrl.split('/').pop().substring(0, 12) + '...' : 'N/A';
+
+      const trHTML = `
+        <tr class="cursor-pointer hover:bg-slate-50 transition-colors" onclick="document.getElementById('nav-reports').click()">
+          <td class="py-3 text-xs font-mono font-semibold text-emerald-600 truncate max-w-[100px]"><a href="${r.hashScanUrl || '#'}" target="_blank" class="hover:underline" onclick="event.stopPropagation()">${txHashDisplay}</a></td>
+          <td class="py-3 text-xs font-semibold text-slate-800">${typeLabel}</td>
+          <td class="py-3">
+            <span class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold rounded">Confirmed</span>
+          </td>
+          <td class="py-3 text-[10px] font-medium text-slate-500 text-right">${timeAgo}</td>
+        </tr>
+      `;
+      tableBody.insertAdjacentHTML('beforeend', trHTML);
+    });
+  }
+
+  // ==========================================
   // 8. MODAL LOGIC
   // ==========================================
 
@@ -1454,6 +1539,24 @@ import {
     modalStatusSelect.value = report.status;
     updateModalStatusBadge(report.status);
     modalReportImage.src = report.imageUrl || PLACEHOLDER_IMAGE;
+
+    if (report.status === "Dismissed") {
+      if (dismissalReasonContainer) dismissalReasonContainer.classList.remove("hidden");
+      if (dismissalReasonInput) dismissalReasonInput.value = report.dismissalReason || "";
+    } else {
+      if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
+      if (dismissalReasonInput) dismissalReasonInput.value = "";
+    }
+
+    if (modalBlockchainUrl && blockchainUrlContainer) {
+      if (report.hashScanUrl) {
+        modalBlockchainUrl.href = report.hashScanUrl;
+        blockchainUrlContainer.classList.remove("hidden");
+      } else {
+        modalBlockchainUrl.removeAttribute("href");
+        blockchainUrlContainer.classList.add("hidden");
+      }
+    }
   }
 
   function openDetailModal(docId) {
@@ -1482,6 +1585,9 @@ import {
     } else if (status === "In Progress") {
       modalStatusBadge.classList.add("bg-amber-50", "text-amber-700", "border", "border-amber-200");
       dotEl.className = "w-2 h-2 rounded-full bg-amber-500";
+    } else if (status === "Dismissed") {
+      modalStatusBadge.classList.add("bg-rose-50", "text-rose-700", "border", "border-rose-200");
+      dotEl.className = "w-2 h-2 rounded-full bg-rose-500";
     } else {
       modalStatusBadge.classList.add("bg-slate-100", "text-slate-700", "border", "border-slate-200");
       dotEl.className = "w-2 h-2 rounded-full bg-slate-400";
@@ -1498,10 +1604,18 @@ import {
     if (!selectedReport) return;
     const newStatus = modalStatusSelect.value;
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
+
+    const updatePayload = { status: firestoreStatus };
+    if (newStatus === "Dismissed") {
+      updatePayload.dismissalReason = dismissalReasonInput ? dismissalReasonInput.value : "";
+    } else {
+      updatePayload.dismissalReason = null;
+    }
+
     try {
       modalBtnSave.disabled = true;
       modalBtnSave.textContent = "Saving...";
-      await updateDoc(doc(db, "reports", selectedReport.docId), { status: firestoreStatus });
+      await updateDoc(doc(db, "reports", selectedReport.docId), updatePayload);
       closeModal();
     } catch (error) {
       console.error("Failed to save report status change:", error);
@@ -1631,7 +1745,18 @@ import {
     if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
     if (modalBtnCloseSecondary) modalBtnCloseSecondary.addEventListener("click", closeModal);
     if (modalBtnSave) modalBtnSave.addEventListener("click", saveStatusChange);
-    if (modalStatusSelect) modalStatusSelect.addEventListener("change", function () { updateModalStatusBadge(this.value); });
+    if (modalStatusSelect) {
+      modalStatusSelect.addEventListener("change", function () {
+        updateModalStatusBadge(this.value);
+        if (dismissalReasonContainer) {
+          if (this.value === "Dismissed") {
+            dismissalReasonContainer.classList.remove("hidden");
+          } else {
+            dismissalReasonContainer.classList.add("hidden");
+          }
+        }
+      });
+    }
 
     const backdrop = document.getElementById("modal-backdrop");
     if (backdrop) backdrop.addEventListener("click", closeModal);
