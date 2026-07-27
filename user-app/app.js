@@ -14,6 +14,7 @@
 
 import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
+import { logReportOnChain } from "./js/hedera-logger.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -45,7 +46,7 @@ const submitSpinner = document.getElementById("submit-spinner");
 const submitText = document.getElementById("submit-text");
 const reporterName = document.getElementById("reporter-name");
 const wasteCategory = document.getElementById("waste-category");
-const contactInfo = document.getElementById("contact-info");
+const contactInfo = document.getElementById("reporter-contact");
 const reporterNotes = document.getElementById("reporter-notes");
 
 if (!photoInput || !summaryEl || !submitBtn) {
@@ -70,25 +71,33 @@ let mapMarker = null;
 // Startup: validate API key configuration
 // ---------------------------------------------------------------------------
 function isApiKeyConfigured() {
-  return (
-    typeof GEMINI_API_KEY === "string" &&
-    GEMINI_API_KEY.trim().length > 0 &&
-    GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE"
-  );
+  try {
+    return (
+      typeof GEMINI_API_KEY === "string" &&
+      GEMINI_API_KEY.trim().length > 0 &&
+      GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE"
+    );
+  } catch (e) {
+    return false;
+  }
 }
 
-if (!isApiKeyConfigured()) {
-  console.error(
-    "Basura-Pin: Missing API key. Copy config.example.js to config.js and add your Gemini key.",
-  );
-  if (summaryEl) {
-    summaryEl.textContent =
-      "App configuration incomplete. Copy config.example.js to config.js and add your Gemini API key.";
+try {
+  if (!isApiKeyConfigured()) {
+    console.error(
+      "Basura-Pin: Missing API key. Copy config.example.js to config.js and add your Gemini key.",
+    );
+    if (summaryEl) {
+      summaryEl.textContent =
+        "App configuration incomplete. Copy config.example.js to config.js and add your Gemini API key.";
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add("opacity-70", "cursor-not-allowed");
+    }
   }
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.classList.add("opacity-70", "cursor-not-allowed");
-  }
+} catch (e) {
+  console.warn("Config check failed:", e);
 }
 
 // ---------------------------------------------------------------------------
@@ -520,6 +529,9 @@ openMapBtn?.addEventListener("click", () => {
   mapModal.classList.remove("hidden");
   setTimeout(() => {
     initMap();
+    if (mapInstance) {
+      mapInstance.invalidateSize();
+    }
 
     // If the user already searched outside, jump the map directly to that spot!
     if (finalCoordinates) {
@@ -687,6 +699,15 @@ if (submitBtn) {
         notes: reporter.notes,
         severityScore: result.severity_score != null ? result.severity_score : 3,
       };
+
+      // === INSERT WEB3 INTEGRATION HERE ===
+      // 1. Send metadata to Hedera Consensus Service
+      const onChainUrl = await logReportOnChain(reportData);
+
+      // 2. Attach the immutable HashScan proof URL if successful
+      if (onChainUrl) {
+        reportData.hashScanUrl = onChainUrl;
+      }
 
 
       const reportId = await submitTrashReport(reportData, selectedFile);

@@ -45,6 +45,7 @@ export async function submitTrashReport(reportData, imageFile) {
     notes: reportData.notes || "",
     severityScore: reportData.severityScore != null ? Number(reportData.severityScore) : 3,
     createdAt: serverTimestamp(),
+    hashScanUrl: reportData.hashScanUrl || null
   });
 
   return docRef.id;
