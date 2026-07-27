@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barangay Performance — SparkPish Ops Board</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #141310;
+    --panel: #1c1a15;
+    --panel-2: #201e18;
+    --ink: #ede8dc;
+    --muted: #8c8676;
+    --faint: #5f5b4d;
+    --line: #322f28;
+
+    --biodeg: #4c9a5d;
+    --recyc: #4a90c4;
+    --residual: #a39c86;
+    --hazard: #e0a63a;
+    --critical: #e15252;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(76,154,93,0.06), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(74,144,196,0.05), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:28px 20px 60px;
+  }
+
+  .wrap{ max-width:1180px; margin:0 auto; }
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1px solid var(--line);
+    padding-bottom:18px; margin-bottom:22px;
+    flex-wrap:wrap; gap:16px;
+  }
+  .masthead-left .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 6px;
+  }
+  .masthead-left h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:28px; margin:0; letter-spacing:-0.01em;
+  }
+  .masthead-left .sub{
+    color:var(--muted); font-size:13px; margin-top:6px;
+  }
+  .live-clock{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);
+    text-align:right; display:flex; flex-direction:column; gap:4px;
+  }
+  .live-dot{ display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--biodeg); margin-right:6px;
+    box-shadow:0 0 8px var(--biodeg); animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  /* ---------- Hero row ---------- */
+  .hero-row{ display:grid; grid-template-columns:220px 1fr 1fr 1fr; gap:14px; margin-bottom:26px; }
+  @media (max-width:820px){ .hero-row{ grid-template-columns:1fr 1fr; } }
+
+  .card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line); border-radius:10px; padding:16px;
+  }
+
+  .gauge-card{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .gauge-card .g-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:8px; }
+
+  .stat-card .s-label{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .stat-card .s-value{ font-family:'Space Grotesk',sans-serif; font-size:30px; font-weight:700; margin-top:8px; }
+  .stat-card .s-delta{ font-size:12px; margin-top:8px; color:var(--muted); }
+  .stat-card .s-delta.up{ color:var(--biodeg); }
+  .stat-card .s-delta.down{ color:var(--critical); }
+
+  /* ---------- Section headers ---------- */
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin:34px 0 12px; }
+  .section-head h2{
+    font-family:'Space Grotesk',sans-serif; font-size:16px; margin:0;
+    letter-spacing:.02em;
+  }
+  .section-head .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+    border:1px solid var(--line); padding:4px 8px; border-radius:20px;
+  }
+
+  /* ---------- Segregation legend ---------- */
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
+  .legend span{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .legend i{ width:8px; height:8px; border-radius:2px; display:inline-block; }
+
+  /* ---------- Performance board ---------- */
+  .board{ background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .board-row{
+    display:grid;
+    grid-template-columns: 34px 1.4fr 90px 100px 90px 110px 130px 90px;
+    align-items:center;
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    gap:8px;
+  }
+  .board-row.head{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    background:rgba(255,255,255,0.015);
+  }
+  .board-row:last-child{ border-bottom:none; }
+  .board-row:not(.head):hover{ background:rgba(255,255,255,0.02); }
+
+  .rank{ font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:12px; }
+  .brgy-name{ display:flex; align-items:center; gap:10px; }
+  .beacon{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .beacon.ok{ background:var(--biodeg); box-shadow:0 0 6px var(--biodeg); }
+  .beacon.watch{ background:var(--hazard); box-shadow:0 0 6px var(--hazard); }
+  .beacon.critical{ background:var(--critical); box-shadow:0 0 6px var(--critical); animation:pulse 1.4s infinite; }
+  .brgy-name .name{ font-size:13.5px; font-weight:500; }
+  .brgy-name .zone{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); }
+
+  .num{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; }
+  .rate{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:500; }
+
+  .seg-bar{ display:flex; width:100%; height:7px; border-radius:4px; overflow:hidden; background:var(--line); }
+  .seg-bar div{ height:100%; }
+
+  .stamp{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase;
+    border:1px solid; border-radius:20px; padding:3px 8px; text-align:center; transform:rotate(-2deg);
+    width:fit-content;
+  }
+  .stamp.ok{ color:var(--biodeg); border-color:var(--biodeg); }
+  .stamp.watch{ color:var(--hazard); border-color:var(--hazard); }
+  .stamp.critical{ color:var(--critical); border-color:var(--critical); }
+
+  footer{ margin-top:36px; padding-top:16px; border-top:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+
+  @media (max-width:760px){
+    .board-row{ grid-template-columns: 24px 1fr 70px 80px; }
+    .board-row .col-hide{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="masthead-left">
+      <p class="eyebrow">SparkPish · LGU Ops Board</p>
+      <h1>Barangay Performance</h1>
+      <p class="sub">City-wide waste report monitoring — 10 barangays, rolling 7-day window</p>
+    </div>
+    <div class="live-clock">
+      <div><span class="live-dot"></span>LIVE — <span id="clockTime">--:--:--</span></div>
+      <div id="clockDate">—</div>
+    </div>
+  </div>
+
+  <!-- HERO ROW -->
+  <div class="hero-row">
+    <div class="card gauge-card">
+      <svg width="110" height="110" viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r="46" fill="none" stroke="#322f28" stroke-width="10"/>
+        <circle id="ringMain" cx="55" cy="55" r="46" fill="none" stroke="#4c9a5d" stroke-width="10"
+          stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"
+          transform="rotate(-90 55 55)"/>
+        <text x="55" y="51" text-anchor="middle" fill="#ede8dc" font-family="Space Grotesk" font-size="20" font-weight="700">78%</text>
+        <text x="55" y="68" text-anchor="middle" fill="#8c8676" font-family="IBM Plex Mono" font-size="8">DIVERSION</text>
+      </svg>
+      <div class="g-label">City-wide segregation compliance</div>
+    </div>
+
+    <div class="card stat-card">
+      <div class="s-label">Reports Resolved (7d)</div>
+      <div class="s-value">1,284</div>
+      <div class="s-delta up">▲ 9.4% vs prior week</div>
+    </div>
+
+    <div class="card stat-card">
+      <div class="s-label">Avg. Response Time</div>
+      <div class="s-value">3h 42m</div>
+      <div class="s-delta up">▼ 21m faster</div>
+    </div>
+
+    <div class="card stat-card">
+      <div class="s-label">Barangays Flagged</div>
+      <div class="s-value">2 <span style="font-size:13px;color:var(--muted);font-weight:400;">of 10</span></div>
+      <div class="s-delta down">▲ 1 new anomaly today</div>
+    </div>
+  </div>
+
+  <!-- BARANGAY PERFORMANCE -->
+  <div class="section-head">
+    <h2>Ranked Board</h2>
+    <span class="tag">Ranked by resolution rate</span>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--biodeg)"></i>Biodegradable</span>
+    <span><i style="background:var(--recyc)"></i>Recyclable</span>
+    <span><i style="background:var(--residual)"></i>Residual</span>
+    <span><i style="background:var(--hazard)"></i>Hazardous</span>
+  </div>
+
+  <div class="board" id="board">
+    <div class="board-row head">
+      <div>#</div>
+      <div>Barangay</div>
+      <div class="col-hide">Resolved</div>
+      <div class="col-hide">Avg. Resp.</div>
+      <div>Rate</div>
+      <div class="col-hide">Segregation mix</div>
+      <div class="col-hide">7-day trend</div>
+      <div>Status</div>
+    </div>
+    <!-- rows injected by JS -->
+  </div>
+
+  <footer>
+    <span>SparkPish Admin Console — sample data for prototype review</span>
+    <span>Generated <span id="footDate"></span></span>
+  </footer>
+
+</div>
+
+<script>
+  // ---------- Clock ----------
+  function tick(){
+    const now = new Date();
+    document.getElementById('clockTime').textContent = now.toLocaleTimeString('en-PH',{hour12:false});
+    document.getElementById('clockDate').textContent = now.toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+    document.getElementById('footDate').textContent = now.toLocaleString('en-PH');
+  }
+  tick(); setInterval(tick,1000);
+
+  // ---------- Ring gauge animation ----------
+  const ring = document.getElementById('ringMain');
+  const circumference = 2*Math.PI*46;
+  ring.setAttribute('stroke-dasharray', circumference);
+  const target = 0.78;
+  let progress = 0;
+  const anim = setInterval(()=>{
+    progress += 0.02;
+    if(progress>=target){ progress=target; clearInterval(anim); }
+    ring.setAttribute('stroke-dashoffset', circumference*(1-progress));
+  },16);
+
+  // ---------- Sample barangay data ----------
+  const barangays = [
+    { name:'Poblacion', zone:'Zone 1', resolved:212, resp:'2h 10m', rate:94, mix:[46,28,20,6], trend:[60,64,70,72,80,85,94], status:'ok' },
+    { name:'Malinis', zone:'Zone 3', resolved:178, resp:'2h 55m', rate:91, mix:[40,30,24,6], trend:[70,68,75,80,82,88,91], status:'ok' },
+    { name:'Masagana', zone:'Zone 2', resolved:165, resp:'3h 05m', rate:88, mix:[38,26,28,8], trend:[55,60,63,70,78,84,88], status:'ok' },
+    { name:'Riverside', zone:'Zone 4', resolved:151, resp:'3h 40m', rate:83, mix:[35,24,30,11], trend:[62,60,65,70,74,79,83], status:'ok' },
+    { name:'Sto. Niño', zone:'Zone 1', resolved:139, resp:'4h 02m', rate:79, mix:[32,22,33,13], trend:[74,72,70,73,76,77,79], status:'ok' },
+    { name:'Bagumbayan', zone:'Zone 5', resolved:122, resp:'4h 30m', rate:74, mix:[28,20,36,16], trend:[80,76,72,70,73,74,74], status:'watch' },
+    { name:'San Isidro', zone:'Zone 2', resolved:110, resp:'5h 12m', rate:69, mix:[26,18,38,18], trend:[72,70,68,65,66,68,69], status:'watch' },
+    { name:'Tagumpay', zone:'Zone 3', resolved:96,  resp:'5h 48m', rate:63, mix:[22,16,40,22], trend:[68,66,63,60,58,61,63], status:'watch' },
+    { name:'Bagong Silang', zone:'Zone 5', resolved:74, resp:'7h 20m', rate:51, mix:[18,12,44,26], trend:[65,60,55,50,48,50,51], status:'critical' },
+    { name:'Maligaya', zone:'Zone 4', resolved:58, resp:'8h 55m', rate:44, mix:[15,10,46,29], trend:[58,54,50,46,42,43,44], status:'critical' },
+  ];
+
+  const segColors = ['#4c9a5d','#4a90c4','#a39c86','#e0a63a'];
+
+  function sparkline(values){
+    const w=100,h=28,max=Math.max(...values),min=Math.min(...values);
+    const pts = values.map((v,i)=>{
+      const x = (i/(values.length-1))*w;
+      const y = h - ((v-min)/((max-min)||1))*h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const lastUp = values[values.length-1] >= values[0];
+    const color = lastUp ? '#4c9a5d' : '#e15252';
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  function segBar(mix){
+    return `<div class="seg-bar">` + mix.map((v,i)=>`<div style="width:${v}%;background:${segColors[i]}"></div>`).join('') + `</div>`;
+  }
+
+  function statusLabel(s){
+    return s==='ok' ? 'On Track' : s==='watch' ? 'Needs Attention' : 'Critical';
+  }
+
+  const board = document.getElementById('board');
+  barangays.forEach((b,i)=>{
+    const row = document.createElement('div');
+    row.className = 'board-row';
+    row.innerHTML = `
+      <div class="rank">${String(i+1).padStart(2,'0')}</div>
+      <div class="brgy-name">
+        <span class="beacon ${b.status}"></span>
+        <div>
+          <div class="name">${b.name}</div>
+          <div class="zone">${b.zone}</div>
+        </div>
+      </div>
+      <div class="num col-hide">${b.resolved}</div>
+      <div class="num col-hide">${b.resp}</div>
+      <div class="rate">${b.rate}%</div>
+      <div class="col-hide">${segBar(b.mix)}</div>
+      <div class="col-hide">${sparkline(b.trend)}</div>
+      <div><span class="stamp ${b.status}">${statusLabel(b.status)}</span></div>
+    `;
+    board.appendChild(row);
+  });
+</script>
+</body>
+</html>
