@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Management — E-Tapon Mo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --brand:#2f7d52; --brand-dark:#1f5c3a; --brand-tint:#eaf3ec;
+    --bg:#f7f8f6; --panel:#ffffff; --ink:#1c231d; --muted:#7a8479; --faint:#aeb6ab; --line:#eaece7;
+    --biodeg:#4c9a5d; --recyc:#4a90c4; --residual:#b3a98d; --hazard:#e0a63a; --critical:#e15252;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{ width:225px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0; height:100vh; }
+  .brand{ display:flex; align-items:center; gap:10px; padding:4px 8px 18px; border-bottom:1px solid var(--line); margin-bottom:14px; }
+  .brand .mark{ width:32px; height:32px; border-radius:9px; background:linear-gradient(155deg,var(--brand),var(--brand-dark));
+    display:flex; align-items:center; justify-content:center; flex:none; }
+  .brand .mark svg{ width:17px; height:17px; }
+  .brand .word{ line-height:1.2; }
+  .brand .word .name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px; }
+  .brand .word .sub{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); letter-spacing:.03em; }
+  nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .nav-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;
+    color:var(--muted); font-size:13px; font-weight:500; text-decoration:none; transition:all .15s ease; }
+  .nav-item svg{ width:16px; height:16px; flex:none; }
+  .nav-item:hover{ background:var(--brand-tint); color:var(--brand-dark); }
+  .nav-item.active{ background:var(--brand-tint); color:var(--brand-dark); font-weight:600; }
+  .sidebar-foot{ border-top:1px solid var(--line); padding-top:12px; margin-top:10px; }
+  .user-row{ display:flex; align-items:center; gap:10px; padding:6px 8px; }
+  .user-row .avatar{ width:32px; height:32px; border-radius:50%; background:var(--brand); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; font-family:'Space Grotesk',sans-serif; flex:none; }
+  .user-row .who{ line-height:1.25; }
+  .user-row .who .n{ font-size:12.5px; font-weight:600; }
+  .user-row .who .r{ font-size:10.5px; color:var(--muted); }
+  .logout{ display:block; margin:8px 8px 0; font-size:11.5px; color:var(--critical); text-decoration:none; font-weight:500; }
+
+  /* ---------- Main ---------- */
+  .main{ flex:1; min-width:0; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:20px 30px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .topbar h1{ font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:700; margin:0 0 3px; }
+  .topbar .sub{ font-size:12.5px; color:var(--muted); margin:0; }
+  .btn{ font-size:12.5px; font-weight:600; color:#fff; background:var(--brand); border:none;
+    padding:8px 16px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .btn:hover{ background:var(--brand-dark); }
+  .content{ padding:26px 30px 50px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+
+  /* ---------- Tabs ---------- */
+  .tab-row{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .tab-btn{ font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; color:var(--muted);
+    background:var(--panel); border:1px solid var(--line); padding:8px 15px; border-radius:8px; cursor:pointer; }
+  .tab-btn .cnt{ font-family:'IBM Plex Mono',monospace; font-weight:500; opacity:.7; margin-left:4px; }
+  .tab-btn:hover{ border-color:var(--brand); color:var(--brand-dark); }
+  .tab-btn.active{ background:var(--brand-tint); color:var(--brand-dark); border-color:var(--brand-tint); }
+
+  /* ---------- Table ---------- */
+  .table-card{ overflow:hidden; margin-bottom:16px; }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--muted); font-weight:500; padding:13px 20px; border-bottom:1px solid var(--line); background:var(--bg); }
+  tbody td{ padding:13px 20px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--brand-tint); }
+
+  .task-cell .h{ font-weight:600; margin:0 0 2px; }
+  .task-cell .d{ font-size:11.5px; color:var(--muted); }
+
+  .assignee{ display:flex; align-items:center; gap:8px; }
+  .assignee .av{ width:26px; height:26px; border-radius:50%; background:var(--brand-tint); color:var(--brand-dark);
+    display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; font-family:'Space Grotesk',sans-serif; flex:none; }
+
+  .badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.03em;
+    padding:4px 10px; border-radius:20px; display:inline-block; white-space:nowrap; }
+  .badge.high{ color:var(--critical); background:rgba(225,82,82,0.12); }
+  .badge.medium{ color:#9a7016; background:rgba(224,166,58,0.16); }
+  .badge.low{ color:var(--recyc); background:rgba(74,144,196,0.12); }
+
+  .status-pill{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.03em;
+    padding:4px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .status-pill i{ width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .status-pill.pending{ color:var(--muted); background:var(--bg); }
+  .status-pill.pending i{ background:var(--faint); }
+  .status-pill.progress{ color:var(--recyc); background:rgba(74,144,196,0.12); }
+  .status-pill.progress i{ background:var(--recyc); }
+  .status-pill.completed{ color:var(--biodeg); background:rgba(76,154,93,0.12); }
+  .status-pill.completed i{ background:var(--biodeg); }
+
+  .due{ font-family:'IBM Plex Mono',monospace; font-size:12px; }
+  .due.overdue{ color:var(--critical); font-weight:600; }
+
+  /* ---------- Pagination ---------- */
+  .pager{ display:flex; align-items:center; justify-content:space-between; padding:8px 4px; flex-wrap:wrap; gap:10px; }
+  .pager .info{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); }
+  .pager .pages{ display:flex; gap:6px; }
+  .pager .pages button{ width:28px; height:28px; border-radius:7px; border:1px solid var(--line); background:var(--panel);
+    color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11.5px; cursor:pointer; }
+  .pager .pages button.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+
+  footer{ margin-top:30px; padding-top:16px; border-top:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+
+  @media (max-width:900px){
+    .sidebar{ display:none; }
+    thead th.hide-sm, tbody td.hide-sm{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></div>
+      <div class="word"><div class="name">E-Tapon Mo</div><div class="sub">LGU Admin Portal</div></div>
+    </div>
+    <nav>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>Reports</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 12 2a7 7 0 0 1 7 7.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>Map</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>Analytics</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Barangay Performance</a>
+      <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Task Management</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M10 19h5a4 4 0 0 0 4-4V7a2 2 0 0 0-2-2H8"/></svg>Collection Routes</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>AI Insights</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="user-row">
+        <div class="avatar">MS</div>
+        <div class="who"><div class="n">Maria Santos</div><div class="r">Brgy. Officer</div></div>
+      </div>
+      <a class="logout" href="#">Log out</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1>Task Management</h1>
+        <p class="sub">Track tasks and assignments</p>
+      </div>
+      <button class="btn">+ New Task</button>
+    </div>
+
+    <div class="content">
+
+      <div class="tab-row" id="tabRow">
+        <button class="tab-btn active" data-filter="all">All Tasks <span class="cnt">(24)</span></button>
+        <button class="tab-btn" data-filter="mine">My Tasks <span class="cnt">(8)</span></button>
+        <button class="tab-btn" data-filter="overdue">Overdue <span class="cnt">(3)</span></button>
+        <button class="tab-btn" data-filter="completed">Completed <span class="cnt">(13)</span></button>
+      </div>
+
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th class="hide-sm">Assigned To</th>
+              <th class="hide-sm">Barangay</th>
+              <th>Priority</th>
+              <th class="hide-sm">Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <span class="info">Showing 1 to 8 of 24 tasks</span>
+        <div class="pages">
+          <button class="active">1</button>
+          <button>2</button>
+          <button>3</button>
+        </div>
+      </div>
+
+      <footer>
+        <span>E-Tapon Mo Admin Console — sample data for prototype review</span>
+        <span>Generated <span id="footDate"></span></span>
+      </footer>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('footDate').textContent = new Date().toLocaleString('en-PH');
+
+  const tasks = [
+    { title:'Reroute one collection unit to San Isidro', desc:'Reassign for two shifts to close resolution gap', assignee:'Maria Santos', brgy:'San Isidro', priority:'high', due:'Jun 28, 2026', overdue:false, status:'progress', mine:true },
+    { title:'Investigate reporting silence in Tagumpay', desc:'Check reporting channel in 2 affected sitios', assignee:'Jun Reyes', brgy:'Tagumpay', priority:'high', due:'Jun 25, 2026', overdue:true, status:'pending', mine:false },
+    { title:'Prepare Bagong Silang for collection surge', desc:'Backlog projected to exceed truck capacity', assignee:'Ana Cruz', brgy:'Bagong Silang', priority:'high', due:'Jun 30, 2026', overdue:false, status:'pending', mine:false },
+    { title:'Verify residual waste spike in Maligaya', desc:'Cross-check against population baseline', assignee:'Maria Santos', brgy:'Maligaya', priority:'medium', due:'Jun 27, 2026', overdue:false, status:'progress', mine:true },
+    { title:'Schedule storage cleaning before heavy rainfall', desc:'Preemptive cleanup ahead of forecasted rain', assignee:'Paolo Ilagan', brgy:'Riverside', priority:'medium', due:'Jul 2, 2026', overdue:false, status:'pending', mine:false },
+    { title:'Deploy additional truck in Sto. Niño & nearby areas', desc:'Cover midday collection gap', assignee:'Jun Reyes', brgy:'Sto. Niño', priority:'medium', due:'Jul 3, 2026', overdue:false, status:'pending', mine:false },
+    { title:'Increase monitoring during Friday afternoon hours', desc:'Peak reporting window city-wide', assignee:'Ana Cruz', brgy:'City-wide', priority:'low', due:'Jun 26, 2026', overdue:true, status:'progress', mine:false },
+    { title:'Publish weekly segregation compliance update', desc:'Share diversion rate trend with barangay captains', assignee:'Maria Santos', brgy:'City-wide', priority:'low', due:'Jun 22, 2026', overdue:false, status:'completed', mine:true },
+  ];
+
+  function initials(n){ return n.split(' ').map(w=>w[0]).slice(0,2).join(''); }
+  function statusLabel(s){ return s==='pending'?'Pending':s==='progress'?'In Progress':'Completed'; }
+
+  const tbody = document.getElementById('taskBody');
+  function render(filter){
+    tbody.innerHTML = '';
+    const list = tasks.filter(t=>{
+      if(filter==='all') return true;
+      if(filter==='mine') return t.mine;
+      if(filter==='overdue') return t.overdue;
+      if(filter==='completed') return t.status==='completed';
+      return true;
+    });
+    list.forEach(t=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="task-cell"><p class="h">${t.title}</p><p class="d">${t.desc}</p></td>
+        <td class="hide-sm"><div class="assignee"><div class="av">${initials(t.assignee)}</div>${t.assignee}</div></td>
+        <td class="hide-sm">${t.brgy}</td>
+        <td><span class="badge ${t.priority}">${t.priority}</span></td>
+        <td class="hide-sm"><span class="due ${t.overdue?'overdue':''}">${t.due}</span></td>
+        <td><span class="status-pill ${t.status}"><i></i>${statusLabel(t.status)}</span></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+  render('all');
+
+  document.getElementById('tabRow').addEventListener('click', e=>{
+    if(!e.target.closest('.tab-btn')) return;
+    const btn = e.target.closest('.tab-btn');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.filter);
+  });
+</script>
+</body>
+</html>
