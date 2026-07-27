@@ -11,3 +11,5 @@ shared/firebase-config.js
 firebaselog.json
 firebase-debug.log
 .firebaserc
+
+CODEOWNERS
