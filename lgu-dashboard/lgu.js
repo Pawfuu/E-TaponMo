@@ -5,18 +5,17 @@
 /**
  * LGU Administrator Portal — live Firestore dashboard
  *
- * - Real-time reports via onSnapshot("reports")
+ * - Real-time dashboard powered by dashboard-service.js (onSnapshot listeners)
  * - View switching, search, sort, modal drill-down
  * - Status updates written back with updateDoc
  */
 
 import { db } from "../shared/firebase-config.js";
 import {
-  collection,
-  onSnapshot,
   doc,
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { subscribeDashboard } from "./dashboard-service.js";
 
 (function () {
   "use strict";
@@ -68,7 +67,7 @@ import {
     return rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1);
   }
 
-  function showToast(featureName) {
+  function showToast(featureName, subtitle) {
     let container = document.getElementById("toast-container");
     if (!container) {
       container = document.createElement("div");
@@ -77,15 +76,17 @@ import {
       document.body.appendChild(container);
     }
 
+    const subtext = subtitle || "This feature will be added in the next update.";
+
     const toast = document.createElement("div");
     toast.className = "flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium transform transition-all duration-300 translate-y-10 opacity-0";
     toast.innerHTML = `
-      <span class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+      <span class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
       </span>
       <div>
         <p class="font-bold text-slate-100">${featureName}</p>
-        <p class="text-[10px] text-slate-400">This feature will be added in the next update.</p>
+        <p class="text-[10px] text-slate-400">${subtext}</p>
       </div>
     `;
     container.appendChild(toast);
@@ -137,6 +138,7 @@ import {
   // ==========================================
 
   let reports = [];
+  let dashboardMetrics = null;
   let lastFilteredReports = [];
   let currentPage = 1;
   const itemsPerPage = 8;
@@ -232,22 +234,11 @@ import {
   }
 
   function subscribeToReports() {
-    // IMPORTANT: Do NOT use orderBy("createdAt") here.
-    // Firestore silently excludes any document that is missing the ordered field,
-    // which causes KPI counts to show 0 when some reports lack a createdAt timestamp.
-    // We fetch ALL documents and sort client-side instead.
-    const reportsQuery = collection(db, "reports");
-    unsubscribeReports = onSnapshot(
-      reportsQuery,
-      (snapshot) => {
-        // Map all docs then sort descending by createdAt client-side
-        reports = snapshot.docs
-          .map(mapDocToReport)
-          .sort((a, b) => {
-            const ta = a.createdAt ? a.createdAt.getTime() : 0;
-            const tb = b.createdAt ? b.createdAt.getTime() : 0;
-            return tb - ta;
-          });
+    unsubscribeReports = subscribeDashboard(
+      (data) => {
+        reports = data.reports || [];
+        dashboardMetrics = data.metrics || null;
+
         updateCategoryDropdown(reports);
         updateDashboardMetrics(reports);
         renderReportsTable();
@@ -265,9 +256,9 @@ import {
         }
       },
       (error) => {
-        console.error("Firestore onSnapshot error:", error);
+        console.error("DashboardService error:", error);
         if (statActiveEl) statActiveEl.textContent = "!";
-        alert("Could not load reports from Firestore.\n\n" + error.message);
+        showToast("Sync Error", "Could not sync data from Firestore. Retrying...");
       }
     );
   }
@@ -428,7 +419,7 @@ import {
   function exportToCSV() {
     const dataToExport = lastFilteredReports.length > 0 ? lastFilteredReports : reports;
     if (dataToExport.length === 0) {
-      alert("No reports available to export.");
+      showToast("Export Notice", "No reports available to export.");
       return;
     }
 
@@ -1617,9 +1608,10 @@ import {
       modalBtnSave.textContent = "Saving...";
       await updateDoc(doc(db, "reports", selectedReport.docId), updatePayload);
       closeModal();
+      showToast("Report Updated", "Status changes saved successfully.");
     } catch (error) {
       console.error("Failed to save report status change:", error);
-      alert("Could not save status change.\n\n" + error.message);
+      showToast("Save Failed", error.message || "Could not save status change.");
     } finally {
       modalBtnSave.disabled = false;
       modalBtnSave.textContent = "Save Status Changes";
