@@ -1,8 +1,6 @@
 // In a production app, these keys live on a secure backend server.
 // For this frontend-only MVP prototype, we initialize them here.
-const LGU_OPERATOR_ID = "0.0.9399649";
-const LGU_PRIVATE_KEY = "302e020100300506032b657004220420b1f6201277c5fa12acb2b5247cbe027fa52e236fd66801bfbf9307fbfe9334a5";
-const E_TAPON_TOPIC_ID = "0.0.9783811";
+import { LGU_OPERATOR_ID, LGU_PRIVATE_KEY, E_TAPON_TOPIC_ID } from "./hedera-config.js";
 
 /**
  * Hashes and submits report metadata to the Hedera ledger
