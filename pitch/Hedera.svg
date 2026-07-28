@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" height="100%" overflow="visible" preserveAspectRatio="none" style="display: block;" viewBox="0 0 180 180" width="100%">
+<g id="Icon">
+<g id="Vector">
+<path d="M115.327 83.5306H64.6835V96.464H115.327V83.5306Z" fill="black"/>
+<path d="M90 0C40.295 0 0 40.295 0 90C0 139.705 40.295 180 90 180C139.705 180 180 139.705 180 90C180 40.295 139.705 0 90 0ZM127.182 130.419H115.327V105.092H64.6835L64.6727 105.07V130.419H52.8183V49.5809H64.6727V74.9245L64.6835 74.9137H115.327V49.5863H127.182V130.424V130.419Z" fill="black"/>
+</g>
+</g>
+</svg>
