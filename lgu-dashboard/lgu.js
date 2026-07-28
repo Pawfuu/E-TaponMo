@@ -217,6 +217,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     refreshMapSizes(100);
     subscribeToReports();
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get("view");
+    if (viewParam && ["dashboard", "reports", "map", "analytics"].includes(viewParam)) {
+      switchView(viewParam);
+    } else {
+      switchView("dashboard");
+    }
+
     window.addEventListener("beforeunload", () => {
       if (unsubscribeReports) unsubscribeReports();
     });
@@ -1703,11 +1711,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", () => switchView("analytics"));
 
     const comingSoonButtons = [
-      navBarangayBtn,
-      document.getElementById("nav-tasks"),
       document.getElementById("nav-routes"),
-      document.getElementById("nav-insights"),
-      navSettingsBtn,
     ];
 
     comingSoonButtons.forEach((nav) => {
