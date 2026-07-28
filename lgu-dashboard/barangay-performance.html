@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barangay Performance — E-Tapon Mo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+    :root {
+      --brand: #2f7d52;
+      --brand-dark: #1f5c3a;
+      --brand-tint: #eaf3ec;
+      --bg: #f7f8f6;
+      --panel: #ffffff;
+      --ink: #1c231d;
+      --muted: #7a8479;
+      --faint: #aeb6ab;
+      --line: #eaece7;
+
+      --biodeg: #4c9a5d;
+      --recyc: #4a90c4;
+      --residual: #b3a98d;
+      --hazard: #e0a63a;
+      --critical: #e15252;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ---------- Sidebar ---------- */
+    .sidebar {
+      width: 225px;
+      flex: none;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 14px;
+    }
+
+    .brand .mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(155deg, var(--brand), var(--brand-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+    }
+
+    .brand .mark svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .brand .word {
+      line-height: 1.2;
+    }
+
+    .brand .word .name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 14.5px;
+    }
+
+    .brand .word .sub {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      color: var(--muted);
+      letter-spacing: .03em;
+    }
+
+    nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all .15s ease;
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex: none;
+    }
+
+    .nav-item:hover {
+      background: var(--brand-tint);
+      color: var(--brand-dark);
+    }
+
+    .nav-item.active {
+      background: var(--brand-tint);
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+
+    .sidebar-foot {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      margin-top: 10px;
+    }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 8px;
+    }
+
+    .user-row .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
+      flex: none;
+    }
+
+    .user-row .who {
+      line-height: 1.25;
+    }
+
+    .user-row .who .n {
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .user-row .who .r {
+      font-size: 10.5px;
+      color: var(--muted);
+    }
+
+    .logout {
+      display: block;
+      margin: 8px 8px 0;
+      font-size: 11.5px;
+      color: var(--critical);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* ---------- Main ---------- */
+    .main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 20px 30px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      margin: 0 0 3px;
+    }
+
+    .topbar .sub {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      background: var(--bg);
+      padding: 7px 13px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--brand);
+      border: none;
+      padding: 8px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: var(--brand-dark);
+    }
+
+    .content {
+      padding: 26px 30px 50px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    /* ---------- Hero row ---------- */
+    .hero-row {
+      display: grid;
+      grid-template-columns: 220px 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width:940px) {
+      .hero-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .gauge-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 18px;
+    }
+
+    .gauge-card .g-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .stat-card {
+      padding: 18px 20px;
+    }
+
+    .stat-card .s-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-card .s-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .stat-card .s-delta {
+      font-size: 12px;
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .stat-card .s-delta.up {
+      color: var(--biodeg);
+    }
+
+    .stat-card .s-delta.down {
+      color: var(--critical);
+    }
+
+    /* ---------- Section headers ---------- */
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 8px 0 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .section-head h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .section-head .tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--bg);
+    }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .legend span {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend i {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* ---------- Board ---------- */
+    .board {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .board-row {
+      display: grid;
+      grid-template-columns: 34px 1.4fr 90px 100px 90px 110px 130px 120px;
+      align-items: center;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--line);
+      gap: 8px;
+    }
+
+    .board-row.head {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--bg);
+    }
+
+    .board-row:last-child {
+      border-bottom: none;
+    }
+
+    .board-row:not(.head):hover {
+      background: var(--brand-tint);
+    }
+
+    .rank {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .brgy-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .beacon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex: none;
+    }
+
+    .beacon.ok {
+      background: var(--biodeg);
+    }
+
+    .beacon.watch {
+      background: var(--hazard);
+    }
+
+    .beacon.critical {
+      background: var(--critical);
+      box-shadow: 0 0 0 3px rgba(225, 82, 82, 0.15);
+    }
+
+    .brgy-name .name {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .brgy-name .zone {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+    }
+
+    .num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      color: var(--ink);
+    }
+
+    .rate {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .seg-bar {
+      display: flex;
+      width: 100%;
+      height: 7px;
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--line);
+    }
+
+    .seg-bar div {
+      height: 100%;
+    }
+
+    .stamp {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      border-radius: 20px;
+      padding: 4px 10px;
+      text-align: center;
+      width: fit-content;
+    }
+
+    .stamp.ok {
+      color: var(--biodeg);
+      background: rgba(76, 154, 93, 0.12);
+    }
+
+    .stamp.watch {
+      color: #a3771e;
+      background: rgba(224, 166, 58, 0.16);
+    }
+
+    .stamp.critical {
+      color: var(--critical);
+      background: rgba(225, 82, 82, 0.12);
+    }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10.5px;
+      color: var(--faint);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    @media (max-width:760px) {
+      .sidebar {
+        display: none;
+      }
+
+      .board-row {
+        grid-template-columns: 24px 1fr 70px 80px;
+      }
+
+      .board-row .col-hide {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6" />
+          </svg></div>
+        <div class="word">
+          <div class="name">E-Tapon Mo</div>
+          <div class="sub">LGU Admin Portal</div>
+        </div>
+      </div>
+      <nav>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+          </svg>Dashboard</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" />
+          </svg>Reports</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 12 2a7 7 0 0 1 7 7.5C19 14.9 12 21 12 21z" />
+            <circle cx="12" cy="9.5" r="2.3" />
+          </svg>Map</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18" />
+            <rect x="7" y="12" width="3" height="6" />
+            <rect x="12" y="8" width="3" height="10" />
+            <rect x="17" y="5" width="3" height="13" />
+          </svg>Analytics</a>
+        <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>Barangay Performance</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 11 3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>Task Management</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="5" r="2" />
+            <path d="M10 19h5a4 4 0 0 0 4-4V7a2 2 0 0 0-2-2H8" />
+          </svg>Collection Routes</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2 3 14h7l-1 8 10-12h-7z" />
+          </svg>AI Insights</a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+          </svg>Settings</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar">MS</div>
+          <div class="who">
+            <div class="n">Maria Santos</div>
+            <div class="r">Brgy. Officer</div>
+          </div>
+        </div>
+        <a class="logout" href="#">Log out</a>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h1>Barangay Performance</h1>
+          <p class="sub">City-wide waste report monitoring — 10 barangays, rolling 7-day window</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="pill">📅 Jun 1 – Jun 30, 2026</div>
+          <button class="btn">⭳ Export</button>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <div class="hero-row">
+          <div class="card gauge-card">
+            <svg width="108" height="108" viewBox="0 0 110 110">
+              <circle cx="55" cy="55" r="46" fill="none" stroke="#eaece7" stroke-width="10" />
+              <circle id="ringMain" cx="55" cy="55" r="46" fill="none" stroke="#2f7d52" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90 55 55)" />
+              <text x="55" y="51" text-anchor="middle" fill="#1c231d" font-family="Space Grotesk" font-size="20"
+                font-weight="700">78%</text>
+              <text x="55" y="68" text-anchor="middle" fill="#7a8479" font-family="IBM Plex Mono"
+                font-size="8">DIVERSION</text>
+            </svg>
+            <div class="g-label">City-wide segregation compliance</div>
+          </div>
+
+          <div class="card stat-card">
+            <div class="s-label">Reports Resolved (7d)</div>
+            <div class="s-value">1,284</div>
+            <div class="s-delta up">▲ 9.4% vs prior week</div>
+          </div>
+
+          <div class="card stat-card">
+            <div class="s-label">Avg. Response Time</div>
+            <div class="s-value">3h 42m</div>
+            <div class="s-delta up">▼ 21m faster</div>
+          </div>
+
+          <div class="card stat-card">
+            <div class="s-label">Barangays Flagged</div>
+            <div class="s-value">2 <span style="font-size:13px;color:var(--muted);font-weight:400;">of 10</span></div>
+            <div class="s-delta down">▲ 1 new anomaly today</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Ranked Board</h2>
+          <span class="tag">Ranked by resolution rate</span>
+        </div>
+
+        <div class="legend">
+          <span><i style="background:var(--biodeg)"></i>Biodegradable</span>
+          <span><i style="background:var(--recyc)"></i>Recyclable</span>
+          <span><i style="background:var(--residual)"></i>Residual</span>
+          <span><i style="background:var(--hazard)"></i>Hazardous</span>
+        </div>
+
+        <div class="board" id="board">
+          <div class="board-row head">
+            <div>#</div>
+            <div>Barangay</div>
+            <div class="col-hide">Resolved</div>
+            <div class="col-hide">Avg. Resp.</div>
+            <div>Rate</div>
+            <div class="col-hide">Segregation mix</div>
+            <div class="col-hide">7-day trend</div>
+            <div>Status</div>
+          </div>
+        </div>
+
+        <footer>
+          <span>E-Tapon Mo Admin Console — sample data for prototype review</span>
+          <span>Generated <span id="footDate"></span></span>
+        </footer>
+
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="barangay.js"></script>
+</body>
+
+</html>

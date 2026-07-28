@@ -1,249 +1,821 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Task Management — E-Tapon Mo</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="LGU Administrator Portal - Task Management" />
+  <title>Task Management - E-Tapon Mo</title>
 
-  :root{
-    --brand:#2f7d52; --brand-dark:#1f5c3a; --brand-tint:#eaf3ec;
-    --bg:#f7f8f6; --panel:#ffffff; --ink:#1c231d; --muted:#7a8479; --faint:#aeb6ab; --line:#eaece7;
-    --biodeg:#4c9a5d; --recyc:#4a90c4; --residual:#b3a98d; --hazard:#e0a63a; --critical:#e15252;
-  }
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
-  body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
-  .app{ display:flex; min-height:100vh; }
+  <!-- Tailwind Stylesheet -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-  /* ---------- Sidebar ---------- */
-  .sidebar{ width:225px; flex:none; background:var(--panel); border-right:1px solid var(--line);
-    display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0; height:100vh; }
-  .brand{ display:flex; align-items:center; gap:10px; padding:4px 8px 18px; border-bottom:1px solid var(--line); margin-bottom:14px; }
-  .brand .mark{ width:32px; height:32px; border-radius:9px; background:linear-gradient(155deg,var(--brand),var(--brand-dark));
-    display:flex; align-items:center; justify-content:center; flex:none; }
-  .brand .mark svg{ width:17px; height:17px; }
-  .brand .word{ line-height:1.2; }
-  .brand .word .name{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14.5px; }
-  .brand .word .sub{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); letter-spacing:.03em; }
-  nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
-  .nav-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px;
-    color:var(--muted); font-size:13px; font-weight:500; text-decoration:none; transition:all .15s ease; }
-  .nav-item svg{ width:16px; height:16px; flex:none; }
-  .nav-item:hover{ background:var(--brand-tint); color:var(--brand-dark); }
-  .nav-item.active{ background:var(--brand-tint); color:var(--brand-dark); font-weight:600; }
-  .sidebar-foot{ border-top:1px solid var(--line); padding-top:12px; margin-top:10px; }
-  .user-row{ display:flex; align-items:center; gap:10px; padding:6px 8px; }
-  .user-row .avatar{ width:32px; height:32px; border-radius:50%; background:var(--brand); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; font-family:'Space Grotesk',sans-serif; flex:none; }
-  .user-row .who{ line-height:1.25; }
-  .user-row .who .n{ font-size:12.5px; font-weight:600; }
-  .user-row .who .r{ font-size:10.5px; color:var(--muted); }
-  .logout{ display:block; margin:8px 8px 0; font-size:11.5px; color:var(--critical); text-decoration:none; font-weight:500; }
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  /* ---------- Main ---------- */
-  .main{ flex:1; min-width:0; }
-  .topbar{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
-    padding:20px 30px; background:var(--panel); border-bottom:1px solid var(--line); }
-  .topbar h1{ font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:700; margin:0 0 3px; }
-  .topbar .sub{ font-size:12.5px; color:var(--muted); margin:0; }
-  .btn{ font-size:12.5px; font-weight:600; color:#fff; background:var(--brand); border:none;
-    padding:8px 16px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; }
-  .btn:hover{ background:var(--brand-dark); }
-  .content{ padding:26px 30px 50px; }
-  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+    }
 
-  /* ---------- Tabs ---------- */
-  .tab-row{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
-  .tab-btn{ font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; color:var(--muted);
-    background:var(--panel); border:1px solid var(--line); padding:8px 15px; border-radius:8px; cursor:pointer; }
-  .tab-btn .cnt{ font-family:'IBM Plex Mono',monospace; font-weight:500; opacity:.7; margin-left:4px; }
-  .tab-btn:hover{ border-color:var(--brand); color:var(--brand-dark); }
-  .tab-btn.active{ background:var(--brand-tint); color:var(--brand-dark); border-color:var(--brand-tint); }
+    /* Sidebar Collapsible Behavior (Priority: Desktop/Computers) */
+    @media (min-width: 768px) {
+      #main-sidebar {
+        width: 5rem;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
 
-  /* ---------- Table ---------- */
-  .table-card{ overflow:hidden; margin-bottom:16px; }
-  table{ width:100%; border-collapse:collapse; }
-  thead th{ text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase;
-    color:var(--muted); font-weight:500; padding:13px 20px; border-bottom:1px solid var(--line); background:var(--bg); }
-  tbody td{ padding:13px 20px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
-  tbody tr:last-child td{ border-bottom:none; }
-  tbody tr:hover{ background:var(--brand-tint); }
+      #main-sidebar:hover {
+        width: 16rem;
+      }
 
-  .task-cell .h{ font-weight:600; margin:0 0 2px; }
-  .task-cell .d{ font-size:11.5px; color:var(--muted); }
+      #main-content-wrapper {
+        padding-left: 5rem;
+        transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
 
-  .assignee{ display:flex; align-items:center; gap:8px; }
-  .assignee .av{ width:26px; height:26px; border-radius:50%; background:var(--brand-tint); color:var(--brand-dark);
-    display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; font-family:'Space Grotesk',sans-serif; flex:none; }
+      #main-sidebar:hover+#main-content-wrapper {
+        padding-left: 16rem;
+      }
 
-  .badge{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.03em;
-    padding:4px 10px; border-radius:20px; display:inline-block; white-space:nowrap; }
-  .badge.high{ color:var(--critical); background:rgba(225,82,82,0.12); }
-  .badge.medium{ color:#9a7016; background:rgba(224,166,58,0.16); }
-  .badge.low{ color:var(--recyc); background:rgba(74,144,196,0.12); }
+      #main-sidebar:not(:hover) nav button,
+      #main-sidebar:not(:hover) nav a {
+        padding-left: 1.625rem;
+      }
 
-  .status-pill{ font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.03em;
-    padding:4px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
-  .status-pill i{ width:6px; height:6px; border-radius:50%; display:inline-block; }
-  .status-pill.pending{ color:var(--muted); background:var(--bg); }
-  .status-pill.pending i{ background:var(--faint); }
-  .status-pill.progress{ color:var(--recyc); background:rgba(74,144,196,0.12); }
-  .status-pill.progress i{ background:var(--recyc); }
-  .status-pill.completed{ color:var(--biodeg); background:rgba(76,154,93,0.12); }
-  .status-pill.completed i{ background:var(--biodeg); }
+      #main-sidebar:not(:hover) nav button svg,
+      #main-sidebar:not(:hover) nav a svg {
+        margin: 0;
+      }
 
-  .due{ font-family:'IBM Plex Mono',monospace; font-size:12px; }
-  .due.overdue{ color:var(--critical); font-weight:600; }
+      #main-sidebar:not(:hover) .p-4 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
 
-  /* ---------- Pagination ---------- */
-  .pager{ display:flex; align-items:center; justify-content:space-between; padding:8px 4px; flex-wrap:wrap; gap:10px; }
-  .pager .info{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted); }
-  .pager .pages{ display:flex; gap:6px; }
-  .pager .pages button{ width:28px; height:28px; border-radius:7px; border:1px solid var(--line); background:var(--panel);
-    color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11.5px; cursor:pointer; }
-  .pager .pages button.active{ background:var(--brand); color:#fff; border-color:var(--brand); }
+      #main-sidebar:not(:hover) .profile-container {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
 
-  footer{ margin-top:30px; padding-top:16px; border-top:1px solid var(--line);
-    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+      #main-sidebar:not(:hover) .logout-btn {
+        padding-left: 1.625rem;
+      }
 
-  @media (max-width:900px){
-    .sidebar{ display:none; }
-    thead th.hide-sm, tbody td.hide-sm{ display:none; }
-  }
-</style>
+      .sidebar-logo-container {
+        width: 3rem;
+        height: 3rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-logo-img {
+        width: 4rem;
+        height: 4rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #main-sidebar:hover .sidebar-logo-container {
+        width: 5rem;
+        height: 5rem;
+      }
+
+      #main-sidebar:hover .sidebar-logo-img {
+        width: 8rem;
+        height: 8rem;
+      }
+
+      .branding-container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #main-sidebar:hover .branding-container {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+      }
+
+      .sidebar-text {
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), margin 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+      }
+
+      #main-sidebar:hover .sidebar-text {
+        opacity: 1;
+        max-width: 12rem;
+        pointer-events: auto;
+        margin-left: 0.25rem;
+      }
+
+      #main-sidebar nav button,
+      #main-sidebar nav a {
+        position: relative;
+        overflow: hidden;
+        border-left-width: 0 !important;
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+          background-color 0.25s ease,
+          color 0.25s ease,
+          padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #main-sidebar nav button:hover:not(.bg-emerald-50),
+      #main-sidebar nav a:hover:not(.bg-emerald-50) {
+        transform: translateX(4px);
+        background-color: rgb(248 250 252 / 0.8);
+      }
+
+      #main-sidebar nav button.bg-emerald-50,
+      #main-sidebar nav a.bg-emerald-50 {
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.12), 0 2px 4px -1px rgba(16, 185, 129, 0.08);
+        animation: tabActivate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+
+      @keyframes tabActivate {
+        0% {
+          transform: scale(0.95) translateX(0);
+        }
+
+        50% {
+          transform: scale(1.02) translateX(6px);
+        }
+
+        100% {
+          transform: scale(1) translateX(4px);
+        }
+      }
+
+      #main-sidebar nav button::before,
+      #main-sidebar nav a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 20%;
+        height: 60%;
+        width: 4px;
+        border-radius: 0 4px 4px 0;
+        background-color: rgb(16 185 129);
+        transform: scaleY(0);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transform-origin: center;
+      }
+
+      #main-sidebar nav button.bg-emerald-50::before,
+      #main-sidebar nav a.bg-emerald-50::before {
+        transform: scaleY(1);
+      }
+
+      #main-sidebar nav button svg,
+      #main-sidebar nav a svg {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease;
+      }
+
+      #main-sidebar nav button:hover svg,
+      #main-sidebar nav a:hover svg {
+        transform: scale(1.1) rotate(2deg);
+      }
+
+      #main-sidebar nav button.bg-emerald-50 svg,
+      #main-sidebar nav a.bg-emerald-50 svg {
+        transform: scale(1.15);
+        color: rgb(4 120 87) !important;
+      }
+    }
+
+    @media (max-width: 767px) {
+      #main-sidebar {
+        width: 4rem;
+      }
+
+      #main-content-wrapper {
+        padding-left: 4rem;
+      }
+
+      .sidebar-text {
+        display: none !important;
+      }
+
+      .branding-container {
+        padding: 0.75rem 0.25rem;
+        justify-content: center;
+      }
+
+      .sidebar-logo-container {
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+
+      .sidebar-logo-img {
+        width: 3.5rem;
+        height: 3.5rem;
+      }
+
+      #main-sidebar nav button,
+      #main-sidebar nav a {
+        padding-left: 1.125rem;
+      }
+
+      #main-sidebar .p-4 {
+        padding: 0.75rem 0.25rem;
+      }
+
+      #main-sidebar .profile-container {
+        justify-content: center;
+        padding: 0;
+      }
+
+      #main-sidebar .logout-btn {
+        padding-left: 0.875rem;
+      }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 10px;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-table-row {
+      opacity: 0;
+      animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
 </head>
-<body>
-<div class="app">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></div>
-      <div class="word"><div class="name">E-Tapon Mo</div><div class="sub">LGU Admin Portal</div></div>
-    </div>
-    <nav>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>Reports</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 12 2a7 7 0 0 1 7 7.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>Map</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>Analytics</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Barangay Performance</a>
-      <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Task Management</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M10 19h5a4 4 0 0 0 4-4V7a2 2 0 0 0-2-2H8"/></svg>Collection Routes</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>AI Insights</a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
-    </nav>
-    <div class="sidebar-foot">
-      <div class="user-row">
-        <div class="avatar">MS</div>
-        <div class="who"><div class="n">Maria Santos</div><div class="r">Brgy. Officer</div></div>
+<body class="bg-[#f8fafc] text-slate-800 antialiased min-h-screen flex">
+
+  <!-- ==========================================
+       FIXED LEFT NAVIGATION SIDEBAR (Collapsible)
+       ========================================== -->
+  <aside id="main-sidebar"
+    class="fixed left-0 top-0 z-40 h-screen bg-white border-r border-gray-100 transition-all duration-300 flex flex-col shadow-sm">
+    <div class="branding-container py-4 border-b border-gray-100 flex items-center gap-3 bg-white flex-shrink-0">
+      <div class="sidebar-logo-container rounded-xl bg-green-0 flex items-center justify-center text-xl shrink-0">
+        <img src="../user-app/assets/ogLogo.svg" alt="E-Tapon Mo Logo" class="sidebar-logo-img object-contain" />
       </div>
-      <a class="logout" href="#">Log out</a>
+      <div class="flex flex-col min-w-0 sidebar-text">
+        <h1 class="text-sm font-black text-slate-800 tracking-tight leading-tight truncate">E-Tapon Mo</h1>
+        <span class="text-[11px] font-semibold text-slate-400 tracking-wide uppercase mt-0.5">LGU Admin Portal</span>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
+      <a id="nav-dashboard" href="lgu-dashboard.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+        </svg>
+        <span class="sidebar-text truncate">Dashboard</span>
+      </a>
+
+      <a id="nav-reports" href="lgu-dashboard.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span class="sidebar-text truncate">Reports</span>
+      </a>
+
+      <a id="nav-map" href="lgu-dashboard.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="sidebar-text truncate">Map</span>
+      </a>
+
+      <a id="nav-analytics" href="lgu-dashboard.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+        </svg>
+        <span class="sidebar-text truncate">Analytics</span>
+      </a>
+
+      <a id="nav-barangay" href="barangay.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+        <span class="sidebar-text truncate">Barangay Performance</span>
+      </a>
+
+      <a id="nav-tasks" href="task-management.html"
+        class="bg-emerald-50 w-full flex items-center gap-3 px-4 py-3 text-sm font-bold border-l-4 border-emerald-600 text-emerald-700 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+        <span class="sidebar-text truncate">Task Management</span>
+      </a>
+
+      <a id="nav-routes" href="routes.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+        <span class="sidebar-text truncate">Collection Routes</span>
+      </a>
+
+      <a id="nav-insights" href="ai-insights.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span class="sidebar-text truncate">AI Insights</span>
+      </a>
+
+      <a id="nav-settings" href="settings.html"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold border-l-4 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-r-xl transition-all duration-300">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="sidebar-text truncate">Settings</span>
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-slate-100 flex flex-col gap-3.5">
+      <div class="profile-container flex items-center gap-3 px-3 transition-all duration-300">
+        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop"
+          alt="Admin Profile"
+          class="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-emerald-500/20 shadow-sm" />
+        <div class="sidebar-text min-w-0 flex-1 transition-opacity duration-300">
+          <p class="text-xs font-bold text-slate-800 truncate leading-tight">Maria Santos</p>
+          <p class="text-[10px] text-slate-400 font-semibold truncate mt-0.5">Chief Env. Officer</p>
+        </div>
+      </div>
+      <button id="logout-btn"
+        class="logout-btn w-full flex items-center gap-3 px-3.5 py-3 text-xs font-bold rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-all duration-300 mt-1"
+        title="Log out">
+        <svg class="w-5 h-5 flex-shrink-0 text-rose-500" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        <span class="sidebar-text truncate">Log out</span>
+      </button>
     </div>
   </aside>
 
-  <!-- MAIN -->
-  <div class="main">
-    <div class="topbar">
+  <!-- ==========================================
+       MAIN CONTENT CONTAINER
+       ========================================== -->
+  <div id="main-content-wrapper" class="flex-1 flex flex-col min-h-screen transition-all duration-300">
+    <!-- Top Header -->
+    <header id="main-header"
+      class="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-30">
       <div>
-        <h1>Task Management</h1>
-        <p class="sub">Track tasks and assignments</p>
-      </div>
-      <button class="btn">+ New Task</button>
-    </div>
-
-    <div class="content">
-
-      <div class="tab-row" id="tabRow">
-        <button class="tab-btn active" data-filter="all">All Tasks <span class="cnt">(24)</span></button>
-        <button class="tab-btn" data-filter="mine">My Tasks <span class="cnt">(8)</span></button>
-        <button class="tab-btn" data-filter="overdue">Overdue <span class="cnt">(3)</span></button>
-        <button class="tab-btn" data-filter="completed">Completed <span class="cnt">(13)</span></button>
+        <h2 class="text-lg font-bold text-slate-900">Task Management</h2>
       </div>
 
-      <div class="card table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Task</th>
-              <th class="hide-sm">Assigned To</th>
-              <th class="hide-sm">Barangay</th>
-              <th>Priority</th>
-              <th class="hide-sm">Due Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="taskBody"></tbody>
-        </table>
-      </div>
-
-      <div class="pager">
-        <span class="info">Showing 1 to 8 of 24 tasks</span>
-        <div class="pages">
-          <button class="active">1</button>
-          <button>2</button>
-          <button>3</button>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+          <span class="text-xs font-semibold text-slate-700" id="header-date">Monday, June 29, 2026</span>
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
         </div>
+
+        <button class="relative p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-500">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <span class="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+        </button>
+
+        <div class="h-8 w-px bg-slate-200"></div>
+        <button onclick="alert('We\'re adding more barangays soon!')"
+          class="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer">
+          Quezon City (All)
+          <span
+            class="text-[9px] font-black uppercase text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">Beta</span>
+          <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
       </div>
+    </header>
 
-      <footer>
-        <span>E-Tapon Mo Admin Console — sample data for prototype review</span>
-        <span>Generated <span id="footDate"></span></span>
-      </footer>
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <section id="view-tasks-panel" class="space-y-6">
 
-    </div>
+        <!-- Title row + primary controls -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold text-slate-900">Task Management</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Manage tasks and assignments by barangay</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Barangay scope dropdown -->
+            <div class="relative">
+              <button type="button" id="scope-barangay-btn"
+                class="flex items-center gap-2 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg px-3 py-2 font-bold focus:outline-none transition-colors shadow-sm cursor-pointer">
+                <span>All Barangays</span>
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            <!-- Date range -->
+            <div class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span class="text-xs font-bold text-slate-700">Jun 20 &ndash; Jun 27, 2026</span>
+            </div>
+            <!-- New Task -->
+            <button id="new-task-btn"
+              class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>New Task</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Bento Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <!-- Total Tasks -->
+          <div
+            class="md:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Total Tasks
+              </p>
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p id="stat-total" class="text-4xl font-black text-slate-900 tracking-tight relative z-10">--</p>
+            <div class="mt-3 relative z-10">
+              <span
+                class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-md">All
+                Barangays</span>
+            </div>
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50/70 rounded-full blur-xl pointer-events-none">
+            </div>
+          </div>
+
+          <!-- Assigned -->
+          <div
+            class="md:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <p class="text-xs font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                Assigned
+              </p>
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-1.13-7.84" />
+              </svg>
+            </div>
+            <p id="stat-assigned" class="text-4xl font-black text-slate-900 tracking-tight relative z-10">--</p>
+            <div class="mt-3 relative z-10">
+              <span
+                class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-md">Tasks
+                in progress</span>
+            </div>
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-50/70 rounded-full blur-xl pointer-events-none">
+            </div>
+          </div>
+
+          <!-- Overdue -->
+          <div
+            class="md:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <p class="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                Overdue
+              </p>
+              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p id="stat-overdue" class="text-4xl font-black text-slate-900 tracking-tight relative z-10">--</p>
+            <div class="mt-3 relative z-10">
+              <span
+                class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md">Needs
+                attention</span>
+            </div>
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50/70 rounded-full blur-xl pointer-events-none">
+            </div>
+          </div>
+
+          <!-- Completed -->
+          <div
+            class="md:col-span-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <p class="text-xs font-bold text-teal-600 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                Completed
+              </p>
+              <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p id="stat-completed" class="text-4xl font-black text-slate-900 tracking-tight relative z-10">--</p>
+            <div class="mt-3 relative z-10">
+              <span
+                class="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-1 rounded-md">This
+                week</span>
+            </div>
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-teal-50/70 rounded-full blur-xl pointer-events-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Main grid: table (left) + sidebar widgets (right) -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+          <!-- LEFT: tabs, filters, table, pagination -->
+          <div class="xl:col-span-8 space-y-4 min-w-0">
+
+            <!-- Status Filter Tabs -->
+            <div class="border-b border-slate-200 flex flex-wrap gap-2 text-sm font-medium text-slate-500">
+              <button id="tab-all"
+                class="px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-task-tab transition-all">
+                All Tasks
+                <span id="tab-count-all" class="text-xs font-normal text-slate-400">(0)</span>
+              </button>
+              <button id="tab-mine"
+                class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+                My Tasks
+                <span id="tab-count-mine" class="text-xs font-normal text-slate-400">(0)</span>
+              </button>
+              <button id="tab-overdue"
+                class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+                Overdue
+                <span id="tab-count-overdue" class="text-xs font-normal text-slate-400">(0)</span>
+              </button>
+              <button id="tab-completed"
+                class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+                Completed
+                <span id="tab-count-completed" class="text-xs font-normal text-slate-400">(0)</span>
+              </button>
+            </div>
+
+            <!-- Filter Toolbar -->
+            <div
+              class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col lg:flex-row gap-3 items-center justify-between shadow-sm">
+              <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full lg:w-auto z-[600]">
+                <div class="relative w-full sm:w-56">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input id="task-search-input" type="text" placeholder="Search tasks..."
+                    class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm" />
+                </div>
+
+                <!-- Status Dropdown -->
+                <div class="relative w-full sm:w-auto">
+                  <button type="button" id="dd-status-btn"
+                    class="flex items-center justify-between w-full sm:w-36 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none transition-all shadow-sm">
+                    <span id="dd-status-text" class="truncate">All Status</span>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div id="dd-status-menu"
+                    class="absolute top-full left-0 mt-1 w-full sm:w-44 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1 z-[600]">
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="all">All Status</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Planning">Planning</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Assigned">Assigned</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Pending">Pending</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="In Progress">In Progress</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Completed">Completed</div>
+                  </div>
+                </div>
+
+                <!-- Priority Dropdown -->
+                <div class="relative w-full sm:w-auto">
+                  <button type="button" id="dd-priority-btn"
+                    class="flex items-center justify-between w-full sm:w-36 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none transition-all shadow-sm">
+                    <span id="dd-priority-text" class="truncate">All Priorities</span>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div id="dd-priority-menu"
+                    class="absolute top-full left-0 mt-1 w-full sm:w-36 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1 z-[600]">
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="all">All Priorities</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="High">High</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Medium">Medium</div>
+                    <div
+                      class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
+                      data-value="Low">Low</div>
+                  </div>
+                </div>
+
+                <!-- Assignee Dropdown -->
+                <div class="relative w-full sm:w-auto">
+                  <button type="button" id="dd-assignee-btn"
+                    class="flex items-center justify-between w-full sm:w-36 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none transition-all shadow-sm">
+                    <span id="dd-assignee-text" class="truncate">All Assignees</span>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div id="dd-assignee-menu"
+                    class="absolute top-full left-0 mt-1 w-full sm:w-44 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 z-[600] custom-scrollbar">
+                    <!-- injected via JS -->
+                  </div>
+                </div>
+
+                <!-- Barangay Dropdown -->
+                <div class="relative w-full sm:w-auto">
+                  <button type="button" id="dd-barangay-btn"
+                    class="flex items-center justify-between w-full sm:w-36 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none transition-all shadow-sm">
+                    <span id="dd-barangay-text" class="truncate">All Barangays</span>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div id="dd-barangay-menu"
+                    class="absolute top-full left-0 mt-1 w-full sm:w-44 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 z-[600] custom-scrollbar">
+                    <!-- injected via JS -->
+                  </div>
+                </div>
+
+                <!-- Reset Filters -->
+                <button id="reset-filters-btn"
+                  class="w-full sm:w-auto px-3.5 py-2 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 bg-white hover:bg-slate-50 shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <span>Filters</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Task Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr
+                      class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <th class="px-5 py-3.5">Task ID</th>
+                      <th class="px-5 py-3.5">Title</th>
+                      <th class="px-5 py-3.5">Barangay</th>
+                      <th class="px-5 py-3.5">Assigned To</th>
+                      <th class="px-5 py-3.5">Priority</th>
+                      <th class="px-5 py-3.5">Due Date</th>
+                      <th class="px-5 py-3.5">Status</th>
+                      <th class="px-5 py-3.5 text-right">&nbsp;</th>
+                    </tr>
+                  </thead>
+                  <tbody id="task-table-body" class="divide-y divide-slate-100 text-sm text-slate-700">
+                    <!-- injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-between items-center text-xs font-medium text-slate-500 px-1">
+              <span id="table-results-counter">Showing 0 tasks</span>
+              <div id="pagination-controls" class="flex items-center gap-1.5"></div>
+            </div>
+
+            <!-- Bottom info banner -->
+            <div
+              class="bg-gradient-to-r from-emerald-700 to-emerald-600 rounded-2xl px-6 py-5 flex items-center justify-between gap-4 shadow-sm overflow-hidden relative">
+              <div class="relative z-10 max-w-xl">
+                <p class="text-sm font-bold text-white">Tasks are assigned per barangay to ensure faster response and
+                  efficient service delivery.</p>
+                <p class="text-xs text-emerald-100 mt-1">Track, assign, and complete tasks to keep your community clean
+                  and healthy.</p>
+              </div>
+              <svg class="w-14 h-14 text-emerald-400/40 flex-shrink-0 relative z-10" fill="none" stroke="currentColor"
+                stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+              </svg>
+              <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-emerald-500/30 rounded-full blur-2xl"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT: sidebar widgets -->
+          <div class="xl:col-span-4 flex flex-col gap-6 min-w-0">
+
+            <!-- Service Queue by Barangay -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider">Service Queue by Barangay</h4>
+              </div>
+              <div id="service-queue-list" class="space-y-3.5">
+                <!-- injected via JS -->
+              </div>
+              <a href="#" onclick="document.getElementById('nav-barangay').click(); return false;"
+                class="mt-4 block text-center text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">View
+                all barangays &rarr;</a>
+            </div>
+
+            <!-- Task Overview donut -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider mb-4">Task Overview</h4>
+              <div class="flex items-center gap-6">
+                <div class="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
+                  <div id="task-donut-chart" class="w-full h-full rounded-full transition-all duration-300"></div>
+                  <div
+                    class="absolute w-[4.6rem] h-[4.6rem] bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
+                    <span id="task-donut-total" class="text-lg font-black text-slate-800 leading-none">--</span>
+                    <span class="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Total</span>
+                  </div>
+                </div>
+                <div id="task-donut-legend" class="flex-1 space-y-2 text-xs font-bold text-slate-700">
+                  <!-- injected via JS -->
+                </div>
+              </div>
+              <a href="#" onclick="document.getElementById('nav-analytics').click(); return false;"
+                class="mt-4 block text-center text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">View
+                detailed analytics &rarr;</a>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-8 text-center text-xs text-slate-400 font-medium">
+      &copy; 2026 E-Tapon Mo Portal. Government Admin Portal. All Rights Reserved.
+    </footer>
   </div>
-</div>
 
-<script>
-  document.getElementById('footDate').textContent = new Date().toLocaleString('en-PH');
-
-  const tasks = [
-    { title:'Reroute one collection unit to San Isidro', desc:'Reassign for two shifts to close resolution gap', assignee:'Maria Santos', brgy:'San Isidro', priority:'high', due:'Jun 28, 2026', overdue:false, status:'progress', mine:true },
-    { title:'Investigate reporting silence in Tagumpay', desc:'Check reporting channel in 2 affected sitios', assignee:'Jun Reyes', brgy:'Tagumpay', priority:'high', due:'Jun 25, 2026', overdue:true, status:'pending', mine:false },
-    { title:'Prepare Bagong Silang for collection surge', desc:'Backlog projected to exceed truck capacity', assignee:'Ana Cruz', brgy:'Bagong Silang', priority:'high', due:'Jun 30, 2026', overdue:false, status:'pending', mine:false },
-    { title:'Verify residual waste spike in Maligaya', desc:'Cross-check against population baseline', assignee:'Maria Santos', brgy:'Maligaya', priority:'medium', due:'Jun 27, 2026', overdue:false, status:'progress', mine:true },
-    { title:'Schedule storage cleaning before heavy rainfall', desc:'Preemptive cleanup ahead of forecasted rain', assignee:'Paolo Ilagan', brgy:'Riverside', priority:'medium', due:'Jul 2, 2026', overdue:false, status:'pending', mine:false },
-    { title:'Deploy additional truck in Sto. Niño & nearby areas', desc:'Cover midday collection gap', assignee:'Jun Reyes', brgy:'Sto. Niño', priority:'medium', due:'Jul 3, 2026', overdue:false, status:'pending', mine:false },
-    { title:'Increase monitoring during Friday afternoon hours', desc:'Peak reporting window city-wide', assignee:'Ana Cruz', brgy:'City-wide', priority:'low', due:'Jun 26, 2026', overdue:true, status:'progress', mine:false },
-    { title:'Publish weekly segregation compliance update', desc:'Share diversion rate trend with barangay captains', assignee:'Maria Santos', brgy:'City-wide', priority:'low', due:'Jun 22, 2026', overdue:false, status:'completed', mine:true },
-  ];
-
-  function initials(n){ return n.split(' ').map(w=>w[0]).slice(0,2).join(''); }
-  function statusLabel(s){ return s==='pending'?'Pending':s==='progress'?'In Progress':'Completed'; }
-
-  const tbody = document.getElementById('taskBody');
-  function render(filter){
-    tbody.innerHTML = '';
-    const list = tasks.filter(t=>{
-      if(filter==='all') return true;
-      if(filter==='mine') return t.mine;
-      if(filter==='overdue') return t.overdue;
-      if(filter==='completed') return t.status==='completed';
-      return true;
-    });
-    list.forEach(t=>{
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td class="task-cell"><p class="h">${t.title}</p><p class="d">${t.desc}</p></td>
-        <td class="hide-sm"><div class="assignee"><div class="av">${initials(t.assignee)}</div>${t.assignee}</div></td>
-        <td class="hide-sm">${t.brgy}</td>
-        <td><span class="badge ${t.priority}">${t.priority}</span></td>
-        <td class="hide-sm"><span class="due ${t.overdue?'overdue':''}">${t.due}</span></td>
-        <td><span class="status-pill ${t.status}"><i></i>${statusLabel(t.status)}</span></td>
-      `;
-      tbody.appendChild(row);
-    });
-  }
-  render('all');
-
-  document.getElementById('tabRow').addEventListener('click', e=>{
-    if(!e.target.closest('.tab-btn')) return;
-    const btn = e.target.closest('.tab-btn');
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    render(btn.dataset.filter);
-  });
-</script>
+  <!-- Task Management logic script -->
+  <script type="module" src="task-management.js"></script>
 </body>
+
 </html>
