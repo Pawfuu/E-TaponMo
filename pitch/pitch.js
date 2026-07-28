@@ -6,7 +6,7 @@ function formatTimeAgo(timestamp) {
     if (!timestamp) return "Just now";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     let interval = seconds / 31536000;
     if (interval > 1) return Math.floor(interval) + " years ago";
     interval = seconds / 2592000;
@@ -48,7 +48,7 @@ const totalReportsMetric = document.getElementById("network-total-reports");
 // Initialize listeners
 function initBlockchainData() {
     const reportsRef = collection(db, "reports");
-    
+
     onSnapshot(reportsRef, (snapshot) => {
         let allReports = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -74,9 +74,9 @@ function initBlockchainData() {
             recentReports.forEach(report => {
                 const tr = document.createElement("tr");
                 const details = getStatusDetails(report.status);
-                const bgColorClass = details.bg.replace('bg-', 'bg-') + '/10'; 
+                const bgColorClass = details.bg.replace('bg-', 'bg-') + '/10';
                 const borderColorClass = 'border-' + details.color.replace('text-', '') + '/20';
-                
+
                 tr.innerHTML = `
                     <td class="py-3.5 font-mono text-slate-500">${getTxHash(report.id)}...</td>
                     <td class="py-3.5">${details.label}</td>

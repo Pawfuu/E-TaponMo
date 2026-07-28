@@ -14,7 +14,6 @@
 
 import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
-import { logReportOnChain } from "./js/hedera-logger.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -699,16 +698,6 @@ if (submitBtn) {
         notes: reporter.notes,
         severityScore: result.severity_score != null ? result.severity_score : 3,
       };
-
-      // === INSERT WEB3 INTEGRATION HERE ===
-      // 1. Send metadata to Hedera Consensus Service
-      const onChainUrl = await logReportOnChain(reportData);
-
-      // 2. Attach the immutable HashScan proof URL if successful
-      if (onChainUrl) {
-        reportData.hashScanUrl = onChainUrl;
-      }
-
 
       const reportId = await submitTrashReport(reportData, selectedFile);
 

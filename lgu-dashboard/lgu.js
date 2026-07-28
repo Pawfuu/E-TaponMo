@@ -16,6 +16,7 @@ import {
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { subscribeDashboard } from "./dashboard-service.js";
+import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
 (function () {
   "use strict";
@@ -1605,10 +1606,45 @@ import { subscribeDashboard } from "./dashboard-service.js";
 
     try {
       modalBtnSave.disabled = true;
-      modalBtnSave.textContent = "Saving...";
+      modalBtnSave.textContent = "Logging to Blockchain..."; // UI feedback for network delay
+
+      // --- 1. EXTRACT COORDINATES SAFELY ---
+      let lat = null, lng = null;
+      if (selectedReport.coordinates) {
+        if (selectedReport.coordinates.lat != null) {
+          lat = selectedReport.coordinates.lat;
+          lng = selectedReport.coordinates.lng;
+        } else if (Array.isArray(selectedReport.coordinates)) {
+          lat = selectedReport.coordinates[0];
+          lng = selectedReport.coordinates[1];
+        }
+      }
+
+      // --- 2. BUILD BLOCKCHAIN PAYLOAD ---
+      const hederaPayload = {
+        aiSeverityScore: selectedReport.severity,
+        category: selectedReport.category,
+        lat: lat,
+        lng: lng,
+        statusUpdate: firestoreStatus // Log the new status state
+      };
+
+      // --- 3. SEND TO HEDERA ---
+      const hashScanUrl = await logReportOnChain(hederaPayload);
+
+      // If the blockchain accepts it, attach the new receipt URL to the database update
+      if (hashScanUrl) {
+        updatePayload.hashScanUrl = hashScanUrl;
+      }
+
+      modalBtnSave.textContent = "Saving to Database...";
+
+      // --- 4. UPDATE FIRESTORE ---
       await updateDoc(doc(db, "reports", selectedReport.docId), updatePayload);
       closeModal();
-      showToast("Report Updated", "Status changes saved successfully.");
+      // Use your existing toast system for feedback
+      showToast("Report Updated", "Status changes saved to Blockchain and Database.");
+
     } catch (error) {
       console.error("Failed to save report status change:", error);
       showToast("Save Failed", error.message || "Could not save status change.");

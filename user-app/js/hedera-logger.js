@@ -1,4 +1,4 @@
-// In a production app, these keys live on a secruer backenddd server.
+// In a production app, these keys live on a secure backend server.
 // For this frontend-only MVP prototype, we initialize them here.
 const LGU_OPERATOR_ID = "0.0.9399649";
 const LGU_PRIVATE_KEY = "302e020100300506032b657004220420b1f6201277c5fa12acb2b5247cbe027fa52e236fd66801bfbf9307fbfe9334a5";
@@ -21,9 +21,10 @@ export async function logReportOnChain(reportPayload) {
         client.setOperator(LGU_OPERATOR_ID, PrivateKey.fromString(LGU_PRIVATE_KEY));
 
         // 1. Create a lightweight stringified payload. 
-        // We do NOT put the heavy image on-chain, only the verifiable metadata.
+        // ADDED: The 'status' field so HashScan shows the exact state of the report
         const auditData = JSON.stringify({
             app: "E-Tapon-Mo",
+            status: reportPayload.statusUpdate || "pending", // <--- THE MISSING PIECE
             severity: reportPayload.aiSeverityScore,
             category: reportPayload.category,
             lat: reportPayload.lat,
