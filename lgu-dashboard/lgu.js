@@ -216,6 +216,14 @@ import { subscribeDashboard } from "./dashboard-service.js";
     refreshMapSizes(100);
     subscribeToReports();
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get("view");
+    if (viewParam && ["dashboard", "reports", "map", "analytics"].includes(viewParam)) {
+      switchView(viewParam);
+    } else {
+      switchView("dashboard");
+    }
+
     window.addEventListener("beforeunload", () => {
       if (unsubscribeReports) unsubscribeReports();
     });
@@ -1667,11 +1675,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
     if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", () => switchView("analytics"));
 
     const comingSoonButtons = [
-      navBarangayBtn,
-      document.getElementById("nav-tasks"),
       document.getElementById("nav-routes"),
-      document.getElementById("nav-insights"),
-      navSettingsBtn,
     ];
 
     comingSoonButtons.forEach((nav) => {
