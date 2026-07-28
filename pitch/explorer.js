@@ -104,6 +104,41 @@ function renderTable(data) {
 }
 
 // Initialize
+// Dynamic Trend Helper Function
+function updateTrendCard(type, currentCount, previousCount) {
+    let percent = 0;
+    let isUp = true;
+
+    if (previousCount === 0) {
+        percent = currentCount > 0 ? 100 : 0;
+        isUp = currentCount >= 0;
+    } else {
+        percent = Math.round(((currentCount - previousCount) / previousCount) * 100);
+        isUp = percent >= 0;
+    }
+
+    const pathEl = document.getElementById(`trend-path-${type}`);
+    const circleEl = document.getElementById(`trend-circle-${type}`);
+    const valEl = document.getElementById(`trend-val-${type}`);
+    const iconEl = document.getElementById(`trend-icon-${type}`);
+
+    if(!pathEl || !circleEl || !valEl || !iconEl) return;
+
+    valEl.textContent = `${Math.abs(percent)}%`;
+
+    if (isUp) {
+        // Upward swoop
+        pathEl.setAttribute("d", "M0,50 L0,40 Q30,45 60,25 T100,10 L100,50 Z");
+        circleEl.setAttribute("cy", "10");
+        iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />`;
+    } else {
+        // Downward swoop
+        pathEl.setAttribute("d", "M0,50 L0,15 Q30,10 60,30 T100,40 L100,50 Z");
+        circleEl.setAttribute("cy", "40");
+        iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />`;
+    }
+}
+
 function initExplorer() {
     const reportsRef = collection(db, "reports");
     
@@ -127,6 +162,37 @@ function initExplorer() {
         if (statTotal) statTotal.textContent = allReports.length.toLocaleString();
         if (statResolved) statResolved.textContent = resolvedCount.toLocaleString();
         if (statActive) statActive.textContent = activeCount.toLocaleString();
+
+        // Compute Dynamic Trends (Current 30 Days vs Prev 30 Days)
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+        const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
+
+        let curTotal = 0, prevTotal = 0;
+        let curRes = 0, prevRes = 0;
+        let curAct = 0, prevAct = 0;
+
+        allReports.forEach(r => {
+            const d = r.createdAt?.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
+            if (!d || isNaN(d)) return;
+            
+            const isRes = r.status === "resolved";
+            const isAct = r.status === "submitted" || r.status === "in_progress" || !r.status;
+
+            if (d >= thirtyDaysAgo) {
+                curTotal++;
+                if (isRes) curRes++;
+                if (isAct) curAct++;
+            } else if (d >= sixtyDaysAgo && d < thirtyDaysAgo) {
+                prevTotal++;
+                if (isRes) prevRes++;
+                if (isAct) prevAct++;
+            }
+        });
+
+        updateTrendCard('total', curTotal, prevTotal);
+        updateTrendCard('resolved', curRes, prevRes);
+        updateTrendCard('active', curAct, prevAct);
 
         // Initial Render
         filterAndRender();
