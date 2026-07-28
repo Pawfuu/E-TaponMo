@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 240" fill="none">
+  <!-- City Skyline Silhouettes -->
+  <path d="M0 240V160h15v-30h20v30h10v-50h25v50h15v-70h20v20h15v-40h20v90h15v-60h25v60h10v-35h15v35h20v-80h25v80h15v-45h20v45h15v-65h25v65h20v-30h15v30h15v-50h20v50h15v-25h15v25h35v80H0z" fill="#E2ECE6" opacity="0.6"/>
+  <path d="M0 240V180h25v-25h15v25h20v-40h18v40h12v-60h22v60h18v-30h15v30h20v-45h22v45h18v-70h25v70h20v-35h15v35h20v-55h22v55h18v-30h15v30h20v-40h25v40h15v-20h20v20h40v60H0z" fill="#CEE2D6" opacity="0.7"/>
+
+  <!-- Bushes / Foliage Background -->
+  <path d="M-20 240c10-25 35-35 60-30 15-20 45-25 70-10 20-15 50-15 70 5 15-20 45-25 70-10 20-15 50-10 65 10 15-15 40-15 55 5 15-10 35-5 50 10v20H-20z" fill="#B3D7C2"/>
+
+  <!-- Street Lamp -->
+  <g transform="translate(18, 140)">
+    <!-- Base & Pole -->
+    <path d="M10 90 L12 25 L8 25 L10 90 Z" fill="#2D3748"/>
+    <rect x="7" y="85" width="6" height="5" rx="1" fill="#1A202C"/>
+    <rect x="8" y="22" width="4" height="4" fill="#2D3748"/>
+    <!-- Lamp Head -->
+    <path d="M5 22 L15 22 L17 10 L3 10 Z" fill="#1A202C"/>
+    <path d="M3 10 L17 10 L10 2 Z" fill="#2D3748"/>
+    <!-- Glass & Glow -->
+    <polygon points="5,21 15,21 14,11 6,11" fill="#FEFCBF" opacity="0.9"/>
+    <circle cx="10" cy="16" r="12" fill="#FEFCBF" opacity="0.3"/>
+  </g>
+
+  <!-- Green Recycling Bin -->
+  <g transform="translate(55, 175)">
+    <!-- Bin Body -->
+    <path d="M4 12 L32 12 L29 60 L7 60 Z" fill="#208A56"/>
+    <!-- Lid -->
+    <rect x="2" y="6" width="32" height="7" rx="2" fill="#166E43"/>
+    <rect x="10" y="2" width="16" height="5" rx="1.5" fill="#166E43"/>
+    <!-- Wheels -->
+    <circle cx="8" cy="60" r="4" fill="#2D3748"/>
+    <circle cx="28" cy="60" r="4" fill="#2D3748"/>
+    <!-- Recycling Symbol -->
+    <g transform="translate(12, 24) scale(0.6)" fill="#FFFFFF">
+      <path d="M12 2L9 7h6l-3-5zm-8.5 12l2.5 4.3 3.5-6-6 1.7zm17 0l-6-1.7 3.5 6 2.5-4.3z"/>
+      <path d="M10 8.5l-3.5 6h2.5v5.5h6V14.5h2.5l-3.5-6z" opacity="0.9"/>
+    </g>
+  </g>
+
+  <!-- Park Bench -->
+  <g transform="translate(105, 190)">
+    <!-- Legs -->
+    <path d="M5 15 L5 40 M15 15 L12 40 M55 15 L55 40 M65 15 L62 40" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M2 28 L68 28" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+    <!-- Bench Slats (Wood) -->
+    <rect x="0" y="14" width="70" height="5" rx="1.5" fill="#8C5638"/>
+    <rect x="0" y="21" width="70" height="5" rx="1.5" fill="#8C5638"/>
+    <!-- Backrest -->
+    <rect x="2" y="-2" width="66" height="5" rx="1.5" fill="#A0633F"/>
+    <rect x="2" y="5" width="66" height="5" rx="1.5" fill="#A0633F"/>
+    <!-- Backrest Supports -->
+    <path d="M6 10 L6 -4 M64 10 L64 -4" stroke="#334155" stroke-width="3"/>
+  </g>
+
+  <!-- Foreground Grass/Bushes -->
+  <path d="M0 240c30-10 60-15 90-8 30 7 60 2 90-6 40-10 80-5 120 5 40 10 80 5 110-5 30-10 60-5 90 14v5H0z" fill="#208A56" opacity="0.85"/>
+  <path d="M0 240c40-6 80-10 120-2 40 8 80 2 120-4 40-6 80 0 120 8 40 8 80 2 140-2v2H0z" fill="#166E43"/>
+</svg>
