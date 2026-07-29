@@ -68,7 +68,12 @@ export class DashboardService {
         try {
             const reportsRef = collection(db, 'reports');
             this.unsubscriber = onSnapshot(reportsRef, (snapshot) => {
-                this.state.reports = snapshot.docs.map(docSnap => this.normalizeReport(docSnap));
+                
+                // FIXED: Map the documents, then STRICTLY filter out legacy data
+                this.state.reports = snapshot.docs
+                    .map(docSnap => this.normalizeReport(docSnap))
+                    .filter(report => report.reportedAt !== null); 
+
                 this.recalculateAndNotify();
             }, (err) => {
                 console.error("DashboardService - Reports Listener Error:", err);
@@ -91,14 +96,12 @@ export class DashboardService {
         this.isSubscribed = false;
     }
 
-    normalizeReport(docSnap) {
+   normalizeReport(docSnap) {
         const data = docSnap.data();
-        let safeLocation = "Unknown Location";
-        if (typeof data.location === "string") {
-            safeLocation = data.location;
-        } else if (typeof data.location === "object" && data.location !== null) {
-            safeLocation = data.location.display_name || data.location.address || data.location.name || "Map Pin Location";
-        }
+        
+        // Safely extract location and barangay from our Phase 1 updates
+        const safeLocation = data.location || "Unknown Location";
+        const barangay = data.barangay || "Unassigned";
 
         const rawStatus = String(data.status || "pending").trim().toLowerCase();
         let uiStatus = "Pending Verification";
@@ -106,26 +109,14 @@ export class DashboardService {
         else if (rawStatus === "in progress" || rawStatus === "in_progress") uiStatus = "In Progress";
         else if (rawStatus === "dismissed") uiStatus = "Dismissed";
 
-        const rawCategory = data.wasteType;
-        let category = "Uncategorized";
-        if (rawCategory) {
-            const cat = String(rawCategory).trim().toLowerCase();
-            const legacyMapping = {
-                "organic": "Recyclable",
-                "plastic": "Non-recyclable",
-                "construction": "Hazardous Waste",
-                "mixed": "Nabubulok"
-            };
-            category = legacyMapping[cat] || (rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1));
-        }
-
         return {
             docId: docSnap.id,
             reportId: docSnap.id,
             id: docSnap.id.slice(0, 8).toUpperCase(),
-            category: category,
-            wasteType: data.wasteType || category,
+            category: data.wasteType || "Uncategorized",
+            wasteType: data.wasteType || "Uncategorized",
             location: safeLocation,
+            barangay: barangay, // Phase 1 field
             coordinates: data.coordinates || null,
             submittedBy: data.reporterName || "Anonymous",
             contactInfo: data.contactInfo || "Not Provided",
@@ -133,9 +124,11 @@ export class DashboardService {
             rawStatus: rawStatus,
             aiVolume: data.volumeEstimate || "N/A",
             severity: data.severityScore != null ? Number(data.severityScore) : 0,
+            upvotes: data.upvotes || 1, // Phase 1 duplicate counter
             notes: data.notes || "",
             imageUrl: data.imageUrl || null,
-            createdAt: data.createdAt?.toDate?.() || null,
+            // FIXED: Map reportedAt from Phase 1 DB instead of createdAt
+            reportedAt: data.reportedAt?.toDate?.() || null, 
             hashScanUrl: data.hashScanUrl || null,
             dismissalReason: data.dismissalReason || "",
         };
@@ -152,10 +145,10 @@ export class DashboardService {
         const criticalReports = reports.filter(r => r.severity >= 4 && r.status !== "Resolved").length;
         const reportCompletionRate = totalReports > 0 ? Math.round((reportsResolved / totalReports) * 100) : 0;
 
-        // Sort reports by createdAt desc
+        // FIXED: Sort reports by reportedAt desc
         const sortedReports = [...reports].sort((a, b) => {
-            const ta = a.createdAt ? a.createdAt.getTime() : 0;
-            const tb = b.createdAt ? b.createdAt.getTime() : 0;
+            const ta = a.reportedAt ? a.reportedAt.getTime() : 0;
+            const tb = b.reportedAt ? b.reportedAt.getTime() : 0;
             return tb - ta;
         });
 
@@ -166,10 +159,10 @@ export class DashboardService {
             wasteStats[cat] = (wasteStats[cat] || 0) + 1;
         });
 
-        // Dynamic Barangay Summary based strictly on Reports Data
+        // Dynamic Barangay Summary using the dedicated barangay field
         const barangayMap = {};
         reports.forEach(r => {
-            const loc = r.location || "Unknown Location";
+            const loc = r.barangay; 
             if (!barangayMap[loc]) {
                 barangayMap[loc] = { total: 0, resolved: 0 };
             }
@@ -199,7 +192,7 @@ export class DashboardService {
             title: `Report #${r.id} (${r.category})`,
             subtitle: r.location,
             status: r.status,
-            timestamp: r.createdAt
+            timestamp: r.reportedAt
         }));
 
         this.state.metrics = {

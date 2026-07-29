@@ -102,38 +102,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     }, 3000);
   }
 
-  function mapDocToReport(docSnap) {
-    const data = docSnap.data();
-
-    // Safely parse the location whether it's a string or an object
-    let safeLocation = "Unknown Location";
-    if (typeof data.location === "string") {
-      safeLocation = data.location;
-    } else if (typeof data.location === "object" && data.location !== null) {
-      // Extract the human-readable address from the object
-      safeLocation = data.location.display_name || data.location.address || data.location.name || "Map Pin Location";
-    }
-
-    return {
-      docId: docSnap.id,
-      reportId: docSnap.id,
-      id: docSnap.id.slice(0, 8).toUpperCase(),
-      category: normalizeCategory(data.wasteType),
-      location: safeLocation,
-      coordinates: data.coordinates || null,
-      submittedBy: data.reporterName || "Anonymous",
-      contactInfo: data.contactInfo || "Not Provided",
-      status: normalizeStatus(data.status),
-      aiVolume: data.volumeEstimate || "N/A",
-      severity: data.severityScore != null ? Number(data.severityScore) : 0,
-      notes: data.notes || "",
-      imageUrl: data.imageUrl || null,
-      createdAt: data.createdAt?.toDate?.() || null,
-      hashScanUrl: data.hashScanUrl || null,
-      dismissalReason: data.dismissalReason || "",
-    };
-  }
-
   // ==========================================
   // 3. GLOBAL STATE & DOM ELEMENTS
   // ==========================================
@@ -273,6 +241,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (typeof updateAnalyticsMetrics === "function") updateAnalyticsMetrics();
         if (typeof renderBlockchainActivity === "function") renderBlockchainActivity(reports);
 
+        // ADD THIS: Auto-center the map on the first successful data load
+        if (!window.hasAutoCentered && window.recenterMap) {
+          setTimeout(() => { 
+            window.recenterMap(); 
+            window.hasAutoCentered = true; 
+          }, 600); // Slight delay ensures Leaflet has finished painting
+        }
+
         if (selectedReport) {
           const fresh = reports.find((r) => r.docId === selectedReport.docId);
           if (fresh) {
@@ -286,6 +262,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (statActiveEl) statActiveEl.textContent = "!";
         showToast("Sync Error", "Could not sync data from Firestore. Retrying...");
       }
+      
     );
   }
 
@@ -296,8 +273,15 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   }
 
   function updateCategoryDropdown(reportsList) {
-    const categories = Array.from(new Set(reportsList.map(r => r.category).filter(Boolean)));
-    categories.sort();
+    // Hardcode the complete list of categories from the web app
+    const categories = [
+      "Nabubulok",
+      "Recyclable",
+      "Non-recyclable",
+      "Hazardous Waste",
+      "Healthcare Waste",
+      "Mixed Waste"
+    ];
 
     // 1. Reports View Custom Dropdown
     const reportsCatMenu = document.getElementById("reports-dropdown-category-menu");
@@ -309,7 +293,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
         optionDiv.dataset.value = cat;
-        optionDiv.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        optionDiv.textContent = cat;
         reportsCatMenu.appendChild(optionDiv);
       });
 
@@ -336,7 +320,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
         optionDiv.dataset.value = cat;
-        optionDiv.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        optionDiv.textContent = cat;
         mapCatMenu.appendChild(optionDiv);
       });
 
@@ -542,10 +526,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // Calculate how many active reports were submitted TODAY
     const today = new Date();
     const newTodayCount = activeAlerts.filter(r => {
-      if (!r.createdAt) return false;
-      return r.createdAt.getDate() === today.getDate() &&
-        r.createdAt.getMonth() === today.getMonth() &&
-        r.createdAt.getFullYear() === today.getFullYear();
+    if (!r.reportedAt) return false; // Changed from createdAt
+    return r.reportedAt.getDate() === today.getDate() &&
+        r.reportedAt.getMonth() === today.getMonth() &&
+        r.reportedAt.getFullYear() === today.getFullYear();
     }).length;
 
     const activeValEl = document.getElementById("map-active-alerts-val");
@@ -624,7 +608,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     let prevStart = new Date();
     let prevEnd = new Date();
 
-    // Dynamically update the first option label with the actual date range of the last 7 days
     const firstOption = dateFilterEl ? dateFilterEl.querySelector('option[value="7days"]') : null;
     if (firstOption) {
       const start = new Date();
@@ -644,8 +627,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       prevEnd.setDate(now.getDate() - 7);
       prevEnd.setHours(0, 0, 0, 0);
 
-      filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
+      // FIXED: Swapped all r.createdAt to r.reportedAt
+      filtered = reports.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
       subtextLabel = "from last week";
     } else if (dateVal === "30days") {
       currentStart.setDate(now.getDate() - 30);
@@ -655,11 +639,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
 
-      filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
+      filtered = reports.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
       subtextLabel = "from last month";
     } else {
-      // "all" time
       filtered = [...reports];
       currentStart.setDate(now.getDate() - 30);
       currentStart.setHours(0, 0, 0, 0);
@@ -668,7 +651,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
 
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
+      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
       subtextLabel = "from last month";
     }
 
@@ -684,12 +667,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("analytics-stat-resolved")) document.getElementById("analytics-stat-resolved").textContent = String(resolvedCount);
     if (document.getElementById("analytics-stat-pending")) document.getElementById("analytics-stat-pending").textContent = String(pendingCount);
 
-    // Update trend percentages
-    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); // reports up = neutral/red
-    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); // resolved up = good
-    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); // pending up = bad
+    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); 
+    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); 
+    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); 
 
-    // Update subtext labels
     const subtextTotalEl = document.getElementById("analytics-subtext-total");
     const subtextResolvedEl = document.getElementById("analytics-subtext-resolved");
     const subtextPendingEl = document.getElementById("analytics-subtext-pending");
@@ -700,9 +681,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (subtextPendingEl) subtextPendingEl.textContent = subtextLabel;
     if (subtextTimeEl) subtextTimeEl.textContent = subtextLabel;
 
-    // Average Response Time calculation responsive to data counts
-    let avgTimeCurrent = 18; // default hours
-    let avgTimePrev = 20; // default hours
+    let avgTimeCurrent = 18; 
+    let avgTimePrev = 20; 
     if (totalCount > 0) {
       avgTimeCurrent = Math.max(4, Math.round(10 + (pendingCount * 0.8)));
     }
@@ -714,7 +694,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
     }
 
-    // Update response time trend
     const timeDiff = avgTimeCurrent - avgTimePrev;
     const trendTimeEl = document.getElementById("analytics-trend-time");
     if (trendTimeEl) {
@@ -733,8 +712,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     drawReportsOverTimeChart(filtered, dateVal);
     drawCategoryDonutChart(filtered);
-
-    // Apply micro-animation refresh indicator
     animateAnalyticsRefresh();
   }
 
@@ -760,7 +737,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
   }
 
-  function drawReportsOverTimeChart(filtered, dateVal) {
+function drawReportsOverTimeChart(filtered, dateVal) {
     const container = document.getElementById("analytics-line-chart-container");
     if (!container) return;
     container.innerHTML = "";
@@ -780,8 +757,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const resolvedCounts = Array(daysCount).fill(0);
 
     filtered.forEach(r => {
-      if (!r.createdAt) return;
-      const reportDate = new Date(r.createdAt);
+      // FIXED: Using reportedAt instead of createdAt
+      if (!r.reportedAt) return;
+      const reportDate = new Date(r.reportedAt);
       reportDate.setHours(0, 0, 0, 0);
 
       const index = days.findIndex(d => d.getTime() === reportDate.getTime());
@@ -1073,15 +1051,16 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     }
   }
 
-  function updateRecentCriticalAlerts() {
+ function updateRecentCriticalAlerts() {
     const container = document.getElementById("recent-critical-alerts-container");
     if (!container) return;
 
     const criticalReports = reports
       .filter(r => r.severity >= 4 && r.status !== "Resolved")
       .sort((a, b) => {
-        if (a.createdAt && b.createdAt) {
-          return b.createdAt.getTime() - a.createdAt.getTime();
+        // FIXED: Using reportedAt instead of createdAt
+        if (a.reportedAt && b.reportedAt) {
+          return b.reportedAt.getTime() - a.reportedAt.getTime();
         }
         return b.docId.localeCompare(a.docId);
       });
@@ -1102,8 +1081,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         openDetailModal(report.docId);
       });
 
-      const timeStr = report.createdAt ? report.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
-      const dateStr = report.createdAt ? report.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+      // FIXED: Using reportedAt instead of createdAt
+      const timeStr = report.reportedAt ? report.reportedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
+      const dateStr = report.reportedAt ? report.reportedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
       card.innerHTML = `
         <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0">
@@ -1178,6 +1158,25 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
 
     updateHeatmap();
+
+    // Add this right below renderMapMarkers()
+  window.recenterMap = function() {
+    const mapReports = getFilteredReportsForMap();
+    if (mapReports.length === 0) return;
+
+    // Calculate a boundary box that includes all active report coordinates
+    const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
+    
+    if (bounds.isValid()) {
+      // Smoothly fly the map to fit all pins with a nice 50px padding
+      if (window.mapInstance) {
+        window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      }
+      if (window.dashboardMapInstance) {
+        window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+      }
+    }
+  };
   }
 
   // ==========================================
@@ -1329,11 +1328,11 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       );
     }
 
-    // Sort processing based on "Reported At" (createdAt timestamp)
+    // Sort processing based on "Reported At" (reportedAt timestamp)
     filteredList.sort((a, b) => {
       // Fallback to 0 if time is missing, though Firebase provides the timestamp
-      const timeA = a.createdAt ? a.createdAt.getTime() : 0;
-      const timeB = b.createdAt ? b.createdAt.getTime() : 0;
+      const timeA = a.reportedAt ? a.reportedAt.getTime() : 0; // Changed from createdAt
+      const timeB = b.reportedAt ? b.reportedAt.getTime() : 0; // Changed from createdAt
 
       if (currentSortOrder === "date-desc") {
         // Newest submitted forms first
@@ -1414,7 +1413,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
             ${priorityText}
           </span>
         </td>
-        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">${formatReportedAt(report.createdAt)}</td>
+        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
         <td class="px-6 py-4 text-right">
           <button data-doc-id="${report.docId}" class="action-view-btn text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors px-3 py-1.5 rounded bg-emerald-50 hover:bg-emerald-100 inline-flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -1508,8 +1507,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // TIMELINE RENDERING (Top 3 recent)
     const timelineReports = blockchainReports.slice(0, 3);
     timelineReports.forEach((r, index) => {
-      const timeStr = r.createdAt ? r.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
-      const dateStr = r.createdAt ? r.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+      const timeStr = r.reportedAt ? r.reportedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
+      const dateStr = r.reportedAt ? r.reportedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
       const isFirst = index === 0;
       const statusLabel = r.status === "Pending Verification" ? "Report Submitted" : r.status;
 
@@ -1533,8 +1532,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const tableReports = blockchainReports.slice(0, 5);
     tableReports.forEach(r => {
       let timeAgo = "Just now";
-      if (r.createdAt) {
-        const diffMs = Date.now() - r.createdAt.getTime();
+      if (r.reportedAt) {
+        const diffMs = Date.now() - r.reportedAt.getTime();
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
