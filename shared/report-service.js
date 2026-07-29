@@ -1,70 +1,64 @@
-import { db, storage } from "./firebase-config.js";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-// ADD THIS IMPORT SO THE SCRIPT KNOWS HOW TO LOG TO THE BLOCKCHAIN
+import { storage } from "./firebase-config.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { logReportOnChain } from "../user-app/js/hedera-logger.js";
+import { checkForDuplicates, createReport } from "../src/utils/db.js";
+import { reverseGeocodeQC } from "../src/utils/geocoding.js";
 
-// MISSING HELPER FUNCTION RESTORED
 function uniqueReportFilename(imageFile) {
-  const ext = imageFile.name?.includes(".")
-    ? imageFile.name.split(".").pop()
-    : "jpg";
+  const ext = imageFile.name?.includes(".") ? imageFile.name.split(".").pop() : "jpg";
   const randomSuffix = Math.random().toString(36).slice(2, 8);
   return `${Date.now()}-${randomSuffix}.${ext}`;
 }
 
-/**
- * Uploads a trash report image and persists metadata to Firestore and Hedera.
- *
- * @param {object} reportData - { wasteType, volumeEstimate, location, coordinates, contactInfo, reporterName, notes, severityScore }
- * @param {File} imageFile - Raw image file from a file input
- * @returns {Promise<string>} Firestore document ID
- */
 export async function submitTrashReport(reportData, imageFile) {
+  const lat = reportData.coordinates?.lat;
+  const lng = reportData.coordinates?.lng;
 
+  if (!lat || !lng) throw new Error("Coordinates are required.");
+
+  // 1. Get Barangay and City via Reverse Geocoding
+  const geoData = await reverseGeocodeQC(lat, lng);
+  reportData.barangay = geoData.barangay;
+  reportData.city = geoData.city;
+
+  // 2. Check for Duplicates BEFORE uploading anything
+  // If the user actively chose to bypass, skip duplicate checking.
+  if (!reportData.bypassDuplicateCheck) {
+    const duplicate = await checkForDuplicates(lat, lng, 30);
+
+    if (duplicate) {
+      return {
+        status: 'duplicate_found',
+        existingReport: duplicate
+      };
+    }
+  }
+
+  // 3. If no duplicate or check bypassed, proceed to upload Image to Storage
   const filename = uniqueReportFilename(imageFile);
   const storageRef = ref(storage, `reports/${filename}`);
-
-  // 1. Upload Image to Storage
   await uploadBytes(storageRef, imageFile);
   const imageUrl = await getDownloadURL(storageRef);
+  reportData.imageUrl = imageUrl;
 
-  // 2. Package metadata for the Blockchain
+  // 4. Package metadata for Hedera and log it
+  const severityScore = reportData.severityScore != null ? Number(reportData.severityScore) : 3;
   const hederaPayload = {
-    aiSeverityScore: reportData.severityScore != null ? Number(reportData.severityScore) : 3,
+    aiSeverityScore: severityScore,
     category: reportData.wasteType,
-    lat: reportData.coordinates?.lat || null,
-    lng: reportData.coordinates?.lng || null,
-    statusUpdate: "pending" // Initial status for new reports
+    lat: lat,
+    lng: lng,
+    statusUpdate: "pending"
   };
-
-  // 3. Log to Hedera and get the HashScan URL
   const hashScanUrl = await logReportOnChain(hederaPayload);
+  reportData.hashScanUrl = hashScanUrl;
+  reportData.severityScore = severityScore;
 
-  // 4. Save everything to Firestore
-  const docRef = await addDoc(collection(db, "reports"), {
-    imageUrl: imageUrl,
-    wasteType: reportData.wasteType,
-    volumeEstimate: reportData.volumeEstimate,
-    location: reportData.location,
-    coordinates: reportData.coordinates || null,
-    status: "pending", // Always default to pending
-    contactInfo: reportData.contactInfo || "Not Provided",
-    reporterName: reportData.reporterName,
-    notes: reportData.notes || "",
-    severityScore: reportData.severityScore != null ? Number(reportData.severityScore) : 3,
-    createdAt: serverTimestamp(),
-    hashScanUrl: hashScanUrl || null // Attach the blockchain receipt here!
-  });
+  // 5. Save everything to Firestore using our updated Geohash schema
+  const docId = await createReport(reportData);
 
-  return docRef.id;
+  return {
+    status: 'success',
+    reportId: docId
+  };
 }

@@ -14,6 +14,7 @@
 
 import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
+import { upvoteReport } from "../src/utils/db.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -441,17 +442,28 @@ function extractJsonFromGeminiResponse(data) {
     throw new Error("Gemini returned an empty or unexpected response.");
   }
 
-  // FIX: Strip markdown formatting (```json and ```) before parsing
-  text = text
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-
   try {
-    return JSON.parse(text);
-  } catch (parseError) {
-    console.error("Raw Gemini output that failed to parse:", text);
-    throw new Error("Could not parse Gemini JSON response.");
+    // Attempt 1: Direct parse in case it's perfectly formatted raw JSON
+    return JSON.parse(text.trim());
+  } catch (parseError1) {
+    try {
+      // Attempt 2: Strip standard markdown code blocks and parse
+      let cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+      return JSON.parse(cleanText);
+    } catch (parseError2) {
+      try {
+        // Attempt 3: Aggressive Regex to extract ONLY the JSON object string
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error("No JSON structure found.");
+      } catch (parseError3) {
+        // If all fallbacks fail, log the raw text and throw the final error
+        console.error("Raw Gemini output that failed to parse:", text);
+        throw new Error("Could not parse Gemini JSON response.");
+      }
+    }
   }
 }
 
@@ -699,7 +711,137 @@ if (submitBtn) {
         severityScore: result.severity_score != null ? result.severity_score : 3,
       };
 
-      const reportId = await submitTrashReport(reportData, selectedFile);
+      // --- NEW DEDUPLICATION HANDLING ---
+      const response = await submitTrashReport(reportData, selectedFile);
+
+      if (response.status === 'duplicate_found') {
+        // Stop the loading spinner
+        setSubmitLoading(false);
+        isSubmitting = false;
+
+        // Grab the modal elements from your HTML
+        const dupModal = document.getElementById('duplicate-modal');
+        const dupImg = document.getElementById('duplicate-modal-image');
+        const dupTime = document.getElementById('duplicate-modal-time');
+        const dupDist = document.getElementById('duplicate-modal-distance');
+        const dupReporter = document.getElementById('duplicate-modal-reporter'); // NEW
+        const closeIcon = document.getElementById('close-duplicate-modal');
+        const upvoteBtn = document.getElementById('confirm-upvote-btn');
+        const cancelBtn = document.getElementById('cancel-upvote-btn');
+
+        // Zoom elements
+        const zoomSlider = document.getElementById('duplicate-zoom-slider');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const fitBtn = document.getElementById('fit-image-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-image-btn');
+
+        // Initialize Zoom Slider Interactions
+        if (zoomSlider && dupImg) {
+          zoomSlider.value = 1;
+          dupImg.style.transform = 'scale(1)';
+
+          zoomSlider.oninput = (e) => {
+            dupImg.style.transform = `scale(${e.target.value})`;
+          };
+          if (zoomInBtn) zoomInBtn.onclick = () => {
+            zoomSlider.value = Math.min(3, Number(zoomSlider.value) + 0.2);
+            dupImg.style.transform = `scale(${zoomSlider.value})`;
+          };
+          if (zoomOutBtn) zoomOutBtn.onclick = () => {
+            zoomSlider.value = Math.max(1, Number(zoomSlider.value) - 0.2);
+            dupImg.style.transform = `scale(${zoomSlider.value})`;
+          };
+          if (fitBtn) fitBtn.onclick = () => {
+            zoomSlider.value = 1;
+            dupImg.style.transform = 'scale(1)';
+          };
+          if (fullscreenBtn) fullscreenBtn.onclick = () => {
+            if (dupImg.requestFullscreen) dupImg.requestFullscreen();
+          };
+        }
+
+        // Populate the modal with the existing report's data
+        if (dupImg) dupImg.src = response.existingReport.imageUrl;
+        if (dupTime) {
+          // Parse to match new UI layout: "July 20, 2024 • 09:15 AM"
+          const dateObj = response.existingReport.reportedAt?.toDate
+            ? response.existingReport.reportedAt.toDate()
+            : new Date();
+
+          const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+          dupTime.innerText = `${formattedDate} • ${formattedTime}`;
+        }
+
+        // Populate the Reporter Name
+        if (dupReporter) {
+          dupReporter.innerText = response.existingReport.reporterName || 'Community Member';
+        }
+
+        // Show the modal
+        if (dupModal) dupModal.classList.remove('hidden');
+
+        // Handle Close 'X' Icon
+        if (closeIcon) {
+          closeIcon.onclick = () => {
+            dupModal.classList.add('hidden');
+          };
+        }
+
+        // Handle Upvote Confirmation
+        if (upvoteBtn) {
+          upvoteBtn.onclick = async () => {
+            upvoteBtn.innerText = "Verifying...";
+            await upvoteReport(response.existingReport.id);
+
+            alert("Thank you! We've added your verification to the existing report.");
+            dupModal.classList.add('hidden');
+            document.getElementById("close-success-modal")?.click();
+
+            // Reset button HTML state
+            upvoteBtn.innerHTML = `<svg class="w-5 h-5 bg-white text-[#2E9946] rounded-full p-0.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> Yes, this is the same`;
+          };
+        }
+
+        // Handle Cancel / Bypass (Submit a new report anyway)
+        if (cancelBtn) {
+          cancelBtn.onclick = async () => {
+            dupModal.classList.add('hidden');
+
+            // Reactivate loading state and force unique submission
+            setSubmitLoading(true);
+            isSubmitting = true;
+            setSummary("Bypassing check... Creating unique report.");
+
+            try {
+              // Internal bypass flag to instruct backend to skip duplicate check
+              reportData.bypassDuplicateCheck = true;
+              const forceResponse = await submitTrashReport(reportData, selectedFile);
+
+              const reportId = forceResponse.reportId;
+              isReportComplete = true;
+
+              console.log("Basura-Pin report submitted (Bypassed Duplicate Check):", { reportId });
+              handleValidationResult(result, reporter, reportId, reportForm.contactInfo);
+            } catch (error) {
+              console.error("Forced submission error:", error);
+              setSummary("Something went wrong while processing your report.\n\n" + getErrorMessage(error));
+              if (typeof window.showErrorModal === "function") window.showErrorModal();
+            } finally {
+              isSubmitting = false;
+              setSubmitLoading(false);
+              updateStepper();
+            }
+          };
+        }
+
+        return;
+      }
+
+      // If it wasn't a duplicate, extract the ID and proceed normally
+      const reportId = response.reportId;
 
       isReportComplete = true;
 
@@ -716,7 +858,7 @@ if (submitBtn) {
         reportForm.contactInfo,
       );
     } catch (error) {
-      console.error("Basura-Pin submission error:", error);
+      console.error("E-Tapon Mo submission error:", error);
       setSummary(
         "Something went wrong while processing your report.\n\n" +
         getErrorMessage(error),
