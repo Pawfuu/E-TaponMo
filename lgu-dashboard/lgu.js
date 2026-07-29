@@ -241,6 +241,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (typeof updateAnalyticsMetrics === "function") updateAnalyticsMetrics();
         if (typeof renderBlockchainActivity === "function") renderBlockchainActivity(reports);
 
+        renderBarangayPerformance();
+
         // ADD THIS: Auto-center the map on the first successful data load
         if (!window.hasAutoCentered && window.recenterMap) {
           setTimeout(() => { 
@@ -713,6 +715,98 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     drawReportsOverTimeChart(filtered, dateVal);
     drawCategoryDonutChart(filtered);
     animateAnalyticsRefresh();
+
+    function renderBarangayPerformance() {
+    if (!dashboardMetrics) return;
+
+    const panel = document.getElementById("view-barangay-performance-panel");
+    if (!panel) return;
+
+    // 1. Update Top KPI Cards
+    const gaugeText = panel.querySelector("svg text:nth-of-type(1)");
+    if (gaugeText) gaugeText.textContent = `${dashboardMetrics.cityDiversionRate || 0}%`;
+
+    const statCards = panel.querySelectorAll(".grid > div.bg-white");
+    if (statCards.length >= 4) {
+      // Resolved (7d)
+      statCards[1].querySelector(".text-3xl").textContent = dashboardMetrics.resolved7d.toLocaleString();
+      
+      // Avg Response Time (Simulated load-based for MVP)
+      const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
+      statCards[2].querySelector(".text-3xl").textContent = `${mockHours}h 15m`;
+
+      // Flagged Barangays
+      statCards[3].querySelector(".text-3xl").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
+    }
+
+    // 2. Render the Ranked Board
+    const board = document.getElementById("board");
+    if (!board) return;
+
+    // Keep the static header row
+    const headHtml = `
+      <div class="board-row head">
+        <div>#</div>
+        <div>Barangay</div>
+        <div class="col-hide">Resolved</div>
+        <div class="col-hide">Avg. Resp.</div>
+        <div>Rate</div>
+        <div class="col-hide">Segregation mix</div>
+        <div class="col-hide">7-day trend</div>
+        <div>Status</div>
+      </div>
+    `;
+
+    let html = headHtml;
+
+    dashboardMetrics.barangaySummary.forEach((b, index) => {
+      const rank = index + 1;
+      
+      // Calculate CSS widths for the Segregation Bar Chart
+      const totalSeg = b.segregation.bio + b.segregation.rec + b.segregation.res + b.segregation.haz || 1;
+      const pBio = (b.segregation.bio / totalSeg) * 100;
+      const pRec = (b.segregation.rec / totalSeg) * 100;
+      const pRes = (b.segregation.res / totalSeg) * 100;
+      const pHaz = (b.segregation.haz / totalSeg) * 100;
+
+      const stampClass = b.status === "ok" ? "ok" : b.status === "critical" ? "critical" : "watch";
+      const stampText = b.status === "ok" ? "IMPROVING" : b.status === "critical" ? "NEEDS ACTION" : "STABLE";
+      const beaconClass = b.status === "ok" ? "ok" : b.status === "critical" ? "critical" : "watch";
+      const uiStatus = b.status === "ok" ? "Good" : b.status === "watch" ? "Monitor" : "Critical";
+
+      html += `
+        <div class="board-row">
+          <div class="rank">${rank}</div>
+          <div class="brgy-name">
+            <div class="beacon ${beaconClass}"></div>
+            <div>
+              <div class="name">${b.name}</div>
+              <div class="zone">District TBD</div>
+            </div>
+          </div>
+          <div class="num col-hide">${b.resolved} / ${b.total}</div>
+          <div class="num col-hide">--</div>
+          <div class="rate">${b.rate}%</div>
+          <div class="col-hide">
+            <div class="seg-bar">
+              <div style="width:${pBio}%; background: #10b981;"></div>
+              <div style="width:${pRec}%; background: #3b82f6;"></div>
+              <div style="width:${pRes}%; background: #b45309;"></div>
+              <div style="width:${pHaz}%; background: #f59e0b;"></div>
+            </div>
+          </div>
+          <div class="col-hide">
+            <div class="stamp ${stampClass}">${stampText}</div>
+          </div>
+          <div>
+            <span style="font-size:11px;font-weight:600;color:#1c231d;text-transform:capitalize">${uiStatus}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    board.innerHTML = html;
+  }
   }
 
   function animateAnalyticsRefresh() {

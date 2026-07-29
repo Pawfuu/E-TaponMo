@@ -134,10 +134,10 @@ export class DashboardService {
         };
     }
 
-    recalculateAndNotify() {
+   recalculateAndNotify() {
         const reports = this.state.reports;
 
-        // Reports Aggregation
+        // General Reports Aggregation
         const totalReports = reports.length;
         const activeReports = reports.filter(r => r.status !== "Resolved" && r.status !== "Dismissed").length;
         const reportsResolved = reports.filter(r => r.status === "Resolved").length;
@@ -145,7 +145,6 @@ export class DashboardService {
         const criticalReports = reports.filter(r => r.severity >= 4 && r.status !== "Resolved").length;
         const reportCompletionRate = totalReports > 0 ? Math.round((reportsResolved / totalReports) * 100) : 0;
 
-        // FIXED: Sort reports by reportedAt desc
         const sortedReports = [...reports].sort((a, b) => {
             const ta = a.reportedAt ? a.reportedAt.getTime() : 0;
             const tb = b.reportedAt ? b.reportedAt.getTime() : 0;
@@ -159,17 +158,50 @@ export class DashboardService {
             wasteStats[cat] = (wasteStats[cat] || 0) + 1;
         });
 
-        // Dynamic Barangay Summary using the dedicated barangay field
+        // --- NEW: BARANGAY PERFORMANCE CALCULATIONS ---
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        let resolved7d = 0;
+        let totalDiversionEligible = 0; // Nabubulok + Recyclable
+        let totalCategorized = 0;
         const barangayMap = {};
+
         reports.forEach(r => {
             const loc = r.barangay; 
             if (!barangayMap[loc]) {
-                barangayMap[loc] = { total: 0, resolved: 0 };
+                barangayMap[loc] = { total: 0, resolved: 0, bio: 0, rec: 0, res: 0, haz: 0 };
             }
+            
+            // 1. Tally Totals & Recent Resolutions
             barangayMap[loc].total++;
-            if (r.status === "Resolved") barangayMap[loc].resolved++;
+            if (r.status === "Resolved") {
+                barangayMap[loc].resolved++;
+                if (r.reportedAt && r.reportedAt >= sevenDaysAgo) resolved7d++;
+            }
+
+            // 2. Tally Segregation Categories for the Bar Charts
+            const cat = r.category;
+            totalCategorized++;
+            if (cat === "Nabubulok") { 
+                barangayMap[loc].bio++; 
+                totalDiversionEligible++; 
+            }
+            else if (cat === "Recyclable") { 
+                barangayMap[loc].rec++; 
+                totalDiversionEligible++; 
+            }
+            else if (cat === "Hazardous Waste" || cat === "Healthcare Waste") { 
+                barangayMap[loc].haz++; 
+            }
+            else { 
+                barangayMap[loc].res++; // Catch-all for Mixed/Non-recyclable
+            }
         });
 
+        const cityDiversionRate = totalCategorized > 0 ? Math.round((totalDiversionEligible / totalCategorized) * 100) : 0;
+
+        // 3. Build the ranked array
         let barangaySummary = Object.keys(barangayMap).map(loc => {
             const stats = barangayMap[loc];
             const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
@@ -178,13 +210,19 @@ export class DashboardService {
                 total: stats.total,
                 resolved: stats.resolved,
                 rate,
-                status: rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical"
+                status: rate >= 80 ? "ok" : rate >= 50 ? "watch" : "critical",
+                segregation: { bio: stats.bio, rec: stats.rec, res: stats.res, haz: stats.haz }
             };
         });
 
+        // Rank Highest to Lowest
         barangaySummary.sort((a, b) => b.rate - a.rate);
+        
         const topBarangays = barangaySummary.slice(0, 5);
         const lowestBarangays = [...barangaySummary].reverse().slice(0, 5);
+        const flaggedCount = barangaySummary.filter(b => b.status === "critical").length;
+
+        // ----------------------------------------------
 
         const recentActivities = sortedReports.slice(0, 5).map(r => ({
             id: r.id,
@@ -213,7 +251,12 @@ export class DashboardService {
             lowestBarangays,
             aiSummary: [],
             recentActivities,
-            latestReports: sortedReports.slice(0, 10)
+            latestReports: sortedReports.slice(0, 10),
+            // EXPOSE NEW METRICS TO UI:
+            resolved7d,
+            cityDiversionRate,
+            flaggedCount,
+            totalBarangays: Object.keys(barangayMap).length
         };
 
         this.state.isLoaded = true;
