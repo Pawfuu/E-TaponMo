@@ -15,7 +15,7 @@
 </head>
 
 <body class="bg-[#F4F8F6] antialiased selection:bg-emerald-200">
-    
+
     <!-- Navbar -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-[90rem] mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
@@ -23,7 +23,8 @@
                 <img src="../user-app/assets/ogLogo.svg" alt="E-Tapon Mo Logo" class="h-10 w-auto object-contain">
                 <div class="flex flex-col hidden sm:flex">
                     <span class="text-xl font-black tracking-tight text-[#0A2517] leading-none">E-Tapon Mo</span>
-                    <span class="text-[9px] font-semibold text-[#208A56] mt-0.5 tracking-widest uppercase">Public Explorer</span>
+                    <span class="text-[9px] font-semibold text-[#208A56] mt-0.5 tracking-widest uppercase">Public
+                        Ledger</span>
                 </div>
             </a>
             <a href="./pitch.html" class="text-sm font-bold text-slate-500 hover:text-[#0A2517] transition-colors">
@@ -37,17 +38,20 @@
         <div class="max-w-[70rem] mx-auto">
             <h1 class="text-3xl lg:text-4xl font-black mb-4">E-Tapon Mo Explorer</h1>
             <p class="text-emerald-100/80 mb-8 max-w-2xl font-medium">
-                Transparent and immutable public ledger of all waste reports, clean-up tasks, and resolutions on the E-Tapon Mo network.
+                Transparent and immutable public ledger of all waste reports, clean-up tasks, and resolutions on the
+                E-Tapon Mo network.
             </p>
 
             <!-- Search Bar -->
             <div class="relative max-w-3xl">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                 </div>
-                <input type="text" id="searchInput" placeholder="Search by Tx Hash or Report ID..." 
+                <input type="text" id="searchInput" placeholder="Search by Tx Hash or Report ID..."
                     class="w-full bg-white text-slate-900 rounded-xl py-4 pl-12 pr-4 shadow-xl focus:outline-none focus:ring-2 focus:ring-[#208A56] font-medium placeholder:text-slate-400">
             </div>
         </div>
@@ -55,28 +59,34 @@
 
     <!-- Main Content -->
     <main class="max-w-[90rem] mx-auto px-4 sm:px-8 py-10 lg:py-12 pb-24">
-        
+
         <!-- Stats Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            
+
             <!-- Card 1: Total Reports (Green) -->
-            <div class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
+            <div
+                class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
                 <!-- Decorative Background Graph (Widened to w-48) -->
-                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-[#208A56]/10 pointer-events-none z-0" viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
+                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-[#208A56]/10 pointer-events-none z-0"
+                    viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
                     <path id="trend-path-total" d="M0,50 L0,40 Q25,30 50,45 T100,15 L100,50 Z"></path>
                     <circle id="trend-circle-total" cx="98" cy="15" r="3" fill="#208A56" />
                 </svg>
 
                 <div class="relative z-10">
                     <div class="flex items-start gap-4 mb-4">
-                        <div class="w-14 h-14 bg-[#E8F2EC] text-[#208A56] rounded-full flex items-center justify-center shrink-0">
+                        <div
+                            class="w-14 h-14 bg-[#E8F2EC] text-[#208A56] rounded-full flex items-center justify-center shrink-0">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <span class="text-[10px] font-bold text-[#208A56] uppercase tracking-widest mb-0.5">Total Reports</span>
-                            <span class="text-3xl font-black text-[#0A2517] leading-none" id="stat-total-reports">--</span>
+                            <span class="text-[10px] font-bold text-[#208A56] uppercase tracking-widest mb-0.5">Total
+                                Reports</span>
+                            <span class="text-3xl font-black text-[#0A2517] leading-none"
+                                id="stat-total-reports">--</span>
                         </div>
                     </div>
                     <p class="text-xs text-slate-500 font-medium mb-6">All time reports submitted</p>
@@ -85,7 +95,8 @@
                 <!-- Trend Pill -->
                 <div class="bg-[#F4F8F6] rounded-xl px-4 py-2.5 flex items-center gap-3 relative z-10 w-full mt-auto">
                     <div class="flex items-center gap-1.5 text-[#208A56]">
-                        <svg id="trend-icon-total" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <svg id="trend-icon-total" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                         </svg>
                         <span class="text-sm font-bold" id="trend-val-total">--%</span>
@@ -96,22 +107,27 @@
             </div>
 
             <!-- Card 2: Resolved Issues (Blue) -->
-            <div class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
+            <div
+                class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
                 <!-- Decorative Background Graph (Widened to w-48) -->
-                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-blue-500/10 pointer-events-none z-0" viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
+                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-blue-500/10 pointer-events-none z-0"
+                    viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
                     <path id="trend-path-resolved" d="M0,50 L0,35 Q20,50 40,30 T70,35 T100,10 L100,50 Z"></path>
                     <circle id="trend-circle-resolved" cx="98" cy="10" r="3" fill="#3b82f6" />
                 </svg>
 
                 <div class="relative z-10">
                     <div class="flex items-start gap-4 mb-4">
-                        <div class="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shrink-0">
+                        <div
+                            class="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shrink-0">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">Resolved Issues</span>
+                            <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">Resolved
+                                Issues</span>
                             <span class="text-3xl font-black text-[#0A2517] leading-none" id="stat-resolved">--</span>
                         </div>
                     </div>
@@ -121,7 +137,8 @@
                 <!-- Trend Pill -->
                 <div class="bg-blue-50/50 rounded-xl px-4 py-2.5 flex items-center gap-3 relative z-10 w-full mt-auto">
                     <div class="flex items-center gap-1.5 text-blue-600">
-                        <svg id="trend-icon-resolved" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <svg id="trend-icon-resolved" class="w-4 h-4" fill="none" stroke="currentColor"
+                            stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                         </svg>
                         <span class="text-sm font-bold" id="trend-val-resolved">--%</span>
@@ -132,22 +149,27 @@
             </div>
 
             <!-- Card 3: Active / Pending (Orange) -->
-            <div class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
+            <div
+                class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm relative overflow-hidden flex flex-col h-full z-10">
                 <!-- Decorative Background Graph (Widened to w-48) -->
-                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-orange-500/10 pointer-events-none z-0" viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
+                <svg class="absolute bottom-[4.5rem] right-0 w-48 h-16 text-orange-500/10 pointer-events-none z-0"
+                    viewBox="0 0 100 50" preserveAspectRatio="none" fill="currentColor">
                     <path id="trend-path-active" d="M0,50 L0,20 Q20,35 40,25 T70,40 T100,15 L100,50 Z"></path>
                     <circle id="trend-circle-active" cx="98" cy="15" r="3" fill="#f97316" />
                 </svg>
 
                 <div class="relative z-10">
                     <div class="flex items-start gap-4 mb-4">
-                        <div class="w-14 h-14 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center shrink-0">
+                        <div
+                            class="w-14 h-14 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center shrink-0">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div class="flex flex-col pt-1">
-                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Active / Pending</span>
+                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Active
+                                / Pending</span>
                             <span class="text-3xl font-black text-[#0A2517] leading-none" id="stat-active">--</span>
                         </div>
                     </div>
@@ -155,9 +177,11 @@
                 </div>
 
                 <!-- Trend Pill -->
-                <div class="bg-orange-50/50 rounded-xl px-4 py-2.5 flex items-center gap-3 relative z-10 w-full mt-auto">
+                <div
+                    class="bg-orange-50/50 rounded-xl px-4 py-2.5 flex items-center gap-3 relative z-10 w-full mt-auto">
                     <div class="flex items-center gap-1.5 text-orange-500">
-                        <svg id="trend-icon-active" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <svg id="trend-icon-active" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
                         </svg>
                         <span class="text-sm font-bold" id="trend-val-active">--%</span>
@@ -174,16 +198,19 @@
             <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h2 class="text-lg font-black text-[#0A2517]">Latest Transactions</h2>
             </div>
-            
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tx Hash</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Report ID</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Location</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Report ID
+                            </th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Location
+                            </th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
+                                Status</th>
                         </tr>
                     </thead>
                     <tbody id="explorer-table-body" class="divide-y divide-slate-100 text-sm">
@@ -199,4 +226,5 @@
 
     <script type="module" src="explorer.js"></script>
 </body>
+
 </html>
