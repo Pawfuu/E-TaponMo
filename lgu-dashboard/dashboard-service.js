@@ -2,29 +2,19 @@
  * Dashboard Service
  *
  * Real-time data aggregator for the LGU Administrator Portal.
- * Subscribes to Firestore collections (reports, tasks, barangays, settings, AI insights)
- * using onSnapshot() and computes unified metrics for UI consumption.
+ * Subscribes to the Firestore 'reports' collection and computes unified metrics.
  */
 
 import { db } from '../shared/firebase-config.js';
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { TaskService } from './task-service.js';
-import { BarangayService } from './barangay-service.js';
-import { AiInsightService } from './ai-insight-service.js';
-import { SettingsService } from './settings-service.js';
 
 export class DashboardService {
     constructor() {
-        this.taskService = new TaskService();
-        this.barangayService = new BarangayService();
-        this.aiInsightService = new AiInsightService();
-        this.settingsService = new SettingsService();
-
         this.state = {
             reports: [],
-            tasks: [],
-            barangays: [],
-            insights: [],
+            tasks: [], // Placeholder for future feature
+            barangays: [], // Placeholder for future feature
+            insights: [], // Placeholder for future feature
             settings: null,
             metrics: {
                 totalTasks: 0,
@@ -51,16 +41,10 @@ export class DashboardService {
         };
 
         this.subscribers = new Set();
-        this.unsubscribers = [];
+        this.unsubscriber = null;
         this.isSubscribed = false;
     }
 
-    /**
-     * Subscribe to real-time dashboard data changes.
-     * @param {Function} callback Function invoked whenever dashboard data changes
-     * @param {Function} [onError] Optional error callback for Firestore subscription errors
-     * @returns {Function} Unsubscribe function
-     */
     subscribeDashboard(callback, onError) {
         this.subscribers.add(callback);
 
@@ -81,10 +65,9 @@ export class DashboardService {
     startListeners(onError) {
         this.isSubscribed = true;
 
-        // 1. Subscribe to Reports Collection
         try {
             const reportsRef = collection(db, 'reports');
-            const unsubReports = onSnapshot(reportsRef, (snapshot) => {
+            this.unsubscriber = onSnapshot(reportsRef, (snapshot) => {
                 this.state.reports = snapshot.docs.map(docSnap => this.normalizeReport(docSnap));
                 this.recalculateAndNotify();
             }, (err) => {
@@ -93,63 +76,18 @@ export class DashboardService {
                 if (onError) onError(err);
                 this.notifySubscribers();
             });
-            this.unsubscribers.push(unsubReports);
         } catch (err) {
             console.error("DashboardService - Failed to attach reports listener:", err);
             this.state.error = err;
             if (onError) onError(err);
         }
-
-        // 2. Subscribe to Tasks (via TaskService)
-        try {
-            const unsubTasks = this.taskService.subscribeTasks((tasks) => {
-                this.state.tasks = tasks || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubTasks === 'function') this.unsubscribers.push(unsubTasks);
-        } catch (err) {
-            console.warn("DashboardService - TaskService subscription fallback:", err);
-        }
-
-        // 3. Subscribe to Barangays (via BarangayService)
-        try {
-            const unsubBarangays = this.barangayService.subscribeBarangays((barangays) => {
-                this.state.barangays = barangays || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubBarangays === 'function') this.unsubscribers.push(unsubBarangays);
-        } catch (err) {
-            console.warn("DashboardService - BarangayService subscription fallback:", err);
-        }
-
-        // 4. Subscribe to AI Insights (via AiInsightService)
-        try {
-            const unsubInsights = this.aiInsightService.subscribeInsights((insights) => {
-                this.state.insights = insights || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubInsights === 'function') this.unsubscribers.push(unsubInsights);
-        } catch (err) {
-            console.warn("DashboardService - AiInsightService subscription fallback:", err);
-        }
-
-        // 5. Subscribe to Settings (via SettingsService)
-        try {
-            const unsubSettings = this.settingsService.subscribeSettings((settings) => {
-                this.state.settings = settings || {};
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubSettings === 'function') this.unsubscribers.push(unsubSettings);
-        } catch (err) {
-            console.warn("DashboardService - SettingsService subscription fallback:", err);
-        }
     }
 
     stopListeners() {
-        this.unsubscribers.forEach(unsub => {
-            if (typeof unsub === 'function') unsub();
-        });
-        this.unsubscribers = [];
+        if (typeof this.unsubscriber === 'function') {
+            this.unsubscriber();
+        }
+        this.unsubscriber = null;
         this.isSubscribed = false;
     }
 
@@ -205,18 +143,6 @@ export class DashboardService {
 
     recalculateAndNotify() {
         const reports = this.state.reports;
-        const tasks = this.state.tasks;
-        const barangays = this.state.barangays;
-
-        // Task Aggregation
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
-        const overdueTasks = tasks.filter(t => (t.status || '').toLowerCase() === 'overdue').length;
-        const pendingTasks = tasks.filter(t => {
-            const s = (t.status || '').toLowerCase();
-            return s === 'pending' || s === 'in progress' || s === 'assigned' || s === 'planning';
-        }).length;
-        const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
         // Reports Aggregation
         const totalReports = reports.length;
@@ -240,7 +166,7 @@ export class DashboardService {
             wasteStats[cat] = (wasteStats[cat] || 0) + 1;
         });
 
-        // Barangay Performance Summary
+        // Dynamic Barangay Summary based strictly on Reports Data
         const barangayMap = {};
         reports.forEach(r => {
             const loc = r.location || "Unknown Location";
@@ -251,63 +177,37 @@ export class DashboardService {
             if (r.status === "Resolved") barangayMap[loc].resolved++;
         });
 
-        let barangaySummary = barangays.map(b => {
-            const name = b.name || "Unknown";
-            const stats = barangayMap[name] || { total: b.total || 0, resolved: b.resolved || 0 };
-            const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : (b.rate || 0);
+        let barangaySummary = Object.keys(barangayMap).map(loc => {
+            const stats = barangayMap[loc];
+            const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
             return {
-                name,
+                name: loc,
                 total: stats.total,
                 resolved: stats.resolved,
                 rate,
-                status: b.status || (rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical")
+                status: rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical"
             };
         });
-
-        if (barangaySummary.length === 0) {
-            barangaySummary = Object.keys(barangayMap).map(loc => {
-                const stats = barangayMap[loc];
-                const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
-                return {
-                    name: loc,
-                    total: stats.total,
-                    resolved: stats.resolved,
-                    rate,
-                    status: rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical"
-                };
-            });
-        }
 
         barangaySummary.sort((a, b) => b.rate - a.rate);
         const topBarangays = barangaySummary.slice(0, 5);
         const lowestBarangays = [...barangaySummary].reverse().slice(0, 5);
 
-        // Combined Recent Activities
-        const recentActivities = [
-            ...sortedReports.slice(0, 5).map(r => ({
-                id: r.id,
-                type: 'report',
-                title: `Report #${r.id} (${r.category})`,
-                subtitle: r.location,
-                status: r.status,
-                timestamp: r.createdAt
-            })),
-            ...tasks.slice(0, 5).map(t => ({
-                id: t.id,
-                type: 'task',
-                title: t.title || `Task #${t.id}`,
-                subtitle: t.barangay || t.assignee || '',
-                status: t.status,
-                timestamp: null
-            }))
-        ];
+        const recentActivities = sortedReports.slice(0, 5).map(r => ({
+            id: r.id,
+            type: 'report',
+            title: `Report #${r.id} (${r.category})`,
+            subtitle: r.location,
+            status: r.status,
+            timestamp: r.createdAt
+        }));
 
         this.state.metrics = {
-            totalTasks,
-            completedTasks,
-            pendingTasks,
-            overdueTasks,
-            taskCompletionRate,
+            totalTasks: 0,
+            completedTasks: 0,
+            pendingTasks: 0,
+            overdueTasks: 0,
+            taskCompletionRate: 0,
             totalReports,
             activeReports,
             reportsResolved,
@@ -318,7 +218,7 @@ export class DashboardService {
             barangaySummary,
             topBarangays,
             lowestBarangays,
-            aiSummary: this.state.insights,
+            aiSummary: [],
             recentActivities,
             latestReports: sortedReports.slice(0, 10)
         };

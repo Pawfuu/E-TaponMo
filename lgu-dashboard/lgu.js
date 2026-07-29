@@ -160,18 +160,28 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   let heatLayer = null;
   let showHeatmap = false;
 
-  // DOM Elements
+  // DOM Elements - Navigation
   const navDashboardBtn = document.getElementById("nav-dashboard");
   const navReportsBtn = document.getElementById("nav-reports");
   const navMapBtn = document.getElementById("nav-map");
   const navAnalyticsBtn = document.getElementById("nav-analytics");
   const navBarangayBtn = document.getElementById("nav-barangay");
+  const navTasksBtn = document.getElementById("nav-tasks");
+  const navRoutesBtn = document.getElementById("nav-routes");
+  const navInsightsBtn = document.getElementById("nav-insights");
   const navSettingsBtn = document.getElementById("nav-settings");
 
+  // DOM Elements - Panels
   const viewDashboardPanel = document.getElementById("view-dashboard-panel");
   const viewReportsPanel = document.getElementById("view-reports-panel");
   const viewMapPanel = document.getElementById("view-map-panel");
   const viewAnalyticsPanel = document.getElementById("view-analytics-panel");
+  const viewBarangayPanel = document.getElementById("view-barangay-performance-panel");
+  const viewTasksPanel = document.getElementById("view-task-management-panel");
+  const viewRoutesPanel = document.getElementById("view-collection-routes-panel");
+  const viewInsightsPanel = document.getElementById("view-ai-insights-panel");
+  const viewSettingsPanel = document.getElementById("view-settings-panel");
+  
   const viewTitle = document.getElementById("view-title");
   const mainHeader = document.getElementById("main-header");
 
@@ -217,12 +227,19 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     refreshMapSizes(100);
     subscribeToReports();
 
+    // Listen for back/forward browser navigation
+    window.addEventListener('popstate', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get("view") || "dashboard";
+      switchView(viewParam, false); // false prevents pushing state again
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get("view");
-    if (viewParam && ["dashboard", "reports", "map", "analytics"].includes(viewParam)) {
-      switchView(viewParam);
+    if (viewParam && ["dashboard", "reports", "map", "analytics", "barangay-performance", "task-management", "collection-routes", "ai-insights", "settings"].includes(viewParam)) {
+      switchView(viewParam, false);
     } else {
-      switchView("dashboard");
+      switchView("dashboard", false);
     }
 
     window.addEventListener("beforeunload", () => {
@@ -517,8 +534,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (statPendingEl) statPendingEl.textContent = String(pendingCount);
     if (statProgressEl) statProgressEl.textContent = String(criticalCount);
     if (statResolvedEl) statResolvedEl.textContent = String(resolvedCount);
-
-
 
     // 2. Dynamic Map View Stats (Active non-resolved alerts)
     const activeAlerts = reports.filter(r => r.status !== "Resolved");
@@ -1107,26 +1122,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
   }
 
-  function updateMapFilterVisuals(activeId) {
-    const filterButtons = {
-      all: document.getElementById("map-filter-all"),
-      high: document.getElementById("map-filter-high"),
-      medium: document.getElementById("map-filter-medium"),
-      resolved: document.getElementById("map-filter-resolved")
-    };
-
-    Object.keys(filterButtons).forEach(key => {
-      const btn = filterButtons[key];
-      if (btn) {
-        if (key === activeId) {
-          btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm transition-all cursor-pointer";
-        } else {
-          btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all cursor-pointer";
-        }
-      }
-    });
-  }
-
   function renderMapMarkers() {
     if (!markerLayerGroup && !dashboardLayerGroup) return;
     if (markerLayerGroup) markerLayerGroup.clearLayers();
@@ -1189,8 +1184,11 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // 6. UI & NAVIGATION LOGIC
   // ==========================================
 
-  function switchView(viewName) {
-    const navButtons = [navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, navBarangayBtn, navSettingsBtn];
+  function switchView(viewName, pushState = true) {
+    const navButtons = [
+      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, 
+      navBarangayBtn, navTasksBtn, navRoutesBtn, navInsightsBtn, navSettingsBtn
+    ];
 
     // 1. Reset all buttons to inactive state
     navButtons.forEach((btn) => {
@@ -1201,42 +1199,81 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
 
     // 2. Hide all panels
-    viewDashboardPanel.classList.add("hidden");
-    viewReportsPanel.classList.add("hidden");
-    viewMapPanel.classList.add("hidden");
+    if (viewDashboardPanel) viewDashboardPanel.classList.add("hidden");
+    if (viewReportsPanel) viewReportsPanel.classList.add("hidden");
+    if (viewMapPanel) viewMapPanel.classList.add("hidden");
     if (viewAnalyticsPanel) viewAnalyticsPanel.classList.add("hidden");
+    if (viewBarangayPanel) viewBarangayPanel.classList.add("hidden");
+    if (viewTasksPanel) viewTasksPanel.classList.add("hidden");
+    if (viewRoutesPanel) viewRoutesPanel.classList.add("hidden");
+    if (viewInsightsPanel) viewInsightsPanel.classList.add("hidden");
+    if (viewSettingsPanel) viewSettingsPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
     if (viewName === "dashboard") {
       if (mainHeader) mainHeader.classList.remove("hidden");
-      viewDashboardPanel.classList.remove("hidden");
+      if (viewDashboardPanel) viewDashboardPanel.classList.remove("hidden");
       if (navDashboardBtn) navDashboardBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Dashboard";
       updateDashboardMetrics(reports);
       initLeafletMap();
       renderMapMarkers();
       refreshMapSizes(100);
-    } else {
+    } 
+    else {
       if (mainHeader) mainHeader.classList.add("hidden");
+      
       if (viewName === "reports") {
-        viewReportsPanel.classList.remove("hidden");
+        if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
         if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
         if (viewTitle) viewTitle.textContent = "Civic Reports Database";
         renderReportsTable();
-      } else if (viewName === "map") {
-        viewMapPanel.classList.remove("hidden");
+      } 
+      else if (viewName === "map") {
+        if (viewMapPanel) viewMapPanel.classList.remove("hidden");
         if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
         if (viewTitle) viewTitle.textContent = "Live Reports Map";
         initLeafletMap();
         if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
         renderMapMarkers();
         refreshMapSizes(100);
-      } else if (viewName === "analytics") {
+      } 
+      else if (viewName === "analytics") {
         if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
         if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
         if (viewTitle) viewTitle.textContent = "Analytics Overview";
         updateAnalyticsMetrics();
       }
+      else if (viewName === "barangay-performance") {
+        if (viewBarangayPanel) viewBarangayPanel.classList.remove("hidden");
+        if (navBarangayBtn) navBarangayBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+        if (viewTitle) viewTitle.textContent = "Barangay Performance";
+      }
+      else if (viewName === "task-management") {
+        if (viewTasksPanel) viewTasksPanel.classList.remove("hidden");
+        if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+        if (viewTitle) viewTitle.textContent = "Task Management";
+      }
+      else if (viewName === "collection-routes") {
+        if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
+        if (navRoutesBtn) navRoutesBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+        if (viewTitle) viewTitle.textContent = "Collection Routes";
+      }
+      else if (viewName === "ai-insights") {
+        if (viewInsightsPanel) viewInsightsPanel.classList.remove("hidden");
+        if (navInsightsBtn) navInsightsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+        if (viewTitle) viewTitle.textContent = "AI Insights";
+      }
+      else if (viewName === "settings") {
+        if (viewSettingsPanel) viewSettingsPanel.classList.remove("hidden");
+        if (navSettingsBtn) navSettingsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+        if (viewTitle) viewTitle.textContent = "Settings";
+      }
+    }
+
+    // Update URL history silently
+    if (pushState) {
+      window.history.pushState({ view: viewName }, '', `lgu.html?view=${viewName}`);
     }
   }
 
@@ -1703,27 +1740,22 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // 9. EVENT LISTENERS
   // ==========================================
 
+  function handleNavClick(e, viewName) {
+    e.preventDefault(); // Prevents the page reload flicker
+    switchView(viewName, true);
+  }
+
   function setupEventListeners() {
-    // Navigation Routing
-    if (navDashboardBtn) navDashboardBtn.addEventListener("click", () => switchView("dashboard"));
-    if (navReportsBtn) navReportsBtn.addEventListener("click", () => switchView("reports"));
-    if (navMapBtn) navMapBtn.addEventListener("click", () => switchView("map"));
-    if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", () => switchView("analytics"));
-
-    const comingSoonButtons = [
-      document.getElementById("nav-routes"),
-    ];
-
-    comingSoonButtons.forEach((nav) => {
-      if (nav) {
-        nav.addEventListener("click", function () {
-          const featureName = this.querySelector("span")
-            ? this.querySelector("span").textContent.trim()
-            : "This feature";
-          showToast(featureName);
-        });
-      }
-    });
+    // Navigation Routing mapped to the new preventDefault handler
+    if (navDashboardBtn) navDashboardBtn.addEventListener("click", (e) => handleNavClick(e, "dashboard"));
+    if (navReportsBtn) navReportsBtn.addEventListener("click", (e) => handleNavClick(e, "reports"));
+    if (navMapBtn) navMapBtn.addEventListener("click", (e) => handleNavClick(e, "map"));
+    if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", (e) => handleNavClick(e, "analytics"));
+    if (navBarangayBtn) navBarangayBtn.addEventListener("click", (e) => handleNavClick(e, "barangay-performance"));
+    if (navTasksBtn) navTasksBtn.addEventListener("click", (e) => handleNavClick(e, "task-management"));
+    if (navRoutesBtn) navRoutesBtn.addEventListener("click", (e) => handleNavClick(e, "collection-routes"));
+    if (navInsightsBtn) navInsightsBtn.addEventListener("click", (e) => handleNavClick(e, "ai-insights"));
+    if (navSettingsBtn) navSettingsBtn.addEventListener("click", (e) => handleNavClick(e, "settings"));
 
     const analyticsDateFilter = document.getElementById("analytics-date-filter");
     if (analyticsDateFilter) {
@@ -1747,7 +1779,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
 
     // --- Analytics Simulated Bar Graph Column Click Handlers ---
-    // Fix: Escaped the colon in the Tailwind class to prevent SyntaxError in querySelectorAll
     const responseTimeBars = document.querySelectorAll("#view-analytics-panel .lg\\:col-span-5 .flex-1.flex.items-end > div");
     responseTimeBars.forEach(barCol => {
       barCol.classList.add("cursor-pointer", "hover:opacity-80", "transition-opacity");
@@ -2050,7 +2081,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const mapBtnViewAll = document.getElementById("map-btn-view-all");
     if (mapBtnViewAll) {
       mapBtnViewAll.addEventListener("click", () => {
-        switchView("reports");
+        switchView("reports", true);
       });
     }
 
