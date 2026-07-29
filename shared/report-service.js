@@ -24,12 +24,12 @@ export async function submitTrashReport(reportData, imageFile) {
   // 2. Check for Duplicates BEFORE uploading anything
   // If the user actively chose to bypass, skip duplicate checking.
   if (!reportData.bypassDuplicateCheck) {
-    const duplicate = await checkForDuplicates(lat, lng, 30);
+    const duplicates = await checkForDuplicates(lat, lng, 50);
 
-    if (duplicate) {
+    if (duplicates) {
       return {
         status: 'duplicate_found',
-        existingReport: duplicate
+        existingReports: duplicates
       };
     }
   }

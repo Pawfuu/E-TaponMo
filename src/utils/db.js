@@ -35,7 +35,7 @@ export async function checkForDuplicates(lat, lng, radiusMeters = 30) {
     );
 
     const querySnapshot = await getDocs(q);
-    let potentialDuplicate = null;
+    let duplicateMatches = [];
 
     // Apply exact Haversine distance verification to the pre-filtered results
     querySnapshot.forEach((docSnapshot) => {
@@ -46,12 +46,15 @@ export async function checkForDuplicates(lat, lng, radiusMeters = 30) {
                 data.coordinates.lat, data.coordinates.lng
             );
             if (distance <= radiusMeters) {
-                potentialDuplicate = { id: docSnapshot.id, distance, ...data };
+                duplicateMatches.push({ id: docSnapshot.id, distance: Math.round(distance), ...data });
             }
         }
     });
 
-    return potentialDuplicate;
+    // Sort by closest first
+    duplicateMatches.sort((a, b) => a.distance - b.distance);
+
+    return duplicateMatches.length > 0 ? duplicateMatches : null;
 }
 
 /**

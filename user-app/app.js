@@ -719,15 +719,23 @@ if (submitBtn) {
         setSubmitLoading(false);
         isSubmitting = false;
 
-        // Grab the modal elements from your HTML
+        // --- CAROUSEL STATE ---
+        const duplicates = response.existingReports;
+        let currentDupIndex = 0;
+
+        // Grab modal DOM elements
         const dupModal = document.getElementById('duplicate-modal');
         const dupImg = document.getElementById('duplicate-modal-image');
         const dupTime = document.getElementById('duplicate-modal-time');
         const dupDist = document.getElementById('duplicate-modal-distance');
-        const dupReporter = document.getElementById('duplicate-modal-reporter'); // NEW
+        const dupReporter = document.getElementById('duplicate-modal-reporter');
         const closeIcon = document.getElementById('close-duplicate-modal');
         const upvoteBtn = document.getElementById('confirm-upvote-btn');
         const cancelBtn = document.getElementById('cancel-upvote-btn');
+        const prevBtn = document.getElementById('prev-duplicate-btn');
+        const nextBtn = document.getElementById('next-duplicate-btn');
+        const counterText = document.getElementById('carousel-counter-text');
+        const dotsContainer = document.getElementById('carousel-dots');
 
         // Zoom elements
         const zoomSlider = document.getElementById('duplicate-zoom-slider');
@@ -736,11 +744,8 @@ if (submitBtn) {
         const fitBtn = document.getElementById('fit-image-btn');
         const fullscreenBtn = document.getElementById('fullscreen-image-btn');
 
-        // Initialize Zoom Slider Interactions
+        // Initialize zoom controls (wired once, applies to current image)
         if (zoomSlider && dupImg) {
-          zoomSlider.value = 1;
-          dupImg.style.transform = 'scale(1)';
-
           zoomSlider.oninput = (e) => {
             dupImg.style.transform = `scale(${e.target.value})`;
           };
@@ -761,24 +766,81 @@ if (submitBtn) {
           };
         }
 
-        // Populate the modal with the existing report's data
-        if (dupImg) dupImg.src = response.existingReport.imageUrl;
-        if (dupTime) {
-          // Parse to match new UI layout: "July 20, 2024 • 09:15 AM"
-          const dateObj = response.existingReport.reportedAt?.toDate
-            ? response.existingReport.reportedAt.toDate()
-            : new Date();
-
-          const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-          const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-          dupTime.innerText = `${formattedDate} • ${formattedTime}`;
+        // Build pagination dots
+        if (dotsContainer) {
+          dotsContainer.innerHTML = duplicates.map((_, i) =>
+            `<button data-dot="${i}" class="w-2 h-2 rounded-full transition-all duration-200 ${i === 0 ? 'bg-green-600 w-4' : 'bg-gray-300'}"></button>`
+          ).join('');
+          dotsContainer.querySelectorAll('[data-dot]').forEach(dot => {
+            dot.addEventListener('click', () => {
+              currentDupIndex = Number(dot.dataset.dot);
+              renderDuplicateReport(currentDupIndex);
+            });
+          });
         }
 
-        // Populate the Reporter Name
-        if (dupReporter) {
-          dupReporter.innerText = response.existingReport.reporterName || 'Community Member';
+        // renderDuplicateReport: Populates modal with data for a given index
+        function renderDuplicateReport(index) {
+          const report = duplicates[index];
+
+          // Reset zoom
+          if (zoomSlider) zoomSlider.value = 1;
+          if (dupImg) dupImg.style.transform = 'scale(1)';
+
+          // Image
+          if (dupImg) dupImg.src = report.imageUrl || '';
+
+          // Time
+          if (dupTime) {
+            const dateObj = report.reportedAt?.toDate
+              ? report.reportedAt.toDate()
+              : new Date();
+            const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            dupTime.innerText = `${formattedDate} • ${formattedTime}`;
+          }
+
+          // Distance
+          if (dupDist) dupDist.innerText = report.distance ?? '?';
+
+          // Reporter name
+          if (dupReporter) dupReporter.innerText = report.reporterName || 'Community Member';
+
+          // Counter text
+          if (counterText) counterText.innerText = `Report ${index + 1} of ${duplicates.length}`;
+
+          // Dots: update active state
+          if (dotsContainer) {
+            dotsContainer.querySelectorAll('[data-dot]').forEach((dot, i) => {
+              dot.className = `rounded-full transition-all duration-200 ${i === index ? 'w-4 h-2 bg-green-600' : 'w-2 h-2 bg-gray-300'}`;
+            });
+          }
+
+          // Prev/Next arrow visibility
+          if (prevBtn) prevBtn.classList.toggle('hidden', index === 0);
+          if (nextBtn) nextBtn.classList.toggle('hidden', index === duplicates.length - 1);
         }
+
+        // Wire prev/next buttons
+        if (prevBtn) {
+          prevBtn.onclick = () => {
+            if (currentDupIndex > 0) {
+              currentDupIndex--;
+              renderDuplicateReport(currentDupIndex);
+            }
+          };
+        }
+        if (nextBtn) {
+          nextBtn.onclick = () => {
+            if (currentDupIndex < duplicates.length - 1) {
+              currentDupIndex++;
+              renderDuplicateReport(currentDupIndex);
+            }
+          };
+        }
+
+        // Render first report before showing the modal
+        renderDuplicateReport(0);
 
         // Show the modal
         if (dupModal) dupModal.classList.remove('hidden');
@@ -790,18 +852,18 @@ if (submitBtn) {
           };
         }
 
-        // Handle Upvote Confirmation
+        // Handle Upvote: always upvote the currently-viewed report
         if (upvoteBtn) {
           upvoteBtn.onclick = async () => {
             upvoteBtn.innerText = "Verifying...";
-            await upvoteReport(response.existingReport.id);
+            await upvoteReport(duplicates[currentDupIndex].id);
 
             alert("Thank you! We've added your verification to the existing report.");
             dupModal.classList.add('hidden');
             document.getElementById("close-success-modal")?.click();
 
             // Reset button HTML state
-            upvoteBtn.innerHTML = `<svg class="w-5 h-5 bg-white text-[#2E9946] rounded-full p-0.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> Yes, this is the same`;
+            upvoteBtn.innerHTML = `<div class="bg-white rounded-full p-0.5 text-[#418B46]"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div> Yes, this is the same`;
           };
         }
 
@@ -823,7 +885,7 @@ if (submitBtn) {
               const reportId = forceResponse.reportId;
               isReportComplete = true;
 
-              console.log("Basura-Pin report submitted (Bypassed Duplicate Check):", { reportId });
+              console.log("E-Tapon Mo report submitted (Bypassed Duplicate Check):", { reportId });
               handleValidationResult(result, reporter, reportId, reportForm.contactInfo);
             } catch (error) {
               console.error("Forced submission error:", error);

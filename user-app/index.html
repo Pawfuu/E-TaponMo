@@ -478,8 +478,8 @@
       <!-- Scrollable Body (This fixes the layout squish/push issue) -->
       <div class="flex-1 overflow-y-auto px-5 pb-2 space-y-4">
 
-        <!-- Badge -->
-        <div class="flex flex-col items-center mt-1">
+        <!-- Badge & Carousel Counter -->
+        <div class="flex flex-col items-center mt-1 gap-2">
           <div
             class="inline-flex items-center justify-center gap-2 bg-green-50 border border-green-100 px-4 py-2 rounded-xl">
             <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -490,6 +490,7 @@
             </svg>
             <span class="text-sm font-bold text-green-800">Possible Match</span>
           </div>
+          <span id="carousel-counter-text" class="text-xs font-semibold text-gray-400">Report 1 of 1</span>
         </div>
 
         <!-- Image Container -->
@@ -497,6 +498,22 @@
           <img id="duplicate-modal-image" src="" alt="Existing Report Photo"
             class="w-full h-full object-cover origin-center transition-transform duration-100"
             style="transform: scale(1)" />
+
+          <!-- Prev Button -->
+          <button id="prev-duplicate-btn" type="button"
+            class="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white shadow-md transition hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <!-- Next Button -->
+          <button id="next-duplicate-btn" type="button"
+            class="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white shadow-md transition hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
           <div
             class="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 z-10 pointer-events-none">
@@ -526,6 +543,9 @@
               class="text-gray-700 hover:text-gray-900 text-lg font-black leading-none px-2">+</button>
           </div>
         </div>
+
+        <!-- Carousel Dots -->
+        <div id="carousel-dots" class="flex justify-center gap-1.5 -mt-2"></div>
 
         <!-- Metadata List -->
         <div
@@ -613,52 +633,6 @@
       </div>
 
     </div>
-  </div>
-
-  <!-- Info Banner -->
-  <div
-    class="w-full bg-[#F0FDF4] border border-green-100 text-green-800 text-[13px] font-medium text-center py-3 rounded-xl flex items-center justify-center gap-2 mt-1">
-    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round"
-        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-      </path>
-    </svg>
-    Still not a match? You can create a new report.
-  </div>
-
-  <!-- Action Buttons -->
-  <div class="flex flex-col gap-2.5 mt-1">
-    <button id="confirm-upvote-btn" type="button"
-      class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#418B46] px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:bg-green-700 focus:outline-none">
-      <div class="bg-white rounded-full p-0.5 text-[#418B46]">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd"
-            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-            clip-rule="evenodd"></path>
-        </svg>
-      </div>
-      Yes, this is the same
-    </button>
-    <button id="cancel-upvote-btn" type="button"
-      class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-gray-300 px-6 py-3.5 text-[15px] font-bold text-gray-700 transition hover:bg-gray-50 focus:outline-none shadow-sm">
-      <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round"
-          d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      No, create new report
-    </button>
-  </div>
-
-  <!-- Footer -->
-  <div class="text-center text-[12px] text-gray-500 flex items-center justify-center gap-1.5 mt-2">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round"
-        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-      </path>
-    </svg>
-    Your report is safe and confidential.
-  </div>
-  </div>
   </div>
 
   <script>
