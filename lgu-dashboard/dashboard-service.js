@@ -170,7 +170,7 @@ export class DashboardService {
             trendLabels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
 
-        const barangayMap = {};
+const barangayMap = {};
         let resolved7d = 0;
         let totalDiversionEligible = 0;
         let totalCategorized = 0;
@@ -180,8 +180,10 @@ export class DashboardService {
             if (!barangayMap[loc]) {
                 barangayMap[loc] = { 
                     total: 0, resolved: 0, pending: 0, district: r.district,
-                    bio: 0, rec: 0, res: 0, haz: 0,
-                    history: Array(7).fill(0) // Sparkline history tracking
+                    // Track all 6 explicit categories
+                    nab: 0, rec: 0, non: 0, mix: 0, haz: 0, heal: 0,
+                    history: Array(7).fill(0), // Sparkline history tracking
+                    maxActiveSeverity: 0       // Track highest AI severity 
                 };
             }
             
@@ -190,29 +192,37 @@ export class DashboardService {
             if (r.status === "Resolved") barangayMap[loc].resolved++;
             if (r.status === "Pending Verification") barangayMap[loc].pending++;
 
+            // Track AI Severity for Active Reports (1 to 5)
+            if (r.status !== "Resolved" && r.status !== "Dismissed") {
+                if (r.severity > barangayMap[loc].maxActiveSeverity) {
+                    barangayMap[loc].maxActiveSeverity = r.severity;
+                }
+            }
+
             // Global Timeline Math
             if (r.reportedAt) {
                 const reportTime = r.reportedAt.getTime();
                 const diffDays = Math.floor((now.getTime() - reportTime) / (1000 * 3600 * 24));
                 
-                // Track global trends
                 if (diffDays >= 0 && diffDays < 7) {
                     trendThisWeek[6 - diffDays]++;
                     if (r.status === "Resolved") resolved7d++;
-                    // Track local sparkline trends per barangay
                     barangayMap[loc].history[6 - diffDays]++;
                 } else if (diffDays >= 7 && diffDays < 14) {
                     trendLastWeek[13 - diffDays]++;
                 }
             }
 
-            // Segregation Breakdown
+            // Segregation Breakdown (Updated to 6 Categories)
             const cat = r.category;
             totalCategorized++;
-            if (cat === "Nabubulok") { barangayMap[loc].bio++; totalDiversionEligible++; }
+            if (cat === "Nabubulok") { barangayMap[loc].nab++; totalDiversionEligible++; }
             else if (cat === "Recyclable") { barangayMap[loc].rec++; totalDiversionEligible++; }
-            else if (cat === "Hazardous Waste" || cat === "Healthcare Waste") { barangayMap[loc].haz++; }
-            else { barangayMap[loc].res++; }
+            else if (cat === "Non-recyclable") { barangayMap[loc].non++; }
+            else if (cat === "Mixed Waste") { barangayMap[loc].mix++; }
+            else if (cat === "Hazardous Waste") { barangayMap[loc].haz++; }
+            else if (cat === "Healthcare Waste") { barangayMap[loc].heal++; }
+            else { barangayMap[loc].non++; } // Default fallback
         });
 
         const cityDiversionRate = totalCategorized > 0 ? Math.round((totalDiversionEligible / totalCategorized) * 100) : 0;
@@ -224,10 +234,11 @@ export class DashboardService {
             
             let statusText = "Low";
             let statusColor = "text-emerald-600 bg-emerald-50 border-emerald-200";
-            if (rate < 60 || stats.pending > 10) {
+            
+            if (stats.maxActiveSeverity >= 4) {
                 statusText = "High";
                 statusColor = "text-rose-600 bg-rose-50 border-rose-200";
-            } else if (rate < 85 || stats.pending > 5) {
+            } else if (stats.maxActiveSeverity === 3) {
                 statusText = "Medium";
                 statusColor = "text-amber-600 bg-amber-50 border-amber-200";
             }
@@ -239,7 +250,8 @@ export class DashboardService {
                 pending: stats.pending,
                 resolved: stats.resolved,
                 rate,
-                segregation: { bio: stats.bio, rec: stats.rec, res: stats.res, haz: stats.haz },
+                // Export 6 distinct groups
+                segregation: { nab: stats.nab, rec: stats.rec, non: stats.non, mix: stats.mix, haz: stats.haz, heal: stats.heal },
                 history: stats.history,
                 statusText,
                 statusColor
@@ -248,7 +260,6 @@ export class DashboardService {
 
         barangaySummary.sort((a, b) => b.rate - a.rate); // Sort by highest rate
         const flaggedCount = barangaySummary.filter(b => b.statusText === "High").length;
-
         this.state.metrics = {
             totalReports,
             activeReports,

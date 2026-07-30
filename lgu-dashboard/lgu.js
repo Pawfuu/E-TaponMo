@@ -233,7 +233,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         reports = data.reports || [];
         dashboardMetrics = data.metrics || null;
 
-        updateCategoryDropdown(reports);
+        updateDropdowns(reports);
         updateDashboardMetrics(reports);
         renderReportsTable();
         if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
@@ -274,21 +274,18 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString("en-US", options);
   }
 
-  function updateCategoryDropdown(reportsList) {
-    // Hardcode the complete list of categories from the web app
+ function updateDropdowns(reportsList) {
     const categories = [
-      "Nabubulok",
-      "Recyclable",
-      "Non-recyclable",
-      "Hazardous Waste",
-      "Healthcare Waste",
-      "Mixed Waste"
+      "Nabubulok", "Recyclable", "Non-recyclable", 
+      "Hazardous Waste", "Healthcare Waste", "Mixed Waste"
     ];
+    
+    // Extract unique assigned Barangays
+    const barangays = [...new Set(reportsList.map(r => r.barangay).filter(b => b && b !== "Unassigned"))].sort();
 
-    // 1. Reports View Custom Dropdown
+    // 1. Reports View Category Dropdown
     const reportsCatMenu = document.getElementById("reports-dropdown-category-menu");
     const reportsCatText = document.getElementById("reports-dropdown-category-text");
-
     if (reportsCatMenu) {
       reportsCatMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Categories</div>`;
       categories.forEach(cat => {
@@ -298,8 +295,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         optionDiv.textContent = cat;
         reportsCatMenu.appendChild(optionDiv);
       });
-
-      // Bind click events
       reportsCatMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -312,10 +307,47 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    // 2. Map View Custom Dropdown
+    // 2. Reports View Barangay Dropdown
+    const reportsBrgyMenu = document.getElementById("reports-dropdown-barangay-menu");
+    const reportsBrgyText = document.getElementById("reports-dropdown-barangay-text");
+    if (reportsBrgyMenu) {
+      reportsBrgyMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Barangays</div>`;
+      barangays.forEach(brgy => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
+        optionDiv.dataset.value = brgy;
+        optionDiv.textContent = brgy;
+        reportsBrgyMenu.appendChild(optionDiv);
+      });
+      reportsBrgyMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          currentBarangayFilter = e.target.dataset.value;
+          if (reportsBrgyText) reportsBrgyText.textContent = e.target.textContent;
+          reportsBrgyMenu.classList.add("hidden");
+          currentPage = 1;
+          renderReportsTable();
+        });
+      });
+    }
+
+    // 3. Analytics View Barangay Filter (Select Menu)
+    const analyticsBrgySelect = document.getElementById("analytics-brgy-filter");
+    if (analyticsBrgySelect) {
+      const currentVal = analyticsBrgySelect.value;
+      analyticsBrgySelect.innerHTML = `<option value="all">All Barangays</option>`;
+      barangays.forEach(brgy => {
+        const opt = document.createElement("option");
+        opt.value = brgy;
+        opt.textContent = brgy;
+        analyticsBrgySelect.appendChild(opt);
+      });
+      if (barangays.includes(currentVal)) analyticsBrgySelect.value = currentVal;
+    }
+
+    // 4. Map View Category Dropdown
     const mapCatMenu = document.getElementById("dropdown-category-menu");
     const mapCatText = document.getElementById("dropdown-category-text");
-
     if (mapCatMenu) {
       mapCatMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Categories</div>`;
       categories.forEach(cat => {
@@ -325,7 +357,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         optionDiv.textContent = cat;
         mapCatMenu.appendChild(optionDiv);
       });
-
       mapCatMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -337,7 +368,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
   }
-
   function formatReportedAt(date) {
     if (!date) return "N/A";
     const options = { month: "short", day: "numeric" };
@@ -600,24 +630,25 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   function updateAnalyticsMetrics() {
     const dateFilterEl = document.getElementById("analytics-date-filter");
+    const brgyFilterEl = document.getElementById("analytics-brgy-filter");
+    
     const dateVal = dateFilterEl ? dateFilterEl.value : "7days";
+    const brgyVal = brgyFilterEl ? brgyFilterEl.value : "all";
 
     const now = new Date();
     let filtered = [...reports];
     let prevFiltered = [];
 
+    // 1. First, apply Barangay Filter
+    if (brgyVal !== "all") {
+      filtered = filtered.filter(r => r.barangay === brgyVal);
+      // We will also filter prevFiltered after we determine dates
+    }
+
+    // 2. Determine Date Ranges
     let currentStart = new Date();
     let prevStart = new Date();
     let prevEnd = new Date();
-
-    const firstOption = dateFilterEl ? dateFilterEl.querySelector('option[value="7days"]') : null;
-    if (firstOption) {
-      const start = new Date();
-      start.setDate(now.getDate() - 7);
-      const formatMonthDay = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const formatYear = (d) => d.getFullYear();
-      firstOption.textContent = `${formatMonthDay(start)} - ${formatMonthDay(now)}, ${formatYear(now)}`;
-    }
 
     let subtextLabel = "from last week";
 
@@ -628,10 +659,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 7);
       prevEnd.setHours(0, 0, 0, 0);
-
-      // FIXED: Swapped all r.createdAt to r.reportedAt
-      filtered = reports.filter(r => r.reportedAt && r.reportedAt >= currentStart);
-      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
       subtextLabel = "from last week";
     } else if (dateVal === "30days") {
       currentStart.setDate(now.getDate() - 30);
@@ -640,23 +667,22 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
-
-      filtered = reports.filter(r => r.reportedAt && r.reportedAt >= currentStart);
-      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
-      subtextLabel = "from last month";
-    } else {
-      filtered = [...reports];
-      currentStart.setDate(now.getDate() - 30);
-      currentStart.setHours(0, 0, 0, 0);
-      prevStart.setDate(now.getDate() - 60);
-      prevStart.setHours(0, 0, 0, 0);
-      prevEnd.setDate(now.getDate() - 30);
-      prevEnd.setHours(0, 0, 0, 0);
-
-      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
       subtextLabel = "from last month";
     }
 
+    // Execute Time Filtering
+    if (dateVal !== "all") {
+        prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
+        filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+    } else {
+        prevFiltered = [...reports]; // Fallback for all time
+    }
+    
+    if (brgyVal !== "all" && dateVal !== "all") {
+        prevFiltered = prevFiltered.filter(r => r.barangay === brgyVal);
+    }
+
+    // 3. Compute Metrics
     const totalCount = filtered.length;
     const resolvedCount = filtered.filter(r => r.status === "Resolved").length;
     const pendingCount = filtered.filter(r => r.status === "Pending Verification").length;
@@ -665,6 +691,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const prevResolved = prevFiltered.filter(r => r.status === "Resolved").length;
     const prevPending = prevFiltered.filter(r => r.status === "Pending Verification").length;
 
+    // Apply to UI
     if (document.getElementById("analytics-stat-total")) document.getElementById("analytics-stat-total").textContent = String(totalCount);
     if (document.getElementById("analytics-stat-resolved")) document.getElementById("analytics-stat-resolved").textContent = String(resolvedCount);
     if (document.getElementById("analytics-stat-pending")) document.getElementById("analytics-stat-pending").textContent = String(pendingCount);
@@ -673,24 +700,16 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); 
     updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); 
 
+    // Text Sublabels
     const subtextTotalEl = document.getElementById("analytics-subtext-total");
-    const subtextResolvedEl = document.getElementById("analytics-subtext-resolved");
-    const subtextPendingEl = document.getElementById("analytics-subtext-pending");
-    const subtextTimeEl = document.getElementById("analytics-subtext-time");
-
     if (subtextTotalEl) subtextTotalEl.textContent = subtextLabel;
-    if (subtextResolvedEl) subtextResolvedEl.textContent = subtextLabel;
-    if (subtextPendingEl) subtextPendingEl.textContent = subtextLabel;
-    if (subtextTimeEl) subtextTimeEl.textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-resolved")) document.getElementById("analytics-subtext-resolved").textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-pending")) document.getElementById("analytics-subtext-pending").textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-time")) document.getElementById("analytics-subtext-time").textContent = subtextLabel;
 
-    let avgTimeCurrent = 18; 
-    let avgTimePrev = 20; 
-    if (totalCount > 0) {
-      avgTimeCurrent = Math.max(4, Math.round(10 + (pendingCount * 0.8)));
-    }
-    if (prevTotal > 0) {
-      avgTimePrev = Math.max(4, Math.round(10 + (prevPending * 0.8)));
-    }
+    // Simulated Average Response Time Logic
+    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18; 
+    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20; 
 
     if (document.getElementById("analytics-stat-time")) {
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
@@ -712,101 +731,247 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       }
     }
 
+    // Redraw Charts
     drawReportsOverTimeChart(filtered, dateVal);
     drawCategoryDonutChart(filtered);
+    renderAnalyticsTopBarangays();
     animateAnalyticsRefresh();
+  }
 
-    function renderBarangayPerformance() {
-    if (!dashboardMetrics) return;
+  function renderAnalyticsTopBarangays() {
+    if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
 
-    const panel = document.getElementById("view-barangay-performance-panel");
-    if (!panel) return;
+    const tbody = document.getElementById("analytics-top-barangays-tbody");
+    const chartContainer = document.getElementById("analytics-avg-response-chart");
+    if (!tbody || !chartContainer) return;
 
-    // 1. Update Top KPI Cards
-    const gaugeText = panel.querySelector("svg text:nth-of-type(1)");
-    if (gaugeText) gaugeText.textContent = `${dashboardMetrics.cityDiversionRate || 0}%`;
+    // Get Top 5 by Total Reports
+    const top5 = [...dashboardMetrics.barangaySummary].sort((a,b) => b.total - a.total).slice(0, 5);
 
-    const statCards = panel.querySelectorAll(".grid > div.bg-white");
-    if (statCards.length >= 4) {
-      // Resolved (7d)
-      statCards[1].querySelector(".text-3xl").textContent = dashboardMetrics.resolved7d.toLocaleString();
-      
-      // Avg Response Time (Simulated load-based for MVP)
-      const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
-      statCards[2].querySelector(".text-3xl").textContent = `${mockHours}h 15m`;
-
-      // Flagged Barangays
-      statCards[3].querySelector(".text-3xl").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
+    // 1. Populate Table
+    tbody.innerHTML = "";
+    if (top5.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-500 italic">No data available</td></tr>`;
+    } else {
+      top5.forEach(b => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 text-xs font-bold text-slate-800">${b.name}</td>
+            <td class="py-3 text-right text-xs font-semibold text-slate-600">${b.total}</td>
+            <td class="py-3 text-right text-xs font-semibold text-slate-600">${b.resolved}</td>
+            <td class="py-3 text-right text-xs font-bold text-emerald-600">${b.rate}%</td>
+          </tr>
+        `;
+      });
     }
 
-    // 2. Render the Ranked Board
-    const board = document.getElementById("board");
-    if (!board) return;
+    // 2. Populate Bar Chart (Simulating Response time dynamically)
+    chartContainer.innerHTML = "";
+    if (top5.length === 0) {
+      chartContainer.innerHTML = `<div class="w-full text-center text-xs text-slate-500 italic flex items-center justify-center h-full">No data available</div>`;
+    } else {
+      const maxBarHeight = 120; // px
+      let maxHours = 0;
+      const chartData = top5.map(b => {
+          const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
+          if (hours > maxHours) maxHours = hours;
+          return { name: b.name, hours: hours };
+      });
 
-    // Keep the static header row
-    const headHtml = `
-      <div class="board-row head">
-        <div>#</div>
-        <div>Barangay</div>
-        <div class="col-hide">Resolved</div>
-        <div class="col-hide">Avg. Resp.</div>
-        <div>Rate</div>
-        <div class="col-hide">Segregation mix</div>
-        <div class="col-hide">7-day trend</div>
-        <div>Status</div>
-      </div>
-    `;
+      chartData.forEach(d => {
+          const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
+          const finalHeight = Math.max(heightPx, 10);
+          const truncName = d.name.length > 8 ? d.name.substring(0,6) + '...' : d.name;
 
-    let html = headHtml;
+          chartContainer.innerHTML += `
+            <div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer" title="${d.name} (${d.hours}h avg)">
+              <span class="text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity font-bold">${d.hours}h</span>
+              <div class="w-7 bg-emerald-600/90 rounded-t-lg transition-all duration-500 group-hover:bg-emerald-700" style="height: ${finalHeight}px;"></div>
+              <span class="text-[9px] text-slate-400 truncate w-14 text-center uppercase tracking-wider">${truncName}</span>
+            </div>
+          `;
+      });
+    }
+  }
 
-    dashboardMetrics.barangaySummary.forEach((b, index) => {
+  function renderBarangayPerformance() {
+    if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
+    
+    // Top KPI Cards
+    if (document.getElementById("brgy-kpi-resolved")) document.getElementById("brgy-kpi-resolved").textContent = dashboardMetrics.resolved7d.toLocaleString();
+    
+    const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
+    if (document.getElementById("brgy-kpi-response")) document.getElementById("brgy-kpi-response").textContent = `${mockHours}h`;
+    
+    if (document.getElementById("brgy-kpi-flagged")) {
+      document.getElementById("brgy-kpi-flagged").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
+    }
+
+    // Ranked Board Table Body
+    const tbody = document.getElementById("brgy-performance-tbody");
+    if (!tbody) return;
+
+    // --- NEW: APPLY FILTERS ---
+    let filteredBrgy = [...dashboardMetrics.barangaySummary];
+
+    if (activeBrgyDistrictFilter !== "all") {
+        filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
+    }
+
+    if (activeBrgySearchQuery) {
+        filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
+    }
+
+    let html = "";
+    
+    // Handle empty state gracefully
+    if (filteredBrgy.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
+        return;
+    }
+
+    filteredBrgy.forEach((b, index) => {
       const rank = index + 1;
       
-      // Calculate CSS widths for the Segregation Bar Chart
-      const totalSeg = b.segregation.bio + b.segregation.rec + b.segregation.res + b.segregation.haz || 1;
-      const pBio = (b.segregation.bio / totalSeg) * 100;
+      // Calculate 6-segment metrics
+      const totalSeg = (b.segregation.nab + b.segregation.rec + b.segregation.non + b.segregation.mix + b.segregation.haz + b.segregation.heal) || 1;
+      
+      const pNab = (b.segregation.nab / totalSeg) * 100;
       const pRec = (b.segregation.rec / totalSeg) * 100;
-      const pRes = (b.segregation.res / totalSeg) * 100;
+      const pNon = (b.segregation.non / totalSeg) * 100;
+      const pMix = (b.segregation.mix / totalSeg) * 100;
       const pHaz = (b.segregation.haz / totalSeg) * 100;
+      const pHeal = (b.segregation.heal / totalSeg) * 100;
 
-      const stampClass = b.status === "ok" ? "ok" : b.status === "critical" ? "critical" : "watch";
-      const stampText = b.status === "ok" ? "IMPROVING" : b.status === "critical" ? "NEEDS ACTION" : "STABLE";
-      const beaconClass = b.status === "ok" ? "ok" : b.status === "critical" ? "critical" : "watch";
-      const uiStatus = b.status === "ok" ? "Good" : b.status === "watch" ? "Monitor" : "Critical";
+      const uiStatus = b.statusText === "Low" ? "Good" : b.statusText === "Medium" ? "Monitor" : "Critical";
+      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
+                        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200" 
+                        : "bg-rose-100 text-rose-700 border border-rose-200";
+
+      const trendBars = b.history.map(val => {
+          const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
+          return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
+      }).join('');
 
       html += `
-        <div class="board-row">
-          <div class="rank">${rank}</div>
-          <div class="brgy-name">
-            <div class="beacon ${beaconClass}"></div>
-            <div>
-              <div class="name">${b.name}</div>
-              <div class="zone">District TBD</div>
-            </div>
-          </div>
-          <div class="num col-hide">${b.resolved} / ${b.total}</div>
-          <div class="num col-hide">--</div>
-          <div class="rate">${b.rate}%</div>
-          <div class="col-hide">
-            <div class="seg-bar">
-              <div style="width:${pBio}%; background: #10b981;"></div>
+        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50">
+          <td class="py-4 px-6 text-left text-xs font-bold text-slate-400">${rank}</td>
+          <td class="py-4 px-6 text-left">
+            <div class="font-bold text-slate-800 text-xs">${b.name}</div>
+            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">${b.district || 'QC'}</div>
+          </td>
+          <td class="py-4 px-6 text-center text-xs font-bold text-slate-700">${b.total}</td>
+          <td class="py-4 px-6 text-center text-xs text-amber-600 font-bold">${b.pending}</td>
+          <td class="py-4 px-6 text-center text-xs text-emerald-600 font-bold">${b.resolved}</td>
+          <td class="py-4 px-6 text-center text-xs font-bold text-slate-800">${b.rate}%</td>
+          <td class="py-4 px-6 text-center w-36">
+            <div class="flex w-full h-1.5 rounded-full overflow-hidden bg-slate-100">
+              <div style="width:${pNab}%; background: #10b981;"></div>
               <div style="width:${pRec}%; background: #3b82f6;"></div>
-              <div style="width:${pRes}%; background: #b45309;"></div>
+              <div style="width:${pNon}%; background: #b45309;"></div>
+              <div style="width:${pMix}%; background: #64748b;"></div>
               <div style="width:${pHaz}%; background: #f59e0b;"></div>
+              <div style="width:${pHeal}%; background: #ef4444;"></div>
             </div>
-          </div>
-          <div class="col-hide">
-            <div class="stamp ${stampClass}">${stampText}</div>
-          </div>
-          <div>
-            <span style="font-size:11px;font-weight:600;color:#1c231d;text-transform:capitalize">${uiStatus}</span>
-          </div>
-        </div>
+          </td>
+          <td class="py-4 px-6 text-center">
+             <div class="flex items-end justify-center h-4 gap-0.5 w-16 mx-auto">${trendBars}</div>
+          </td>
+          <td class="py-4 px-6 text-center">
+            <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${badgeClass}">${uiStatus}</span>
+          </td>
+        </tr>
       `;
     });
+    tbody.innerHTML = html;
 
-    board.innerHTML = html;
+    // Performance Score Gauge Sync
+    const gaugeVal = document.getElementById("brgy-gauge-val");
+    const gaugePath = document.getElementById("brgy-gauge-path");
+    if (gaugeVal && gaugePath) {
+      const dr = dashboardMetrics.cityDiversionRate || 0;
+      gaugeVal.textContent = `${dr}%`;
+      const offset = 125.6 - (125.6 * (dr / 100)); // 125.6 maps to SVG stroke dash scale
+      gaugePath.style.strokeDashoffset = offset;
+      gaugePath.style.stroke = dr > 75 ? '#16a34a' : dr > 50 ? '#f59e0b' : '#dc2626';
+    }
+
+    drawBarangayTrendChart();
   }
+
+  function drawBarangayTrendChart() {
+    const container = document.getElementById("brgy-trend-chart");
+    if (!container || !dashboardMetrics) return;
+
+    // Pull real-time data calculated by dashboard-service.js
+    const labels = dashboardMetrics.trendLabels || [];
+    const thisWeek = dashboardMetrics.trendThisWeek || [];
+    const lastWeek = dashboardMetrics.trendLastWeek || [];
+
+    if (labels.length === 0) {
+        container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
+        return;
+    }
+
+    // Dynamic Sizing
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 200;
+    const paddingLeft = 35;
+    const paddingRight = 15;
+    const paddingTop = 30; 
+    const paddingBottom = 25;
+
+    const chartWidth = width - paddingLeft - paddingRight;
+    const chartHeight = height - paddingTop - paddingBottom;
+
+    // Find highest peak to scale the Y-Axis (minimum scale of 5)
+    const maxVal = Math.max(...thisWeek, ...lastWeek, 5);
+
+    const getX = (idx) => paddingLeft + (idx / (labels.length - 1)) * chartWidth;
+    const getY = (val) => paddingTop + chartHeight - (val / maxVal) * chartHeight;
+
+    let html = `
+      <div class="absolute top-0 right-2 flex items-center gap-4 text-[10px] font-bold bg-white px-2 py-1">
+        <span class="flex items-center gap-1.5 text-blue-600"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> This Week</span>
+        <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Last Week</span>
+      </div>
+      <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" class="overflow-visible">
+    `;
+
+    // 1. Grid Lines & Y-Axis Labels
+    const gridLines = 4;
+    for (let i = 0; i <= gridLines; i++) {
+      const val = Math.round((i / gridLines) * maxVal);
+      const y = getY(val);
+      html += `
+        <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#f1f5f9" stroke-width="1.5" />
+        <text x="${paddingLeft - 8}" y="${y + 4}" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="end">${val}</text>
+      `;
+    }
+
+    // 2. X-Axis Labels
+    labels.forEach((label, idx) => {
+      const x = getX(idx);
+      html += `<text x="${x}" y="${height - 5}" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="middle">${label}</text>`;
+    });
+
+    // 3. Path Builder Helper
+    const buildPath = (data) => data.map((val, idx) => `${idx === 0 ? 'M' : 'L'} ${getX(idx)} ${getY(val)}`).join(" ");
+
+    // 4. Draw Last Week Line & Nodes (Green)
+    html += `<path d="${buildPath(lastWeek)}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    lastWeek.forEach((val, idx) => {
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
+    });
+
+    // 5. Draw This Week Line & Nodes (Blue)
+    html += `<path d="${buildPath(thisWeek)}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    thisWeek.forEach((val, idx) => {
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
+    });
+
+    html += `</svg>`;
+    container.innerHTML = html;
   }
 
   function animateAnalyticsRefresh() {
@@ -1235,6 +1400,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
         }
       });
     }
+    
 
     // Render dashboard map markers (all reports)
     reports.forEach((report) => {
@@ -1377,7 +1543,12 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
+  let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
+
+  // NEW: Barangay Performance Panel Filter States
+  let activeBrgyDistrictFilter = "all";
+  let activeBrgySearchQuery = "";
 
   function renderReportsTable() {
     if (!reportsTableBody) return;
@@ -1409,6 +1580,11 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     // Apply secondary category filter from custom dropdown
     if (currentCategoryFilter && currentCategoryFilter !== "all") {
       filteredList = filteredList.filter(r => r.category === currentCategoryFilter);
+    }
+
+    // ADD THIS: Apply Barangay filter
+    if (currentBarangayFilter && currentBarangayFilter !== "all") {
+      filteredList = filteredList.filter(r => r.barangay === currentBarangayFilter);
     }
 
     // Apply text query filter
@@ -1839,6 +2015,24 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   }
 
   function setupEventListeners() {
+    // --- NEW: Barangay Performance Input Listeners ---
+    const brgyDistrictFilter = document.getElementById("brgy-district-filter");
+    if (brgyDistrictFilter) {
+      brgyDistrictFilter.addEventListener("change", function () {
+        activeBrgyDistrictFilter = this.value;
+        renderBarangayPerformance();
+      });
+    }
+
+    const brgySearchInput = document.getElementById("brgy-search-input");
+    if (brgySearchInput) {
+      brgySearchInput.addEventListener("input", function () {
+        activeBrgySearchQuery = this.value.trim();
+        renderBarangayPerformance();
+      });
+    }
+
+
     // Navigation Routing mapped to the new preventDefault handler
     if (navDashboardBtn) navDashboardBtn.addEventListener("click", (e) => handleNavClick(e, "dashboard"));
     if (navReportsBtn) navReportsBtn.addEventListener("click", (e) => handleNavClick(e, "reports"));
@@ -1947,6 +2141,56 @@ function drawReportsOverTimeChart(filtered, dateVal) {
           renderReportsTable();
         });
       });
+
+      // Barangay Dropdown Setup (Reports Menu)
+    const rptBrgyBtn = document.getElementById("reports-dropdown-barangay-btn");
+    const rptBrgyMenu = document.getElementById("reports-dropdown-barangay-menu");
+    if (rptBrgyBtn && rptBrgyMenu) {
+      rptBrgyBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptBrgyMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+      });
+    }
+
+    // Map the Global Click Escape properly
+    document.addEventListener("click", () => {
+      [
+        "reports-dropdown-status-menu",
+        "reports-dropdown-category-menu",
+        "reports-dropdown-barangay-menu", // <-- ADD THIS
+        "reports-dropdown-sort-menu",
+        "dropdown-status-menu",
+        "dropdown-category-menu"
+      ].forEach(id => {
+        const menu = document.getElementById(id);
+        if (menu && !menu.classList.contains("hidden")) menu.classList.add("hidden");
+      });
+    });
+
+    // Fix the "Clear Filters" Button 
+    const filterBtn = document.getElementById("filter-btn");
+    if (filterBtn) {
+      filterBtn.addEventListener("click", function () {
+        if (reportSearchInput) reportSearchInput.value = "";
+
+        currentStatusFilter = "all";
+        currentCategoryFilter = "all";
+        currentBarangayFilter = "all"; // <-- ADD THIS
+        currentSortOrder = "date-desc";
+
+        if (rptStatusText) rptStatusText.textContent = "All Status";
+        if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
+        if (document.getElementById("reports-dropdown-barangay-text")) document.getElementById("reports-dropdown-barangay-text").textContent = "All Barangays"; // <-- ADD THIS
+        if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
+
+        updateTabHighlight("all");
+        currentPage = 1;
+        renderReportsTable();
+      });
+      }
     }
 
     // Category Dropdown
@@ -2180,6 +2424,14 @@ function drawReportsOverTimeChart(filtered, dateVal) {
 
     // Initialize Sub-Tab Filters  
     setupTabFilters();
+
+    // BARANGAY PERFORMANCE CHARTS
+    // Ensure Trend Chart scales dynamically if window is resized
+    window.addEventListener("resize", () => {
+        if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
+            drawBarangayTrendChart();
+        }
+    });
   }
 
   // ==========================================
