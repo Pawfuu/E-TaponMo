@@ -5,9 +5,12 @@ user-app/.env
 # Local configuration files containing live API keys
 user-app/config.js
 shared/firebase-config.js
+user-app/js/hedera-config.js
 
 # Firebase local caches and logs
 .firebase/
 firebaselog.json
 firebase-debug.log
 .firebaserc
+
+CODEOWNERS

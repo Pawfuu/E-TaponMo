@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Tapon Mo Explorer | Public Hedera Ledger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Toast notification styles */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            background: #0A2517;
+            color: #fff;
+            border-radius: 0.875rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.08);
+            max-width: 22rem;
+            transform: translateY(1rem);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast .toast-icon {
+            flex-shrink: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            background: rgba(52,211,153,0.18);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body class="bg-[#F8FAF9] text-slate-800 antialiased selection:bg-emerald-200">
+
+    <!-- Top Navigation Header -->
+    <nav class="bg-white border-b border-slate-200/80 sticky top-0 z-50 backdrop-blur-md bg-white/90">
+        <div class="max-w-[85rem] mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between">
+            <a href="./pitch.html" class="flex items-center gap-3">
+                <img src="../user-app/assets/ogLogo.svg" alt="E-Tapon Mo" class="h-9 w-auto object-contain">
+                <div class="flex flex-col">
+                    <span class="text-lg font-black tracking-tight text-[#0A2517] leading-tight">E-Tapon Mo</span>
+                    <span class="text-[10px] font-bold text-emerald-600 tracking-widest uppercase">Hedera Public
+                        Explorer</span>
+                </div>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="./pitch.html" class="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">
+                    &larr; Back to Platform
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-[85rem] mx-auto px-4 sm:px-8 py-8 space-y-8">
+
+        <!-- Hero Title & Graphic Banner -->
+        <div
+            class="relative flex flex-col lg:flex-row items-center justify-between gap-6 pt-8 pb-12 lg:pt-6 lg:pb-8 overflow-hidden">
+
+            <!-- Left Column: Text + Search Bar -->
+            <div class="w-full lg:w-5/12 relative z-10">
+                <span
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-100/80 text-emerald-800 border border-emerald-200/60 mb-4">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Public Ledger
+                </span>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4 leading-tight">
+                    <span class="text-[#0A2517]">E-Tapon Mo</span><br />
+                    <span class="text-emerald-600">Explorer</span>
+                </h1>
+                <p class="text-base sm:text-lg text-slate-600 font-medium leading-relaxed max-w-md mb-6">
+                    Transparent and tamper-proof ledger of all waste reports, clean-up tasks, and resolutions on the
+                    <span class="font-bold text-emerald-700">Hedera</span> network.
+                </p>
+
+                <!-- Search Bar & Filter (inside left column) -->
+                <div class="flex flex-col sm:flex-row items-center gap-3 max-w-md">
+                    <div class="relative flex-1 w-full">
+                        <div
+                            class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Search by Tx Hash, Report ID, or Location..."
+                            class="w-full bg-white text-slate-800 rounded-xl py-3.5 pl-11 pr-4 border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium placeholder-slate-400">
+                    </div>
+                    <button id="btn-filters"
+                        class="w-full sm:w-auto px-5 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-emerald-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <span>Filters</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Hero Image (unchanged) -->
+            <div class="w-full lg:w-7/12 flex justify-end relative z-10">
+                <img src="./assets/explorer-hero.png" alt="Hedera Network City Illustration"
+                    class="w-full max-w-lg lg:max-w-xl h-auto object-contain drop-shadow-xl scale-[1.15] transform origin-right" />
+            </div>
+
+        </div>
+
+        <!-- 4 KPI Summary Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Reports</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900 leading-tight mt-1" id="stat-total-reports">1,248</div>
+                <div class="text-[10px] font-bold text-emerald-600 mt-1">↑ 12% <span
+                        class="text-slate-400 font-medium">vs last 30 days</span></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Resolved</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900 leading-tight mt-1" id="stat-resolved">892</div>
+                <div class="text-[10px] font-bold text-emerald-600 mt-1">↑ 15% <span
+                        class="text-slate-400 font-medium">vs last 30 days</span></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Pending / Active</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900 leading-tight mt-1" id="stat-active">234</div>
+                <div class="text-[10px] font-bold text-amber-500 mt-1">↑ 8% <span class="text-slate-400 font-medium">vs
+                        last 30 days</span></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Dismissed</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900 leading-tight mt-1" id="stat-dismissed">122</div>
+                <div class="text-[10px] font-bold text-rose-500 mt-1">↓ 3% <span class="text-slate-400 font-medium">vs
+                        last 30 days</span></div>
+            </div>
+        </div>
+
+        <!-- 3 Interactive Feature Panels -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Map View</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed mb-4">
+                        Explore waste reports across the community with an interactive map.
+                    </p>
+                    <img src="./assets/explorer-maps.png" alt="Map Preview"
+                        class="w-full h-40 object-cover rounded-xl mb-6 border border-slate-100" />
+                </div>
+                <button id="btn-open-map"
+                    class="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>Open Map</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Top Reporters</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed mb-6">
+                        See the most active community members making a difference.
+                    </p>
+
+                    <div class="space-y-3 mb-6">
+                        <div
+                            class="flex items-center justify-between text-sm font-bold p-2.5 bg-amber-50/50 rounded-xl border border-amber-100">
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center text-[11px] font-black">1</span>
+                                <span class="text-slate-800">Juan Dela Cruz</span>
+                            </div>
+                            <span class="text-slate-500 font-semibold text-xs">128 reports</span>
+                        </div>
+                        <div
+                            class="flex items-center justify-between text-sm font-bold p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-black">2</span>
+                                <span class="text-slate-800">Maria Santos</span>
+                            </div>
+                            <span class="text-slate-500 font-semibold text-xs">98 reports</span>
+                        </div>
+                        <div
+                            class="flex items-center justify-between text-sm font-bold p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="w-6 h-6 rounded-full bg-amber-700/20 text-amber-900 flex items-center justify-center text-[11px] font-black">3</span>
+                                <span class="text-slate-800">Green Warriors PH</span>
+                            </div>
+                            <span class="text-slate-500 font-semibold text-xs">76 reports</span>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-view-leaders"
+                    class="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>View Leaders</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Analytics</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed mb-4">
+                        Insights and trends from on-chain data to improve our community.
+                    </p>
+                    <!-- Increased height to h-48, changed to object-cover, and added rounded-xl -->
+                    <img src="./assets/explorer-analytics.png" alt="Analytics Line Chart"
+                        class="w-full h-48 object-cover object-top rounded-xl mb-6" />
+                </div>
+                <button id="btn-view-analytics"
+                    class="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>View Analytics</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Transactions Table Section -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center gap-3">
+                <h2 class="text-lg font-extrabold text-slate-900">Live DB Ledger</h2>
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Updates
+                </span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-slate-50/60 border-b border-slate-200/80 text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                            <th class="px-6 py-4">Tx Hash</th>
+                            <th class="px-6 py-4">Time</th>
+                            <th class="px-6 py-4">Report ID</th>
+                            <th class="px-6 py-4">Report Status</th>
+                            <th class="px-6 py-4">Location</th>
+                            <th class="px-6 py-4">Waste Type & Severity</th>
+                            <th class="px-6 py-4">Network</th>
+                            <th class="px-6 py-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="explorer-table-body"
+                        class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                        <!-- Dynamic rows injected via explorer.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Pagination Bar (dynamically generated by explorer.js) -->
+            <div id="pagination-container"
+                class="px-5 py-3.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-500 bg-white">
+                <!-- Populated by renderPagination() in explorer.js -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast notification container -->
+    <div id="toast-container"></div>
+
+    <script type="module" src="explorer.js"></script>
+</body>
+
+</html>
