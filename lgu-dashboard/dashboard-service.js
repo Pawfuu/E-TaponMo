@@ -1,37 +1,57 @@
 /**
  * Dashboard Service
- *
  * Real-time data aggregator for the LGU Administrator Portal.
- * Subscribes to Firestore collections (reports, tasks, barangays, settings, AI insights)
- * using onSnapshot() and computes unified metrics for UI consumption.
  */
 
 import { db } from '../shared/firebase-config.js';
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { TaskService } from './task-service.js';
-import { BarangayService } from './barangay-service.js';
-import { AiInsightService } from './ai-insight-service.js';
-import { SettingsService } from './settings-service.js';
+
+// Quezon City Legislative District Mapping Dictionary
+const QC_DISTRICTS = {
+    "Alicia": "District 1", "Bagong Pag-asa": "District 1", "Bahay Toro": "District 1", "Balingasa": "District 1",
+    "Bungad": "District 1", "Damar": "District 1", "Damayan": "District 1", "Del Monte": "District 1",
+    "Katipunan": "District 1", "Laging Handa": "District 1", "Lourdes": "District 1", "Manresa": "District 1",
+    "Mariblo": "District 1", "Masambong": "District 1", "Nayong Kanluran": "District 1", "Paang Bundok": "District 1",
+    "Pag-ibig sa Nayon": "District 1", "Paltok": "District 1", "Paraiso": "District 1", "Phil-Am": "District 1",
+    "Project 6": "District 1", "Ramon Magsaysay": "District 1", "San Antonio": "District 1", "San Jose": "District 1",
+    "Santa Cruz": "District 1", "Santa Teresita": "District 1", "Santo Domingo": "District 1", "Santo Cristo": "District 1",
+    "Siena": "District 1", "Talayan": "District 1", "Vasra": "District 1", "Veterans Village": "District 1", "West Triangle": "District 1",
+    "Bagong Silangan": "District 2", "Batasan Hills": "District 2", "Commonwealth": "District 2", "Holy Spirit": "District 2", "Payatas": "District 2",
+    "Amihan": "District 3", "Bagumbayan": "District 3", "Bayanihan": "District 3", "Blue Ridge A": "District 3", "Blue Ridge B": "District 3",
+    "Camp Aguinaldo": "District 3", "Claro": "District 3", "Dioquino Zobel": "District 3", "Duyan-Duyan": "District 3", "E. Rodriguez": "District 3",
+    "East Kamias": "District 3", "Escopa I": "District 3", "Escopa II": "District 3", "Escopa III": "District 3", "Escopa IV": "District 3",
+    "Libis": "District 3", "Loyola Heights": "District 3", "Mangga": "District 3", "Marilag": "District 3", "Masagana": "District 3",
+    "Matandang Balara": "District 3", "Milagrosa": "District 3", "Pansol": "District 3", "Quirino 2-A": "District 3", "Quirino 2-B": "District 3",
+    "Quirino 2-C": "District 3", "Quirino 3-A": "District 3", "Saint Ignatius": "District 3", "San Roque": "District 3", "Silangan": "District 3",
+    "Socorro": "District 3", "Tagumpay": "District 3", "Ugong Norte": "District 3", "Villa Maria Clara": "District 3", "West Kamias": "District 3", "White Plains": "District 3",
+    "Bagong Lipunan ng Crame": "District 4", "Botocan": "District 4", "Central": "District 4", "Damayang Lagi": "District 4",
+    "Don Manuel": "District 4", "Doña Aurora": "District 4", "Doña Imelda": "District 4", "Doña Josefa": "District 4",
+    "Horseshoe": "District 4", "Imelda": "District 4", "Kalusugan": "District 4", "Kamuning": "District 4", "Kaunlaran": "District 4",
+    "Kristong Hari": "District 4", "Malaya": "District 4", "Mariana": "District 4", "Obrero": "District 4", "Old Capitol Site": "District 4",
+    "Paligsahan": "District 4", "Pinyahan": "District 4", "Pinagkaisahan": "District 4", "Roxas": "District 4", "Sacred Heart": "District 4",
+    "San Martin de Porres": "District 4", "Sikatuna Village": "District 4", "South Triangle": "District 4", "Tatalon": "District 4",
+    "Teachers Village East": "District 4", "Teachers Village West": "District 4", "U.P. Campus": "District 4", "UP Campus": "District 4",
+    "U.P. Village": "District 4", "Valencia": "District 4", "Barangay 630": "District 4",
+    "Bagbag": "District 5", "Capri": "District 5", "Fairview": "District 5", "Greater Lagro": "District 5", "Gulod": "District 5",
+    "Kaligayahan": "District 5", "Nagkaisang Nayon": "District 5", "Novaliches Proper": "District 5", "Pasong Putik Proper": "District 5",
+    "San Bartolome": "District 5", "Santa Lucia": "District 5", "Santa Monica": "District 5",
+    "Baesa": "District 6", "Balon-Bato": "District 6", "Culiat": "District 6", "New Era": "District 6", "Pasong Tamo": "District 6",
+    "Sangandaan": "District 6", "Sauyo": "District 6", "Talipapa": "District 6", "Tandang Sora": "District 6", "Unang Sigaw": "District 6"
+};
+
+function getDistrictForBarangay(barangayName, city) {
+    if (!barangayName) return "Provincial / Outside QC";
+    const cleanName = barangayName.replace(/^Barangay\s+/i, '').trim();
+    if (QC_DISTRICTS[cleanName]) return QC_DISTRICTS[cleanName];
+    if (city && city.toLowerCase().includes("quezon")) return "QC Unassigned";
+    return "Provincial / Outside QC";
+}
 
 export class DashboardService {
     constructor() {
-        this.taskService = new TaskService();
-        this.barangayService = new BarangayService();
-        this.aiInsightService = new AiInsightService();
-        this.settingsService = new SettingsService();
-
         this.state = {
             reports: [],
-            tasks: [],
-            barangays: [],
-            insights: [],
-            settings: null,
             metrics: {
-                totalTasks: 0,
-                completedTasks: 0,
-                pendingTasks: 0,
-                overdueTasks: 0,
-                taskCompletionRate: 0,
                 totalReports: 0,
                 activeReports: 0,
                 reportsResolved: 0,
@@ -42,125 +62,57 @@ export class DashboardService {
                 barangaySummary: [],
                 topBarangays: [],
                 lowestBarangays: [],
-                aiSummary: [],
                 recentActivities: [],
                 latestReports: []
             },
             isLoaded: false,
             error: null
         };
-
         this.subscribers = new Set();
-        this.unsubscribers = [];
+        this.unsubscriber = null;
         this.isSubscribed = false;
     }
 
-    /**
-     * Subscribe to real-time dashboard data changes.
-     * @param {Function} callback Function invoked whenever dashboard data changes
-     * @param {Function} [onError] Optional error callback for Firestore subscription errors
-     * @returns {Function} Unsubscribe function
-     */
     subscribeDashboard(callback, onError) {
         this.subscribers.add(callback);
-
-        if (!this.isSubscribed) {
-            this.startListeners(onError);
-        } else if (this.state.isLoaded) {
-            callback(this.getAggregatedState());
-        }
-
+        if (!this.isSubscribed) this.startListeners(onError);
+        else if (this.state.isLoaded) callback(this.getAggregatedState());
         return () => {
             this.subscribers.delete(callback);
-            if (this.subscribers.size === 0) {
-                this.stopListeners();
-            }
+            if (this.subscribers.size === 0) this.stopListeners();
         };
     }
 
     startListeners(onError) {
         this.isSubscribed = true;
-
-        // 1. Subscribe to Reports Collection
         try {
             const reportsRef = collection(db, 'reports');
-            const unsubReports = onSnapshot(reportsRef, (snapshot) => {
-                this.state.reports = snapshot.docs.map(docSnap => this.normalizeReport(docSnap));
+            this.unsubscriber = onSnapshot(reportsRef, (snapshot) => {
+                this.state.reports = snapshot.docs
+                    .map(docSnap => this.normalizeReport(docSnap))
+                    .filter(report => report.reportedAt !== null); 
                 this.recalculateAndNotify();
             }, (err) => {
-                console.error("DashboardService - Reports Listener Error:", err);
                 this.state.error = err;
                 if (onError) onError(err);
-                this.notifySubscribers();
             });
-            this.unsubscribers.push(unsubReports);
         } catch (err) {
-            console.error("DashboardService - Failed to attach reports listener:", err);
             this.state.error = err;
             if (onError) onError(err);
-        }
-
-        // 2. Subscribe to Tasks (via TaskService)
-        try {
-            const unsubTasks = this.taskService.subscribeTasks((tasks) => {
-                this.state.tasks = tasks || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubTasks === 'function') this.unsubscribers.push(unsubTasks);
-        } catch (err) {
-            console.warn("DashboardService - TaskService subscription fallback:", err);
-        }
-
-        // 3. Subscribe to Barangays (via BarangayService)
-        try {
-            const unsubBarangays = this.barangayService.subscribeBarangays((barangays) => {
-                this.state.barangays = barangays || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubBarangays === 'function') this.unsubscribers.push(unsubBarangays);
-        } catch (err) {
-            console.warn("DashboardService - BarangayService subscription fallback:", err);
-        }
-
-        // 4. Subscribe to AI Insights (via AiInsightService)
-        try {
-            const unsubInsights = this.aiInsightService.subscribeInsights((insights) => {
-                this.state.insights = insights || [];
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubInsights === 'function') this.unsubscribers.push(unsubInsights);
-        } catch (err) {
-            console.warn("DashboardService - AiInsightService subscription fallback:", err);
-        }
-
-        // 5. Subscribe to Settings (via SettingsService)
-        try {
-            const unsubSettings = this.settingsService.subscribeSettings((settings) => {
-                this.state.settings = settings || {};
-                this.recalculateAndNotify();
-            });
-            if (typeof unsubSettings === 'function') this.unsubscribers.push(unsubSettings);
-        } catch (err) {
-            console.warn("DashboardService - SettingsService subscription fallback:", err);
         }
     }
 
     stopListeners() {
-        this.unsubscribers.forEach(unsub => {
-            if (typeof unsub === 'function') unsub();
-        });
-        this.unsubscribers = [];
+        if (typeof this.unsubscriber === 'function') this.unsubscriber();
+        this.unsubscriber = null;
         this.isSubscribed = false;
     }
 
     normalizeReport(docSnap) {
         const data = docSnap.data();
-        let safeLocation = "Unknown Location";
-        if (typeof data.location === "string") {
-            safeLocation = data.location;
-        } else if (typeof data.location === "object" && data.location !== null) {
-            safeLocation = data.location.display_name || data.location.address || data.location.name || "Map Pin Location";
-        }
+        const safeLocation = data.location || "Unknown Location";
+        const barangay = data.barangay || "Unassigned";
+        const district = getDistrictForBarangay(barangay, data.city);
 
         const rawStatus = String(data.status || "pending").trim().toLowerCase();
         let uiStatus = "Pending Verification";
@@ -168,26 +120,14 @@ export class DashboardService {
         else if (rawStatus === "in progress" || rawStatus === "in_progress") uiStatus = "In Progress";
         else if (rawStatus === "dismissed") uiStatus = "Dismissed";
 
-        const rawCategory = data.wasteType;
-        let category = "Uncategorized";
-        if (rawCategory) {
-            const cat = String(rawCategory).trim().toLowerCase();
-            const legacyMapping = {
-                "organic": "Recyclable",
-                "plastic": "Non-recyclable",
-                "construction": "Hazardous Waste",
-                "mixed": "Nabubulok"
-            };
-            category = legacyMapping[cat] || (rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1));
-        }
-
         return {
             docId: docSnap.id,
             reportId: docSnap.id,
             id: docSnap.id.slice(0, 8).toUpperCase(),
-            category: category,
-            wasteType: data.wasteType || category,
+            category: data.wasteType || "Uncategorized",
             location: safeLocation,
+            barangay: barangay,
+            district: district,
             coordinates: data.coordinates || null,
             submittedBy: data.reporterName || "Anonymous",
             contactInfo: data.contactInfo || "Not Provided",
@@ -195,132 +135,149 @@ export class DashboardService {
             rawStatus: rawStatus,
             aiVolume: data.volumeEstimate || "N/A",
             severity: data.severityScore != null ? Number(data.severityScore) : 0,
+            upvotes: data.upvotes || 1,
             notes: data.notes || "",
             imageUrl: data.imageUrl || null,
-            createdAt: data.createdAt?.toDate?.() || null,
+            reportedAt: data.reportedAt?.toDate?.() || null, 
             hashScanUrl: data.hashScanUrl || null,
             dismissalReason: data.dismissalReason || "",
+            resolvedByCode: data.resolvedByCode || null,
+            assignedToCode: data.assignedToCode || null,
         };
     }
 
     recalculateAndNotify() {
         const reports = this.state.reports;
-        const tasks = this.state.tasks;
-        const barangays = this.state.barangays;
-
-        // Task Aggregation
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
-        const overdueTasks = tasks.filter(t => (t.status || '').toLowerCase() === 'overdue').length;
-        const pendingTasks = tasks.filter(t => {
-            const s = (t.status || '').toLowerCase();
-            return s === 'pending' || s === 'in progress' || s === 'assigned' || s === 'planning';
-        }).length;
-        const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-        // Reports Aggregation
         const totalReports = reports.length;
         const activeReports = reports.filter(r => r.status !== "Resolved" && r.status !== "Dismissed").length;
         const reportsResolved = reports.filter(r => r.status === "Resolved").length;
         const pendingReports = reports.filter(r => r.status === "Pending Verification").length;
         const criticalReports = reports.filter(r => r.severity >= 4 && r.status !== "Resolved").length;
-        const reportCompletionRate = totalReports > 0 ? Math.round((reportsResolved / totalReports) * 100) : 0;
 
-        // Sort reports by createdAt desc
         const sortedReports = [...reports].sort((a, b) => {
-            const ta = a.createdAt ? a.createdAt.getTime() : 0;
-            const tb = b.createdAt ? b.createdAt.getTime() : 0;
+            const ta = a.reportedAt ? a.reportedAt.getTime() : 0;
+            const tb = b.reportedAt ? b.reportedAt.getTime() : 0;
             return tb - ta;
         });
 
-        // Waste Statistics Breakdown
-        const wasteStats = {};
-        reports.forEach(r => {
-            const cat = r.category || "Uncategorized";
-            wasteStats[cat] = (wasteStats[cat] || 0) + 1;
-        });
+        // --- BARANGAY PERFORMANCE & TREND CALCULATIONS ---
+        const now = new Date();
+        const trendLabels = [];
+        const trendThisWeek = Array(7).fill(0);
+        const trendLastWeek = Array(7).fill(0);
 
-        // Barangay Performance Summary
-        const barangayMap = {};
+        for (let i = 6; i >= 0; i--) {
+            let d = new Date();
+            d.setDate(now.getDate() - i);
+            trendLabels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+
+const barangayMap = {};
+        let resolved7d = 0;
+        let totalDiversionEligible = 0;
+        let totalCategorized = 0;
+
         reports.forEach(r => {
-            const loc = r.location || "Unknown Location";
+            const loc = r.barangay; 
             if (!barangayMap[loc]) {
-                barangayMap[loc] = { total: 0, resolved: 0 };
+                barangayMap[loc] = { 
+                    total: 0, resolved: 0, pending: 0, district: r.district,
+                    // Track all 6 explicit categories
+                    nab: 0, rec: 0, non: 0, mix: 0, haz: 0, heal: 0,
+                    history: Array(7).fill(0), // Sparkline history tracking
+                    maxActiveSeverity: 0       // Track highest AI severity 
+                };
             }
+            
+            // Core Metrics
             barangayMap[loc].total++;
             if (r.status === "Resolved") barangayMap[loc].resolved++;
+            if (r.status === "Pending Verification") barangayMap[loc].pending++;
+
+            // Track AI Severity for Active Reports (1 to 5)
+            if (r.status !== "Resolved" && r.status !== "Dismissed") {
+                if (r.severity > barangayMap[loc].maxActiveSeverity) {
+                    barangayMap[loc].maxActiveSeverity = r.severity;
+                }
+            }
+
+            // Global Timeline Math
+            if (r.reportedAt) {
+                const reportTime = r.reportedAt.getTime();
+                const diffDays = Math.floor((now.getTime() - reportTime) / (1000 * 3600 * 24));
+                
+                if (diffDays >= 0 && diffDays < 7) {
+                    trendThisWeek[6 - diffDays]++;
+                    if (r.status === "Resolved") resolved7d++;
+                    barangayMap[loc].history[6 - diffDays]++;
+                } else if (diffDays >= 7 && diffDays < 14) {
+                    trendLastWeek[13 - diffDays]++;
+                }
+            }
+
+            // Segregation Breakdown (Updated to 6 Categories)
+            const cat = r.category;
+            totalCategorized++;
+            if (cat === "Nabubulok") { barangayMap[loc].nab++; totalDiversionEligible++; }
+            else if (cat === "Recyclable") { barangayMap[loc].rec++; totalDiversionEligible++; }
+            else if (cat === "Non-recyclable") { barangayMap[loc].non++; }
+            else if (cat === "Mixed Waste") { barangayMap[loc].mix++; }
+            else if (cat === "Hazardous Waste") { barangayMap[loc].haz++; }
+            else if (cat === "Healthcare Waste") { barangayMap[loc].heal++; }
+            else { barangayMap[loc].non++; } // Default fallback
         });
 
-        let barangaySummary = barangays.map(b => {
-            const name = b.name || "Unknown";
-            const stats = barangayMap[name] || { total: b.total || 0, resolved: b.resolved || 0 };
-            const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : (b.rate || 0);
+        const cityDiversionRate = totalCategorized > 0 ? Math.round((totalDiversionEligible / totalCategorized) * 100) : 0;
+
+        // Map to standard array
+        let barangaySummary = Object.keys(barangayMap).map(loc => {
+            const stats = barangayMap[loc];
+            const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
+            
+            let statusText = "Low";
+            let statusColor = "text-emerald-600 bg-emerald-50 border-emerald-200";
+            
+            if (stats.maxActiveSeverity >= 4) {
+                statusText = "High";
+                statusColor = "text-rose-600 bg-rose-50 border-rose-200";
+            } else if (stats.maxActiveSeverity === 3) {
+                statusText = "Medium";
+                statusColor = "text-amber-600 bg-amber-50 border-amber-200";
+            }
+
             return {
-                name,
+                name: loc,
+                district: stats.district,
                 total: stats.total,
+                pending: stats.pending,
                 resolved: stats.resolved,
                 rate,
-                status: b.status || (rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical")
+                // Export 6 distinct groups
+                segregation: { nab: stats.nab, rec: stats.rec, non: stats.non, mix: stats.mix, haz: stats.haz, heal: stats.heal },
+                history: stats.history,
+                statusText,
+                statusColor
             };
         });
 
-        if (barangaySummary.length === 0) {
-            barangaySummary = Object.keys(barangayMap).map(loc => {
-                const stats = barangayMap[loc];
-                const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
-                return {
-                    name: loc,
-                    total: stats.total,
-                    resolved: stats.resolved,
-                    rate,
-                    status: rate >= 80 ? "ok" : rate >= 60 ? "watch" : "critical"
-                };
-            });
-        }
-
-        barangaySummary.sort((a, b) => b.rate - a.rate);
-        const topBarangays = barangaySummary.slice(0, 5);
-        const lowestBarangays = [...barangaySummary].reverse().slice(0, 5);
-
-        // Combined Recent Activities
-        const recentActivities = [
-            ...sortedReports.slice(0, 5).map(r => ({
-                id: r.id,
-                type: 'report',
-                title: `Report #${r.id} (${r.category})`,
-                subtitle: r.location,
-                status: r.status,
-                timestamp: r.createdAt
-            })),
-            ...tasks.slice(0, 5).map(t => ({
-                id: t.id,
-                type: 'task',
-                title: t.title || `Task #${t.id}`,
-                subtitle: t.barangay || t.assignee || '',
-                status: t.status,
-                timestamp: null
-            }))
-        ];
-
+        barangaySummary.sort((a, b) => b.rate - a.rate); // Sort by highest rate
+        const flaggedCount = barangaySummary.filter(b => b.statusText === "High").length;
         this.state.metrics = {
-            totalTasks,
-            completedTasks,
-            pendingTasks,
-            overdueTasks,
-            taskCompletionRate,
             totalReports,
             activeReports,
             reportsResolved,
             pendingReports,
             criticalReports,
-            reportCompletionRate,
-            wasteStats,
             barangaySummary,
-            topBarangays,
-            lowestBarangays,
-            aiSummary: this.state.insights,
-            recentActivities,
-            latestReports: sortedReports.slice(0, 10)
+            recentActivities: sortedReports.slice(0, 5),
+            latestReports: sortedReports.slice(0, 10),
+            trendLabels,
+            trendThisWeek,
+            trendLastWeek,
+            resolved7d,
+            cityDiversionRate,
+            flaggedCount,
+            totalBarangays: Object.keys(barangayMap).length
         };
 
         this.state.isLoaded = true;
@@ -330,21 +287,13 @@ export class DashboardService {
     notifySubscribers() {
         const payload = this.getAggregatedState();
         this.subscribers.forEach(cb => {
-            try {
-                cb(payload);
-            } catch (err) {
-                console.error("DashboardService - Subscriber callback error:", err);
-            }
+            try { cb(payload); } catch (err) { console.error("DashboardService Callback Error:", err); }
         });
     }
 
     getAggregatedState() {
         return {
             reports: [...this.state.reports],
-            tasks: [...this.state.tasks],
-            barangays: [...this.state.barangays],
-            insights: [...this.state.insights],
-            settings: this.state.settings ? { ...this.state.settings } : null,
             metrics: { ...this.state.metrics },
             isLoaded: this.state.isLoaded,
             error: this.state.error
@@ -353,9 +302,7 @@ export class DashboardService {
 }
 
 const dashboardServiceInstance = new DashboardService();
-
 export function subscribeDashboard(callback, onError) {
     return dashboardServiceInstance.subscribeDashboard(callback, onError);
 }
-
 export default dashboardServiceInstance;

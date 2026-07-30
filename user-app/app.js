@@ -14,7 +14,7 @@
 
 import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
-import { logReportOnChain } from "./js/hedera-logger.js";
+import { upvoteReport } from "../src/utils/db.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -442,17 +442,28 @@ function extractJsonFromGeminiResponse(data) {
     throw new Error("Gemini returned an empty or unexpected response.");
   }
 
-  // FIX: Strip markdown formatting (```json and ```) before parsing
-  text = text
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-
   try {
-    return JSON.parse(text);
-  } catch (parseError) {
-    console.error("Raw Gemini output that failed to parse:", text);
-    throw new Error("Could not parse Gemini JSON response.");
+    // Attempt 1: Direct parse in case it's perfectly formatted raw JSON
+    return JSON.parse(text.trim());
+  } catch (parseError1) {
+    try {
+      // Attempt 2: Strip standard markdown code blocks and parse
+      let cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+      return JSON.parse(cleanText);
+    } catch (parseError2) {
+      try {
+        // Attempt 3: Aggressive Regex to extract ONLY the JSON object string
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error("No JSON structure found.");
+      } catch (parseError3) {
+        // If all fallbacks fail, log the raw text and throw the final error
+        console.error("Raw Gemini output that failed to parse:", text);
+        throw new Error("Could not parse Gemini JSON response.");
+      }
+    }
   }
 }
 
@@ -700,17 +711,199 @@ if (submitBtn) {
         severityScore: result.severity_score != null ? result.severity_score : 3,
       };
 
-      // === INSERT WEB3 INTEGRATION HERE ===
-      // 1. Send metadata to Hedera Consensus Service
-      const onChainUrl = await logReportOnChain(reportData);
+      // --- NEW DEDUPLICATION HANDLING ---
+      const response = await submitTrashReport(reportData, selectedFile);
 
-      // 2. Attach the immutable HashScan proof URL if successful
-      if (onChainUrl) {
-        reportData.hashScanUrl = onChainUrl;
+      if (response.status === 'duplicate_found') {
+        // Stop the loading spinner
+        setSubmitLoading(false);
+        isSubmitting = false;
+
+        // --- CAROUSEL STATE ---
+        const duplicates = response.existingReports;
+        let currentDupIndex = 0;
+
+        // Grab modal DOM elements
+        const dupModal = document.getElementById('duplicate-modal');
+        const dupImg = document.getElementById('duplicate-modal-image');
+        const dupTime = document.getElementById('duplicate-modal-time');
+        const dupDist = document.getElementById('duplicate-modal-distance');
+        const dupReporter = document.getElementById('duplicate-modal-reporter');
+        const closeIcon = document.getElementById('close-duplicate-modal');
+        const upvoteBtn = document.getElementById('confirm-upvote-btn');
+        const cancelBtn = document.getElementById('cancel-upvote-btn');
+        const prevBtn = document.getElementById('prev-duplicate-btn');
+        const nextBtn = document.getElementById('next-duplicate-btn');
+        const counterText = document.getElementById('carousel-counter-text');
+        const dotsContainer = document.getElementById('carousel-dots');
+
+        // Zoom elements
+        const zoomSlider = document.getElementById('duplicate-zoom-slider');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const fitBtn = document.getElementById('fit-image-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-image-btn');
+
+        // Initialize zoom controls (wired once, applies to current image)
+        if (zoomSlider && dupImg) {
+          zoomSlider.oninput = (e) => {
+            dupImg.style.transform = `scale(${e.target.value})`;
+          };
+          if (zoomInBtn) zoomInBtn.onclick = () => {
+            zoomSlider.value = Math.min(3, Number(zoomSlider.value) + 0.2);
+            dupImg.style.transform = `scale(${zoomSlider.value})`;
+          };
+          if (zoomOutBtn) zoomOutBtn.onclick = () => {
+            zoomSlider.value = Math.max(1, Number(zoomSlider.value) - 0.2);
+            dupImg.style.transform = `scale(${zoomSlider.value})`;
+          };
+          if (fitBtn) fitBtn.onclick = () => {
+            zoomSlider.value = 1;
+            dupImg.style.transform = 'scale(1)';
+          };
+          if (fullscreenBtn) fullscreenBtn.onclick = () => {
+            if (dupImg.requestFullscreen) dupImg.requestFullscreen();
+          };
+        }
+
+        // Build pagination dots
+        if (dotsContainer) {
+          dotsContainer.innerHTML = duplicates.map((_, i) =>
+            `<button data-dot="${i}" class="w-2 h-2 rounded-full transition-all duration-200 ${i === 0 ? 'bg-green-600 w-4' : 'bg-gray-300'}"></button>`
+          ).join('');
+          dotsContainer.querySelectorAll('[data-dot]').forEach(dot => {
+            dot.addEventListener('click', () => {
+              currentDupIndex = Number(dot.dataset.dot);
+              renderDuplicateReport(currentDupIndex);
+            });
+          });
+        }
+
+        // renderDuplicateReport: Populates modal with data for a given index
+        function renderDuplicateReport(index) {
+          const report = duplicates[index];
+
+          // Reset zoom
+          if (zoomSlider) zoomSlider.value = 1;
+          if (dupImg) dupImg.style.transform = 'scale(1)';
+
+          // Image
+          if (dupImg) dupImg.src = report.imageUrl || '';
+
+          // Time
+          if (dupTime) {
+            const dateObj = report.reportedAt?.toDate
+              ? report.reportedAt.toDate()
+              : new Date();
+            const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            dupTime.innerText = `${formattedDate} • ${formattedTime}`;
+          }
+
+          // Distance
+          if (dupDist) dupDist.innerText = report.distance ?? '?';
+
+          // Reporter name
+          if (dupReporter) dupReporter.innerText = report.reporterName || 'Community Member';
+
+          // Counter text
+          if (counterText) counterText.innerText = `Report ${index + 1} of ${duplicates.length}`;
+
+          // Dots: update active state
+          if (dotsContainer) {
+            dotsContainer.querySelectorAll('[data-dot]').forEach((dot, i) => {
+              dot.className = `rounded-full transition-all duration-200 ${i === index ? 'w-4 h-2 bg-green-600' : 'w-2 h-2 bg-gray-300'}`;
+            });
+          }
+
+          // Prev/Next arrow visibility
+          if (prevBtn) prevBtn.classList.toggle('hidden', index === 0);
+          if (nextBtn) nextBtn.classList.toggle('hidden', index === duplicates.length - 1);
+        }
+
+        // Wire prev/next buttons
+        if (prevBtn) {
+          prevBtn.onclick = () => {
+            if (currentDupIndex > 0) {
+              currentDupIndex--;
+              renderDuplicateReport(currentDupIndex);
+            }
+          };
+        }
+        if (nextBtn) {
+          nextBtn.onclick = () => {
+            if (currentDupIndex < duplicates.length - 1) {
+              currentDupIndex++;
+              renderDuplicateReport(currentDupIndex);
+            }
+          };
+        }
+
+        // Render first report before showing the modal
+        renderDuplicateReport(0);
+
+        // Show the modal
+        if (dupModal) dupModal.classList.remove('hidden');
+
+        // Handle Close 'X' Icon
+        if (closeIcon) {
+          closeIcon.onclick = () => {
+            dupModal.classList.add('hidden');
+          };
+        }
+
+        // Handle Upvote: always upvote the currently-viewed report
+        if (upvoteBtn) {
+          upvoteBtn.onclick = async () => {
+            upvoteBtn.innerText = "Verifying...";
+            await upvoteReport(duplicates[currentDupIndex].id);
+
+            alert("Thank you! We've added your verification to the existing report.");
+            dupModal.classList.add('hidden');
+            document.getElementById("close-success-modal")?.click();
+
+            // Reset button HTML state
+            upvoteBtn.innerHTML = `<div class="bg-white rounded-full p-0.5 text-[#418B46]"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div> Yes, this is the same`;
+          };
+        }
+
+        // Handle Cancel / Bypass (Submit a new report anyway)
+        if (cancelBtn) {
+          cancelBtn.onclick = async () => {
+            dupModal.classList.add('hidden');
+
+            // Reactivate loading state and force unique submission
+            setSubmitLoading(true);
+            isSubmitting = true;
+            setSummary("Bypassing check... Creating unique report.");
+
+            try {
+              // Internal bypass flag to instruct backend to skip duplicate check
+              reportData.bypassDuplicateCheck = true;
+              const forceResponse = await submitTrashReport(reportData, selectedFile);
+
+              const reportId = forceResponse.reportId;
+              isReportComplete = true;
+
+              console.log("E-Tapon Mo report submitted (Bypassed Duplicate Check):", { reportId });
+              handleValidationResult(result, reporter, reportId, reportForm.contactInfo);
+            } catch (error) {
+              console.error("Forced submission error:", error);
+              setSummary("Something went wrong while processing your report.\n\n" + getErrorMessage(error));
+              if (typeof window.showErrorModal === "function") window.showErrorModal();
+            } finally {
+              isSubmitting = false;
+              setSubmitLoading(false);
+              updateStepper();
+            }
+          };
+        }
+
+        return;
       }
 
-
-      const reportId = await submitTrashReport(reportData, selectedFile);
+      // If it wasn't a duplicate, extract the ID and proceed normally
+      const reportId = response.reportId;
 
       isReportComplete = true;
 
@@ -727,7 +920,7 @@ if (submitBtn) {
         reportForm.contactInfo,
       );
     } catch (error) {
-      console.error("Basura-Pin submission error:", error);
+      console.error("E-Tapon Mo submission error:", error);
       setSummary(
         "Something went wrong while processing your report.\n\n" +
         getErrorMessage(error),

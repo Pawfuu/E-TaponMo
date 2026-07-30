@@ -16,6 +16,7 @@ import {
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { subscribeDashboard } from "./dashboard-service.js";
+import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
 (function () {
   "use strict";
@@ -101,41 +102,16 @@ import { subscribeDashboard } from "./dashboard-service.js";
     }, 3000);
   }
 
-  function mapDocToReport(docSnap) {
-    const data = docSnap.data();
-
-    // Safely parse the location whether it's a string or an object
-    let safeLocation = "Unknown Location";
-    if (typeof data.location === "string") {
-      safeLocation = data.location;
-    } else if (typeof data.location === "object" && data.location !== null) {
-      // Extract the human-readable address from the object
-      safeLocation = data.location.display_name || data.location.address || data.location.name || "Map Pin Location";
-    }
-
-    return {
-      docId: docSnap.id,
-      reportId: docSnap.id,
-      id: docSnap.id.slice(0, 8).toUpperCase(),
-      category: normalizeCategory(data.wasteType),
-      location: safeLocation,
-      coordinates: data.coordinates || null,
-      submittedBy: data.reporterName || "Anonymous",
-      contactInfo: data.contactInfo || "Not Provided",
-      status: normalizeStatus(data.status),
-      aiVolume: data.volumeEstimate || "N/A",
-      severity: data.severityScore != null ? Number(data.severityScore) : 0,
-      notes: data.notes || "",
-      imageUrl: data.imageUrl || null,
-      createdAt: data.createdAt?.toDate?.() || null,
-      hashScanUrl: data.hashScanUrl || null,
-      dismissalReason: data.dismissalReason || "",
-    };
-  }
-
   // ==========================================
   // 3. GLOBAL STATE & DOM ELEMENTS
   // ==========================================
+
+  // NEW: Task Management State Variables
+  let taskCurrentTab = 'all';
+  let taskCurrentPriority = 'all';
+  let taskSearchQuery = '';
+  let taskCurrentPage = 1;
+  const tasksPerPage = 7;
 
   let reports = [];
   let dashboardMetrics = null;
@@ -159,18 +135,29 @@ import { subscribeDashboard } from "./dashboard-service.js";
   let heatLayer = null;
   let showHeatmap = false;
 
-  // DOM Elements
+  // DOM Elements - Navigation
   const navDashboardBtn = document.getElementById("nav-dashboard");
   const navReportsBtn = document.getElementById("nav-reports");
   const navMapBtn = document.getElementById("nav-map");
   const navAnalyticsBtn = document.getElementById("nav-analytics");
   const navBarangayBtn = document.getElementById("nav-barangay");
+  const navTasksBtn = document.getElementById("nav-tasks");
+  const navRoutesBtn = document.getElementById("nav-routes");
+  const navInsightsBtn = document.getElementById("nav-insights");
   const navSettingsBtn = document.getElementById("nav-settings");
 
+  // DOM Elements - Panels
   const viewDashboardPanel = document.getElementById("view-dashboard-panel");
   const viewReportsPanel = document.getElementById("view-reports-panel");
   const viewMapPanel = document.getElementById("view-map-panel");
   const viewAnalyticsPanel = document.getElementById("view-analytics-panel");
+  const viewBarangayPanel = document.getElementById("view-barangay-performance-panel");
+  const viewTasksPanel = document.getElementById("view-task-management-panel");
+  const viewRoutesPanel = document.getElementById("view-collection-routes-panel");
+  const viewInsightsPanel = document.getElementById("view-ai-insights-panel");
+  const viewSettingsPanel = document.getElementById("view-settings-panel");
+  const viewLiveSyncPanel = document.getElementById("view-live-sync-panel");
+  
   const viewTitle = document.getElementById("view-title");
   const mainHeader = document.getElementById("main-header");
 
@@ -184,6 +171,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
   const sortSelect = document.getElementById("sort-select");
   const tableResultsCounter = document.getElementById("table-results-counter");
 
+  // Global Report Modal Elements
   const reportDetailModal = document.getElementById("report-detail-modal");
   const modalReportId = document.getElementById("modal-report-id");
   const modalCategory = document.getElementById("modal-category");
@@ -198,6 +186,10 @@ import { subscribeDashboard } from "./dashboard-service.js";
   const modalReportImage = document.getElementById("modal-report-image");
   const dismissalReasonContainer = document.getElementById("dismissal-reason-container");
   const dismissalReasonInput = document.getElementById("dismissal-reason");
+  const resolvedByContainer = document.getElementById("resolved-by-container");
+  const resolvedByInput = document.getElementById("resolved-by-code");
+  const assigneeContainer = document.getElementById("assignee-container");
+  const assigneeInput = document.getElementById("assignee-code");
   const modalBlockchainUrl = document.getElementById("modal-blockchain-url");
   const blockchainUrlContainer = document.getElementById("modal-blockchain-url-container");
 
@@ -216,12 +208,19 @@ import { subscribeDashboard } from "./dashboard-service.js";
     refreshMapSizes(100);
     subscribeToReports();
 
+    // Listen for back/forward browser navigation
+    window.addEventListener('popstate', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get("view") || "dashboard";
+      switchView(viewParam, false); // false prevents pushing state again
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get("view");
-    if (viewParam && ["dashboard", "reports", "map", "analytics"].includes(viewParam)) {
-      switchView(viewParam);
+    if (viewParam && ["dashboard", "reports", "map", "analytics", "barangay-performance", "task-management", "collection-routes", "ai-insights", "settings", "live-sync"].includes(viewParam)) {
+      switchView(viewParam, false);
     } else {
-      switchView("dashboard");
+      switchView("dashboard", false);
     }
 
     window.addEventListener("beforeunload", () => {
@@ -247,7 +246,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
         reports = data.reports || [];
         dashboardMetrics = data.metrics || null;
 
-        updateCategoryDropdown(reports);
+        updateDropdowns(reports);
         updateDashboardMetrics(reports);
         renderReportsTable();
         if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
@@ -255,11 +254,34 @@ import { subscribeDashboard } from "./dashboard-service.js";
         if (typeof updateAnalyticsMetrics === "function") updateAnalyticsMetrics();
         if (typeof renderBlockchainActivity === "function") renderBlockchainActivity(reports);
 
+        renderBarangayPerformance();
+        renderTaskManagement();
+
+        // Auto-center the map on the first successful data load
+        if (!window.hasAutoCentered && window.recenterMap) {
+          setTimeout(() => { 
+            window.recenterMap(); 
+            window.hasAutoCentered = true; 
+          }, 600); // Slight delay ensures Leaflet has finished painting
+        }
+
+        // Keep active standard modal updated if open
         if (selectedReport) {
           const fresh = reports.find((r) => r.docId === selectedReport.docId);
           if (fresh) {
             selectedReport = fresh;
             populateModal(fresh);
+          }
+        }
+
+        // Keep active task modals updated if open
+        if (selectedTaskReport) {
+          const freshTask = reports.find((r) => r.docId === selectedTaskReport.docId);
+          if (freshTask) {
+              selectedTaskReport = freshTask;
+              if(!document.getElementById("task-details-modal").classList.contains("hidden")) {
+                  populateTaskDetailsModal(freshTask);
+              }
           }
         }
       },
@@ -277,25 +299,31 @@ import { subscribeDashboard } from "./dashboard-service.js";
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString("en-US", options);
   }
 
-  function updateCategoryDropdown(reportsList) {
-    const categories = Array.from(new Set(reportsList.map(r => r.category).filter(Boolean)));
-    categories.sort();
+ function updateDropdowns(reportsList) {
+    const categories = [
+      "Nabubulok", "Recyclable", "Non-recyclable", 
+      "Hazardous Waste", "Healthcare Waste", "Mixed Waste"
+    ];
+    
+    // Hardcode explicit districts for consistent UI
+    const districts = [
+      "District 1", "District 2", "District 3", 
+      "District 4", "District 5", "District 6", 
+      "Provincial / Outside QC"
+    ];
 
-    // 1. Reports View Custom Dropdown
+    // 1. Reports View Category Dropdown
     const reportsCatMenu = document.getElementById("reports-dropdown-category-menu");
     const reportsCatText = document.getElementById("reports-dropdown-category-text");
-
     if (reportsCatMenu) {
       reportsCatMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Categories</div>`;
       categories.forEach(cat => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
         optionDiv.dataset.value = cat;
-        optionDiv.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        optionDiv.textContent = cat;
         reportsCatMenu.appendChild(optionDiv);
       });
-
-      // Bind click events
       reportsCatMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -308,20 +336,56 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     }
 
-    // 2. Map View Custom Dropdown
+    // 2. Reports View District Dropdown
+    const reportsDistMenu = document.getElementById("reports-dropdown-district-menu");
+    const reportsDistText = document.getElementById("reports-dropdown-district-text");
+    if (reportsDistMenu) {
+      reportsDistMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Districts</div>`;
+      districts.forEach(dist => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
+        optionDiv.dataset.value = dist; 
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
+        reportsDistMenu.appendChild(optionDiv);
+      });
+      reportsDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          currentDistrictFilter = e.target.dataset.value;
+          if (reportsDistText) reportsDistText.textContent = e.target.textContent;
+          reportsDistMenu.classList.add("hidden");
+          currentPage = 1;
+          renderReportsTable();
+        });
+      });
+    }
+
+    // 3. Analytics View District Filter (Select Menu)
+    const analyticsDistSelect = document.getElementById("analytics-district-filter");
+    if (analyticsDistSelect) {
+      const currentVal = analyticsDistSelect.value;
+      analyticsDistSelect.innerHTML = `<option value="all">All Districts</option>`;
+      districts.forEach(dist => {
+        const opt = document.createElement("option");
+        opt.value = dist;
+        opt.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
+        analyticsDistSelect.appendChild(opt);
+      });
+      if (districts.includes(currentVal)) analyticsDistSelect.value = currentVal;
+    }
+
+    // 4. Map View Category Dropdown
     const mapCatMenu = document.getElementById("dropdown-category-menu");
     const mapCatText = document.getElementById("dropdown-category-text");
-
     if (mapCatMenu) {
       mapCatMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Categories</div>`;
       categories.forEach(cat => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
         optionDiv.dataset.value = cat;
-        optionDiv.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        optionDiv.textContent = cat;
         mapCatMenu.appendChild(optionDiv);
       });
-
       mapCatMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -330,6 +394,20 @@ import { subscribeDashboard } from "./dashboard-service.js";
           mapCatMenu.classList.add("hidden");
           renderMapMarkers();
         });
+      });
+    }
+
+    // 5. Task Management View District Dropdown
+    const taskDistMenu = document.getElementById("task-dropdown-district-menu");
+    const taskDistText = document.getElementById("task-dropdown-district-text");
+    if (taskDistMenu && taskDistMenu.children.length === 0) {
+      taskDistMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Districts</div>`;
+      districts.forEach(dist => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
+        optionDiv.dataset.value = dist; 
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
+        taskDistMenu.appendChild(optionDiv);
       });
     }
   }
@@ -512,12 +590,11 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const resolvedCount = reports.filter((r) => r.status === "Resolved").length;
     const inProgressCount = reports.filter((r) => r.status === "In Progress").length;
 
-    if (statActiveEl) statActiveEl.textContent = String(activeCount);
-    if (statPendingEl) statPendingEl.textContent = String(pendingCount);
-    if (statProgressEl) statProgressEl.textContent = String(criticalCount);
-    if (statResolvedEl) statResolvedEl.textContent = String(resolvedCount);
-
-
+    // Fetch elements directly to ensure they are found
+    if (document.getElementById("stat-active")) document.getElementById("stat-active").textContent = String(activeCount);
+    if (document.getElementById("stat-pending")) document.getElementById("stat-pending").textContent = String(pendingCount);
+    if (document.getElementById("stat-progress")) document.getElementById("stat-progress").textContent = String(criticalCount);
+    if (document.getElementById("stat-resolved")) document.getElementById("stat-resolved").textContent = String(resolvedCount);
 
     // 2. Dynamic Map View Stats (Active non-resolved alerts)
     const activeAlerts = reports.filter(r => r.status !== "Resolved");
@@ -526,10 +603,10 @@ import { subscribeDashboard } from "./dashboard-service.js";
     // Calculate how many active reports were submitted TODAY
     const today = new Date();
     const newTodayCount = activeAlerts.filter(r => {
-      if (!r.createdAt) return false;
-      return r.createdAt.getDate() === today.getDate() &&
-        r.createdAt.getMonth() === today.getMonth() &&
-        r.createdAt.getFullYear() === today.getFullYear();
+    if (!r.reportedAt) return false; 
+    return r.reportedAt.getDate() === today.getDate() &&
+        r.reportedAt.getMonth() === today.getMonth() &&
+        r.reportedAt.getFullYear() === today.getFullYear();
     }).length;
 
     const activeValEl = document.getElementById("map-active-alerts-val");
@@ -550,7 +627,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
     // Severity Breakdown
     const lowCount = activeAlerts.filter(r => r.severity <= 2).length;
     const mediumCount = activeAlerts.filter(r => r.severity === 3).length;
-    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length; // Both score 4 and 5 consolidated
+    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length; 
 
     if (document.getElementById("map-severity-low-val")) document.getElementById("map-severity-low-val").textContent = String(lowCount);
     if (document.getElementById("map-severity-medium-val")) document.getElementById("map-severity-medium-val").textContent = String(mediumCount);
@@ -597,26 +674,25 @@ import { subscribeDashboard } from "./dashboard-service.js";
   }
 
   function updateAnalyticsMetrics() {
-    const dateFilterEl = document.getElementById("analytics-date-filter");
+   const dateFilterEl = document.getElementById("analytics-date-filter");
+    const distFilterEl = document.getElementById("analytics-district-filter");
+    
     const dateVal = dateFilterEl ? dateFilterEl.value : "7days";
+    const distVal = distFilterEl ? distFilterEl.value : "all";
 
     const now = new Date();
     let filtered = [...reports];
     let prevFiltered = [];
 
+    // 1. First, apply District Filter
+    if (distVal !== "all") {
+      filtered = filtered.filter(r => r.district === distVal);
+    }
+
+    // 2. Determine Date Ranges
     let currentStart = new Date();
     let prevStart = new Date();
     let prevEnd = new Date();
-
-    // Dynamically update the first option label with the actual date range of the last 7 days
-    const firstOption = dateFilterEl ? dateFilterEl.querySelector('option[value="7days"]') : null;
-    if (firstOption) {
-      const start = new Date();
-      start.setDate(now.getDate() - 7);
-      const formatMonthDay = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const formatYear = (d) => d.getFullYear();
-      firstOption.textContent = `${formatMonthDay(start)} - ${formatMonthDay(now)}, ${formatYear(now)}`;
-    }
 
     let subtextLabel = "from last week";
 
@@ -627,9 +703,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 7);
       prevEnd.setHours(0, 0, 0, 0);
-
-      filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
       subtextLabel = "from last week";
     } else if (dateVal === "30days") {
       currentStart.setDate(now.getDate() - 30);
@@ -638,24 +711,22 @@ import { subscribeDashboard } from "./dashboard-service.js";
       prevStart.setHours(0, 0, 0, 0);
       prevEnd.setDate(now.getDate() - 30);
       prevEnd.setHours(0, 0, 0, 0);
-
-      filtered = reports.filter(r => r.createdAt && r.createdAt >= currentStart);
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
-      subtextLabel = "from last month";
-    } else {
-      // "all" time
-      filtered = [...reports];
-      currentStart.setDate(now.getDate() - 30);
-      currentStart.setHours(0, 0, 0, 0);
-      prevStart.setDate(now.getDate() - 60);
-      prevStart.setHours(0, 0, 0, 0);
-      prevEnd.setDate(now.getDate() - 30);
-      prevEnd.setHours(0, 0, 0, 0);
-
-      prevFiltered = reports.filter(r => r.createdAt && r.createdAt >= prevStart && r.createdAt < prevEnd);
       subtextLabel = "from last month";
     }
 
+    // Execute Time Filtering
+    if (dateVal !== "all") {
+        prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
+        filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+    } else {
+        prevFiltered = [...reports]; // Fallback for all time
+    }
+    
+    if (distVal !== "all" && dateVal !== "all") {
+        prevFiltered = prevFiltered.filter(r => r.district === distVal);
+    }
+
+    // 3. Compute Metrics
     const totalCount = filtered.length;
     const resolvedCount = filtered.filter(r => r.status === "Resolved").length;
     const pendingCount = filtered.filter(r => r.status === "Pending Verification").length;
@@ -664,41 +735,30 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const prevResolved = prevFiltered.filter(r => r.status === "Resolved").length;
     const prevPending = prevFiltered.filter(r => r.status === "Pending Verification").length;
 
+    // Apply to UI
     if (document.getElementById("analytics-stat-total")) document.getElementById("analytics-stat-total").textContent = String(totalCount);
     if (document.getElementById("analytics-stat-resolved")) document.getElementById("analytics-stat-resolved").textContent = String(resolvedCount);
     if (document.getElementById("analytics-stat-pending")) document.getElementById("analytics-stat-pending").textContent = String(pendingCount);
 
-    // Update trend percentages
-    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); // reports up = neutral/red
-    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); // resolved up = good
-    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); // pending up = bad
+    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); 
+    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); 
+    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); 
 
-    // Update subtext labels
+    // Text Sublabels
     const subtextTotalEl = document.getElementById("analytics-subtext-total");
-    const subtextResolvedEl = document.getElementById("analytics-subtext-resolved");
-    const subtextPendingEl = document.getElementById("analytics-subtext-pending");
-    const subtextTimeEl = document.getElementById("analytics-subtext-time");
-
     if (subtextTotalEl) subtextTotalEl.textContent = subtextLabel;
-    if (subtextResolvedEl) subtextResolvedEl.textContent = subtextLabel;
-    if (subtextPendingEl) subtextPendingEl.textContent = subtextLabel;
-    if (subtextTimeEl) subtextTimeEl.textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-resolved")) document.getElementById("analytics-subtext-resolved").textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-pending")) document.getElementById("analytics-subtext-pending").textContent = subtextLabel;
+    if (document.getElementById("analytics-subtext-time")) document.getElementById("analytics-subtext-time").textContent = subtextLabel;
 
-    // Average Response Time calculation responsive to data counts
-    let avgTimeCurrent = 18; // default hours
-    let avgTimePrev = 20; // default hours
-    if (totalCount > 0) {
-      avgTimeCurrent = Math.max(4, Math.round(10 + (pendingCount * 0.8)));
-    }
-    if (prevTotal > 0) {
-      avgTimePrev = Math.max(4, Math.round(10 + (prevPending * 0.8)));
-    }
+    // Simulated Average Response Time Logic
+    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18; 
+    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20; 
 
     if (document.getElementById("analytics-stat-time")) {
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
     }
 
-    // Update response time trend
     const timeDiff = avgTimeCurrent - avgTimePrev;
     const trendTimeEl = document.getElementById("analytics-trend-time");
     if (trendTimeEl) {
@@ -715,11 +775,510 @@ import { subscribeDashboard } from "./dashboard-service.js";
       }
     }
 
+    // Redraw Charts
     drawReportsOverTimeChart(filtered, dateVal);
     drawCategoryDonutChart(filtered);
-
-    // Apply micro-animation refresh indicator
+    renderAnalyticsTopBarangays();
     animateAnalyticsRefresh();
+  }
+
+  function renderAnalyticsTopBarangays() {
+    if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
+
+    const tbody = document.getElementById("analytics-top-barangays-tbody");
+    const chartContainer = document.getElementById("analytics-avg-response-chart");
+    if (!tbody || !chartContainer) return;
+
+    // Get Top 5 by Total Reports
+    const top5 = [...dashboardMetrics.barangaySummary].sort((a,b) => b.total - a.total).slice(0, 5);
+
+    // 1. Populate Table
+    tbody.innerHTML = "";
+    if (top5.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-500 italic">No data available</td></tr>`;
+    } else {
+      top5.forEach(b => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 text-xs font-bold text-slate-800">${b.name}</td>
+            <td class="py-3 text-right text-xs font-semibold text-slate-600">${b.total}</td>
+            <td class="py-3 text-right text-xs font-semibold text-slate-600">${b.resolved}</td>
+            <td class="py-3 text-right text-xs font-bold text-emerald-600">${b.rate}%</td>
+          </tr>
+        `;
+      });
+    }
+
+    // 2. Populate Bar Chart (Simulating Response time dynamically)
+    chartContainer.innerHTML = "";
+    if (top5.length === 0) {
+      chartContainer.innerHTML = `<div class="w-full text-center text-xs text-slate-500 italic flex items-center justify-center h-full">No data available</div>`;
+    } else {
+      const maxBarHeight = 120; // px
+      let maxHours = 0;
+      const chartData = top5.map(b => {
+          const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
+          if (hours > maxHours) maxHours = hours;
+          return { name: b.name, hours: hours };
+      });
+
+      chartData.forEach(d => {
+          const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
+          const finalHeight = Math.max(heightPx, 10);
+          const truncName = d.name.length > 8 ? d.name.substring(0,6) + '...' : d.name;
+
+          chartContainer.innerHTML += `
+            <div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer" title="${d.name} (${d.hours}h avg)">
+              <span class="text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity font-bold">${d.hours}h</span>
+              <div class="w-7 bg-emerald-600/90 rounded-t-lg transition-all duration-500 group-hover:bg-emerald-700" style="height: ${finalHeight}px;"></div>
+              <span class="text-[9px] text-slate-400 truncate w-14 text-center uppercase tracking-wider">${truncName}</span>
+            </div>
+          `;
+      });
+    }
+  }
+
+  function renderBarangayPerformance() {
+    if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
+    
+    // Top KPI Cards
+    if (document.getElementById("brgy-kpi-resolved")) document.getElementById("brgy-kpi-resolved").textContent = dashboardMetrics.resolved7d.toLocaleString();
+    
+    const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
+    if (document.getElementById("brgy-kpi-response")) document.getElementById("brgy-kpi-response").textContent = `${mockHours}h`;
+    
+    if (document.getElementById("brgy-kpi-flagged")) {
+      document.getElementById("brgy-kpi-flagged").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
+    }
+
+    // Ranked Board Table Body
+    const tbody = document.getElementById("brgy-performance-tbody");
+    if (!tbody) return;
+
+    // --- NEW: APPLY FILTERS ---
+    let filteredBrgy = [...dashboardMetrics.barangaySummary];
+
+    if (activeBrgyDistrictFilter !== "all") {
+        filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
+    }
+
+    if (activeBrgySearchQuery) {
+        filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
+    }
+
+    let html = "";
+    
+    // Handle empty state gracefully
+    if (filteredBrgy.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
+        return;
+    }
+
+    filteredBrgy.forEach((b, index) => {
+      const rank = index + 1;
+      
+      // Calculate 6-segment metrics
+      const totalSeg = (b.segregation.nab + b.segregation.rec + b.segregation.non + b.segregation.mix + b.segregation.haz + b.segregation.heal) || 1;
+      
+      const pNab = (b.segregation.nab / totalSeg) * 100;
+      const pRec = (b.segregation.rec / totalSeg) * 100;
+      const pNon = (b.segregation.non / totalSeg) * 100;
+      const pMix = (b.segregation.mix / totalSeg) * 100;
+      const pHaz = (b.segregation.haz / totalSeg) * 100;
+      const pHeal = (b.segregation.heal / totalSeg) * 100;
+
+      const uiStatus = b.statusText === "Low" ? "Good" : b.statusText === "Medium" ? "Monitor" : "Critical";
+      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
+                        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200" 
+                        : "bg-rose-100 text-rose-700 border border-rose-200";
+
+      const trendBars = b.history.map(val => {
+          const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
+          return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
+      }).join('');
+
+      html += `
+        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50">
+          <td class="py-4 px-6 text-left text-xs font-bold text-slate-400">${rank}</td>
+          <td class="py-4 px-6 text-left">
+            <div class="font-bold text-slate-800 text-xs">${b.name}</div>
+            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">${b.district || 'QC'}</div>
+          </td>
+          <td class="py-4 px-6 text-center text-xs font-bold text-slate-700">${b.total}</td>
+          <td class="py-4 px-6 text-center text-xs text-amber-600 font-bold">${b.pending}</td>
+          <td class="py-4 px-6 text-center text-xs text-emerald-600 font-bold">${b.resolved}</td>
+          <td class="py-4 px-6 text-center text-xs font-bold text-slate-800">${b.rate}%</td>
+          <td class="py-4 px-6 text-center w-36">
+            <div class="flex w-full h-1.5 rounded-full overflow-hidden bg-slate-100">
+              <div style="width:${pNab}%; background: #10b981;"></div>
+              <div style="width:${pRec}%; background: #3b82f6;"></div>
+              <div style="width:${pNon}%; background: #b45309;"></div>
+              <div style="width:${pMix}%; background: #64748b;"></div>
+              <div style="width:${pHaz}%; background: #f59e0b;"></div>
+              <div style="width:${pHeal}%; background: #ef4444;"></div>
+            </div>
+          </td>
+          <td class="py-4 px-6 text-center">
+             <div class="flex items-end justify-center h-4 gap-0.5 w-16 mx-auto">${trendBars}</div>
+          </td>
+          <td class="py-4 px-6 text-center">
+            <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${badgeClass}">${uiStatus}</span>
+          </td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = html;
+
+    // Performance Score Gauge Sync
+    const gaugeVal = document.getElementById("brgy-gauge-val");
+    const gaugePath = document.getElementById("brgy-gauge-path");
+    if (gaugeVal && gaugePath) {
+      const dr = dashboardMetrics.cityDiversionRate || 0;
+      gaugeVal.textContent = `${dr}%`;
+      const offset = 125.6 - (125.6 * (dr / 100)); // 125.6 maps to SVG stroke dash scale
+      gaugePath.style.strokeDashoffset = offset;
+      gaugePath.style.stroke = dr > 75 ? '#16a34a' : dr > 50 ? '#f59e0b' : '#dc2626';
+    }
+
+    drawBarangayTrendChart();
+  }
+
+  function renderTaskManagement() {
+    const tbody = document.getElementById('task-table-body');
+    const counter = document.getElementById('task-table-results-counter');
+    const pager = document.getElementById('task-pagination-controls');
+    if (!tbody || !reports) return;
+
+    // 1. Synthesize Tasks from live Reports
+    let allTasks = reports.map((r, i) => {
+      const sev = r.severity || 0;
+      const upvotes = r.upvotes || 1;
+      
+      // Upvotes organically raise priority!
+      let priority = 'Low';
+      if (sev >= 4 || upvotes >= 10) priority = 'High';
+      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
+
+      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
+      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
+      
+      let status = 'Planning';
+      let isOverdue = false;
+      if (r.status === 'Resolved') status = 'Completed';
+      else if (r.status === 'Dismissed') status = 'Failed'; // Workflow C: Map Dismissed to Failed
+      else if (r.status === 'In Progress') status = 'In Progress';
+      else if (ageMs > (48 * 60 * 60 * 1000) && r.status === 'Pending Verification') { 
+        status = 'Overdue'; 
+        isOverdue = true; 
+      }
+      else status = 'Pending';
+
+      // Keep unassigned tasks cleanly separate for Workflow A mapping
+      let assignee = 'Unassigned';
+      let team = 'Pending Assignment';
+      
+      if (status === 'Completed' && r.resolvedByCode) {
+          assignee = `Verified: ${r.resolvedByCode.split(' ')[0]}`; // Clean Admin ID
+          team = 'Admin Finalized';
+      } else if (status === 'In Progress' && r.assignedToCode) {
+          assignee = `${r.assignedToCode}`; // Clean Truck ID
+          team = 'Active Deployment';
+      } else if (status === 'Completed') {
+          assignee = 'Completed Unit';
+          team = 'Operations';
+      } else if (status === 'In Progress') {
+          assignee = 'Response Team';
+          team = 'Operations';
+      }
+
+      return {
+        id: `TSK-${new Date().getFullYear()}-${1000 + i}`,
+        refId: r.id,
+        docId: r.docId,
+        title: r.category === 'Uncategorized' ? 'Waste Clearing' : `${r.category} Collection`,
+        barangay: r.barangay,
+        assignee: assignee,
+        team: team,
+        priority: priority,
+        status: status,
+        isOverdue: isOverdue,
+        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        rawDate: targetDate.getTime()
+      };
+    });
+
+    // Update Top KPIs
+    document.getElementById('task-stat-total').textContent = allTasks.length;
+    document.getElementById('task-stat-assigned').textContent = allTasks.filter(t => t.status === 'In Progress').length;
+    document.getElementById('task-stat-overdue').textContent = allTasks.filter(t => t.isOverdue).length;
+    document.getElementById('task-stat-completed').textContent = allTasks.filter(t => t.status === 'Completed').length;
+
+    // Update Tab Counts
+    document.getElementById('task-count-all').textContent = `(${allTasks.length})`;
+    document.getElementById('task-count-mine').textContent = `(${allTasks.filter(t => t.assignee === 'Maria Santos').length})`;
+    document.getElementById('task-count-overdue').textContent = `(${allTasks.filter(t => t.isOverdue).length})`;
+    document.getElementById('task-count-completed').textContent = `(${allTasks.filter(t => t.status === 'Completed').length})`;
+
+    // 2. Apply Filters
+    let list = [...allTasks];
+    if (taskState.tab === 'mine') list = list.filter(t => t.assignee === 'Maria Santos');
+    if (taskState.tab === 'overdue') list = list.filter(t => t.isOverdue);
+    if (taskState.tab === 'completed') list = list.filter(t => t.status === 'Completed');
+
+    if (taskState.status !== 'all') list = list.filter(t => t.status === taskState.status);
+    if (taskState.priority !== 'all') list = list.filter(t => t.priority === taskState.priority);
+    if (taskState.assignee !== 'all') list = list.filter(t => t.assignee === taskState.assignee);
+
+    if (taskState.search.trim()) {
+        const q = taskState.search.trim().toLowerCase();
+        list = list.filter(t => t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.barangay.toLowerCase().includes(q));
+    }
+
+    list.sort((a, b) => a.rawDate - b.rawDate);
+
+    // 3. Render Table
+    const totalPages = Math.max(1, Math.ceil(list.length / TASK_PAGE_SIZE));
+    if (taskState.page > totalPages) taskState.page = totalPages;
+    const start = (taskState.page - 1) * TASK_PAGE_SIZE;
+    const pageItems = list.slice(start, start + TASK_PAGE_SIZE);
+
+    tbody.innerHTML = '';
+    const priorityStyle = { High: 'bg-rose-50 text-rose-600 border border-rose-100', Medium: 'bg-amber-50 text-amber-700 border border-amber-100', Low: 'bg-blue-50 text-blue-600 border border-blue-100' };
+    const statusStyle = {
+        Planning: { dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600' },
+        Assigned: { dot: 'bg-indigo-500', pill: 'bg-indigo-50 text-indigo-600' },
+        Pending: { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700' },
+        'In Progress': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-600' },
+        Overdue: { dot: 'bg-rose-500', pill: 'bg-rose-50 text-rose-600' },
+        Completed: { dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-600' },
+    };
+
+    if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks match your filters.</td></tr>`;
+    } else {
+        pageItems.forEach((t, i) => {
+            const st = statusStyle[t.status] || statusStyle.Planning;
+            // Extrapolate initials safely, handling "Ref: CODE" edge cases
+            const initArr = t.assignee.replace('Ref: ', '').replace('Verified: ', '').split(' ');
+            const initials = initArr.map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'NA';
+            
+            tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-50" style="animation-delay: ${i * 30}ms;">
+                <td class="px-5 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">${t.id}</td>
+                <td class="px-5 py-3.5">
+                  <p class="font-semibold text-slate-800">${t.title}</p>
+                </td>
+                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.barangay}</td>
+                <td class="px-5 py-3.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-[10px] font-black flex-shrink-0">${initials}</span>
+                    <div class="min-w-0">
+                      <p class="font-semibold text-slate-800 text-xs truncate">${t.assignee}</p>
+                      <p class="text-[10px] text-slate-400 truncate">${t.team}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-5 py-3.5">
+                  <span class="text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${priorityStyle[t.priority]}">${t.priority}</span>
+                </td>
+                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.due}</td>
+                <td class="px-5 py-3.5">
+                  <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${st.pill}">
+                    <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="window.openTaskModal('${t.docId}')" class="w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition-colors inline-flex items-center justify-center cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
+                  </button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    if(counter) counter.textContent = list.length ? `Showing ${start + 1} to ${Math.min(start + TASK_PAGE_SIZE, list.length)} of ${list.length} tasks` : 'Showing 0 tasks';
+
+    // Pagination render
+    if (pager) {
+        pager.innerHTML = '';
+        if (totalPages > 1) {
+            const mkBtn = (lbl, pg, active, disabled) => {
+                const b = document.createElement('button');
+                b.innerHTML = lbl; b.disabled = disabled;
+                b.className = `w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`;
+                if (!disabled) b.addEventListener('click', () => { taskState.page = pg; renderTaskManagement(); });
+                return b;
+            };
+            pager.appendChild(mkBtn('‹', Math.max(1, taskState.page - 1), false, taskState.page === 1));
+            for (let p = 1; p <= totalPages; p++) pager.appendChild(mkBtn(String(p), p, p === taskState.page, false));
+            pager.appendChild(mkBtn('›', Math.min(totalPages, taskState.page + 1), false, taskState.page === totalPages));
+        }
+    }
+
+    // 4. Update Assignee Dropdown Dynamically
+    const assgnMenu = document.getElementById("dd-task-assignee-menu");
+    if(assgnMenu && assgnMenu.children.length <= 1) {
+        const uniques = [...new Set(allTasks.map(t => t.assignee))];
+        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
+        uniques.forEach(v => {
+            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
+        });
+        
+        assgnMenu.querySelectorAll('.dd-opt').forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                taskState.assignee = opt.dataset.value;
+                document.getElementById('dd-task-assignee-text').textContent = opt.dataset.value === 'all' ? 'All Assignees' : opt.dataset.value;
+                assgnMenu.classList.add('hidden');
+                taskState.page = 1;
+                renderTaskManagement();
+            });
+        });
+    }
+
+    // 5. Sidebar: Service Queue
+    const brgyCounts = {};
+    allTasks.filter(t => t.status !== 'Completed').forEach(t => {
+      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
+    });
+    
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 5);
+    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+    
+    const queueContainer = document.getElementById("service-queue-list");
+    if(queueContainer) {
+      queueContainer.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Queue is empty.</p>` : "";
+      queueData.forEach(q => {
+        const pct = (q.count / maxQueue) * 100;
+        let c = 'bg-emerald-500'; let tc = 'text-emerald-600';
+        if(q.count > 10) { c = 'bg-rose-500'; tc = 'text-rose-600'; }
+        else if(q.count > 5) { c = 'bg-amber-500'; tc = 'text-amber-600'; }
+
+        queueContainer.innerHTML += `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-slate-700">${q.name}</span>
+              <span class="text-xs font-black ${tc}">${q.count}</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full ${c} rounded-full" style="width:${pct}%"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 6. Sidebar: Donut Chart
+    const statusCounts = { 'In Progress': 0, 'Pending': 0, 'Overdue': 0, 'Planning': 0 };
+    allTasks.forEach(t => { if(statusCounts[t.status] !== undefined) statusCounts[t.status]++; });
+
+    document.getElementById("task-donut-total").textContent = allTasks.length;
+    const oData = [
+      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
+      { label: 'Pending', val: statusCounts['Pending'], color: '#f59e0b' },
+      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
+      { label: 'Planning', val: statusCounts['Planning'], color: '#94a3b8' }
+    ].filter(d => d.val > 0);
+
+    if (donutEl && legendEl) {
+      legendEl.innerHTML = oData.length === 0 ? `<p class="text-xs text-slate-400 italic py-4">No data</p>` : "";
+      let cursor = 0;
+      const stops = oData.map(o => {
+          const startPct = (cursor / allTasks.length) * 100;
+          cursor += o.val;
+          const endPct = (cursor / allTasks.length) * 100;
+          return `${o.color} ${startPct}% ${endPct}%`;
+      }).join(', ');
+      donutEl.style.background = `conic-gradient(${stops})`;
+
+      oData.forEach(o => {
+          const pct = Math.round((o.val / allTasks.length) * 100);
+          legendEl.innerHTML += `
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <span class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                <span class="truncate">${o.label}</span>
+              </span>
+              <span class="text-slate-400 font-semibold">${pct}%</span>
+            </div>
+          `;
+      });
+    }
+  }
+
+  function drawBarangayTrendChart() {
+    const container = document.getElementById("brgy-trend-chart");
+    if (!container || !dashboardMetrics) return;
+
+    // Pull real-time data calculated by dashboard-service.js
+    const labels = dashboardMetrics.trendLabels || [];
+    const thisWeek = dashboardMetrics.trendThisWeek || [];
+    const lastWeek = dashboardMetrics.trendLastWeek || [];
+
+    if (labels.length === 0) {
+        container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
+        return;
+    }
+
+    // Dynamic Sizing
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 200;
+    const paddingLeft = 35;
+    const paddingRight = 15;
+    const paddingTop = 30; 
+    const paddingBottom = 25;
+
+    const chartWidth = width - paddingLeft - paddingRight;
+    const chartHeight = height - paddingTop - paddingBottom;
+
+    // Find highest peak to scale the Y-Axis (minimum scale of 5)
+    const maxVal = Math.max(...thisWeek, ...lastWeek, 5);
+
+    const getX = (idx) => paddingLeft + (idx / (labels.length - 1)) * chartWidth;
+    const getY = (val) => paddingTop + chartHeight - (val / maxVal) * chartHeight;
+
+    let html = `
+      <div class="absolute top-0 right-2 flex items-center gap-4 text-[10px] font-bold bg-white px-2 py-1">
+        <span class="flex items-center gap-1.5 text-blue-600"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> This Week</span>
+        <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Last Week</span>
+      </div>
+      <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" class="overflow-visible">
+    `;
+
+    // 1. Grid Lines & Y-Axis Labels
+    const gridLines = 4;
+    for (let i = 0; i <= gridLines; i++) {
+      const val = Math.round((i / gridLines) * maxVal);
+      const y = getY(val);
+      html += `
+        <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#f1f5f9" stroke-width="1.5" />
+        <text x="${paddingLeft - 8}" y="${y + 4}" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="end">${val}</text>
+      `;
+    }
+
+    // 2. X-Axis Labels
+    labels.forEach((label, idx) => {
+      const x = getX(idx);
+      html += `<text x="${x}" y="${height - 5}" fill="#94a3b8" font-size="10" font-weight="600" text-anchor="middle">${label}</text>`;
+    });
+
+    // 3. Path Builder Helper
+    const buildPath = (data) => data.map((val, idx) => `${idx === 0 ? 'M' : 'L'} ${getX(idx)} ${getY(val)}`).join(" ");
+
+    // 4. Draw Last Week Line & Nodes (Green)
+    html += `<path d="${buildPath(lastWeek)}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    lastWeek.forEach((val, idx) => {
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
+    });
+
+    // 5. Draw This Week Line & Nodes (Blue)
+    html += `<path d="${buildPath(thisWeek)}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+    thisWeek.forEach((val, idx) => {
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
+    });
+
+    html += `</svg>`;
+    container.innerHTML = html;
   }
 
   function animateAnalyticsRefresh() {
@@ -744,7 +1303,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
     });
   }
 
-  function drawReportsOverTimeChart(filtered, dateVal) {
+function drawReportsOverTimeChart(filtered, dateVal) {
     const container = document.getElementById("analytics-line-chart-container");
     if (!container) return;
     container.innerHTML = "";
@@ -764,8 +1323,9 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const resolvedCounts = Array(daysCount).fill(0);
 
     filtered.forEach(r => {
-      if (!r.createdAt) return;
-      const reportDate = new Date(r.createdAt);
+      // FIXED: Using reportedAt instead of createdAt
+      if (!r.reportedAt) return;
+      const reportDate = new Date(r.reportedAt);
       reportDate.setHours(0, 0, 0, 0);
 
       const index = days.findIndex(d => d.getTime() === reportDate.getTime());
@@ -1057,15 +1617,16 @@ import { subscribeDashboard } from "./dashboard-service.js";
     }
   }
 
-  function updateRecentCriticalAlerts() {
+ function updateRecentCriticalAlerts() {
     const container = document.getElementById("recent-critical-alerts-container");
     if (!container) return;
 
     const criticalReports = reports
       .filter(r => r.severity >= 4 && r.status !== "Resolved")
       .sort((a, b) => {
-        if (a.createdAt && b.createdAt) {
-          return b.createdAt.getTime() - a.createdAt.getTime();
+        // FIXED: Using reportedAt instead of createdAt
+        if (a.reportedAt && b.reportedAt) {
+          return b.reportedAt.getTime() - a.reportedAt.getTime();
         }
         return b.docId.localeCompare(a.docId);
       });
@@ -1086,8 +1647,9 @@ import { subscribeDashboard } from "./dashboard-service.js";
         openDetailModal(report.docId);
       });
 
-      const timeStr = report.createdAt ? report.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
-      const dateStr = report.createdAt ? report.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+      // FIXED: Using reportedAt instead of createdAt
+      const timeStr = report.reportedAt ? report.reportedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
+      const dateStr = report.reportedAt ? report.reportedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
       card.innerHTML = `
         <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-100 flex-shrink-0">
@@ -1103,26 +1665,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
         </div>
       `;
       container.appendChild(card);
-    });
-  }
-
-  function updateMapFilterVisuals(activeId) {
-    const filterButtons = {
-      all: document.getElementById("map-filter-all"),
-      high: document.getElementById("map-filter-high"),
-      medium: document.getElementById("map-filter-medium"),
-      resolved: document.getElementById("map-filter-resolved")
-    };
-
-    Object.keys(filterButtons).forEach(key => {
-      const btn = filterButtons[key];
-      if (btn) {
-        if (key === activeId) {
-          btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm transition-all cursor-pointer";
-        } else {
-          btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all cursor-pointer";
-        }
-      }
     });
   }
 
@@ -1165,6 +1707,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
         }
       });
     }
+    
 
     // Render dashboard map markers (all reports)
     reports.forEach((report) => {
@@ -1182,14 +1725,36 @@ import { subscribeDashboard } from "./dashboard-service.js";
     });
 
     updateHeatmap();
+
+    // Add this right below renderMapMarkers()
+  window.recenterMap = function() {
+    const mapReports = getFilteredReportsForMap();
+    if (mapReports.length === 0) return;
+
+    // Calculate a boundary box that includes all active report coordinates
+    const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
+    
+    if (bounds.isValid()) {
+      // Smoothly fly the map to fit all pins with a nice 50px padding
+      if (window.mapInstance) {
+        window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      }
+      if (window.dashboardMapInstance) {
+        window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+      }
+    }
+  };
   }
 
   // ==========================================
   // 6. UI & NAVIGATION LOGIC
   // ==========================================
 
-  function switchView(viewName) {
-    const navButtons = [navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, navBarangayBtn, navSettingsBtn];
+  function switchView(viewName, pushState = true) {
+    const navButtons = [
+      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, 
+      navBarangayBtn, navTasksBtn, navRoutesBtn, navInsightsBtn, navSettingsBtn
+    ];
 
     // 1. Reset all buttons to inactive state
     navButtons.forEach((btn) => {
@@ -1200,42 +1765,88 @@ import { subscribeDashboard } from "./dashboard-service.js";
     });
 
     // 2. Hide all panels
-    viewDashboardPanel.classList.add("hidden");
-    viewReportsPanel.classList.add("hidden");
-    viewMapPanel.classList.add("hidden");
+    if (viewDashboardPanel) viewDashboardPanel.classList.add("hidden");
+    if (viewReportsPanel) viewReportsPanel.classList.add("hidden");
+    if (viewMapPanel) viewMapPanel.classList.add("hidden");
     if (viewAnalyticsPanel) viewAnalyticsPanel.classList.add("hidden");
+    if (viewBarangayPanel) viewBarangayPanel.classList.add("hidden");
+    if (viewTasksPanel) viewTasksPanel.classList.add("hidden");
+    if (viewRoutesPanel) viewRoutesPanel.classList.add("hidden");
+    if (viewInsightsPanel) viewInsightsPanel.classList.add("hidden");
+    if (viewSettingsPanel) viewSettingsPanel.classList.add("hidden");
+    if (viewLiveSyncPanel) viewLiveSyncPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
+    
+    // Ensure the top header is ALWAYS visible across all pages
+    if (mainHeader) mainHeader.classList.remove("hidden");
+
     if (viewName === "dashboard") {
-      if (mainHeader) mainHeader.classList.remove("hidden");
-      viewDashboardPanel.classList.remove("hidden");
+      if (viewDashboardPanel) viewDashboardPanel.classList.remove("hidden");
       if (navDashboardBtn) navDashboardBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Dashboard";
       updateDashboardMetrics(reports);
       initLeafletMap();
       renderMapMarkers();
       refreshMapSizes(100);
-    } else {
-      if (mainHeader) mainHeader.classList.add("hidden");
-      if (viewName === "reports") {
-        viewReportsPanel.classList.remove("hidden");
-        if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Civic Reports Database";
-        renderReportsTable();
-      } else if (viewName === "map") {
-        viewMapPanel.classList.remove("hidden");
-        if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Live Reports Map";
-        initLeafletMap();
-        if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
-        renderMapMarkers();
-        refreshMapSizes(100);
-      } else if (viewName === "analytics") {
-        if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
-        if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Analytics Overview";
-        updateAnalyticsMetrics();
-      }
+    } 
+    else if (viewName === "reports") {
+      if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
+      if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Civic Reports Database";
+      renderReportsTable();
+    } 
+    else if (viewName === "map") {
+      if (viewMapPanel) viewMapPanel.classList.remove("hidden");
+      if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Live Reports Map";
+      initLeafletMap();
+      if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
+      renderMapMarkers();
+      refreshMapSizes(100);
+    } 
+    else if (viewName === "analytics") {
+      if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
+      if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Analytics Overview";
+      updateAnalyticsMetrics();
+    }
+    else if (viewName === "barangay-performance") {
+      if (viewBarangayPanel) viewBarangayPanel.classList.remove("hidden");
+      if (navBarangayBtn) navBarangayBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Barangay Performance";
+    }
+    else if (viewName === "task-management") {
+      if (viewTasksPanel) viewTasksPanel.classList.remove("hidden");
+      if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Task Management";
+    }
+    else if (viewName === "live-sync") {
+      if (viewLiveSyncPanel) viewLiveSyncPanel.classList.remove("hidden");
+      // Highlight the parent Task Management nav button
+      if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      // Hide the global view title since this specific page has its own breadcrumb header
+      if (mainHeader) mainHeader.classList.add("hidden"); 
+    }
+    else if (viewName === "collection-routes") {
+      if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
+      if (navRoutesBtn) navRoutesBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Collection Routes";
+    }
+    else if (viewName === "ai-insights") {
+      if (viewInsightsPanel) viewInsightsPanel.classList.remove("hidden");
+      if (navInsightsBtn) navInsightsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "AI Insights";
+    }
+    else if (viewName === "settings") {
+      if (viewSettingsPanel) viewSettingsPanel.classList.remove("hidden");
+      if (navSettingsBtn) navSettingsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Settings";
+    }
+
+    // Update URL history silently
+    if (pushState) {
+      window.history.pushState({ view: viewName }, '', `lgu.html?view=${viewName}`);
     }
   }
 
@@ -1246,7 +1857,24 @@ import { subscribeDashboard } from "./dashboard-service.js";
   // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
+  let currentDistrictFilter = "all";
+  let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
+
+let activeBrgyDistrictFilter = "all";
+let activeBrgySearchQuery = "";
+
+// NEW: Task Management State Variables
+  let taskState = {
+      tab: 'all',
+      status: 'all',
+      priority: 'all',
+      assignee: 'all',
+      district: 'all', // Added district filter
+      search: '',
+      page: 1,
+  };
+  const TASK_PAGE_SIZE = 7;
 
   function renderReportsTable() {
     if (!reportsTableBody) return;
@@ -1280,6 +1908,11 @@ import { subscribeDashboard } from "./dashboard-service.js";
       filteredList = filteredList.filter(r => r.category === currentCategoryFilter);
     }
 
+    // ADD THIS: Apply District filter
+    if (currentDistrictFilter && currentDistrictFilter !== "all") {
+      filteredList = filteredList.filter(r => r.district === currentDistrictFilter);
+    }
+
     // Apply text query filter
     if (queryText) {
       filteredList = filteredList.filter((item) =>
@@ -1291,11 +1924,11 @@ import { subscribeDashboard } from "./dashboard-service.js";
       );
     }
 
-    // Sort processing based on "Reported At" (createdAt timestamp)
+    // Sort processing based on "Reported At" (reportedAt timestamp)
     filteredList.sort((a, b) => {
       // Fallback to 0 if time is missing, though Firebase provides the timestamp
-      const timeA = a.createdAt ? a.createdAt.getTime() : 0;
-      const timeB = b.createdAt ? b.createdAt.getTime() : 0;
+      const timeA = a.reportedAt ? a.reportedAt.getTime() : 0; // Changed from createdAt
+      const timeB = b.reportedAt ? b.reportedAt.getTime() : 0; // Changed from createdAt
 
       if (currentSortOrder === "date-desc") {
         // Newest submitted forms first
@@ -1376,7 +2009,7 @@ import { subscribeDashboard } from "./dashboard-service.js";
             ${priorityText}
           </span>
         </td>
-        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">${formatReportedAt(report.createdAt)}</td>
+        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
         <td class="px-6 py-4 text-right">
           <button data-doc-id="${report.docId}" class="action-view-btn text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors px-3 py-1.5 rounded bg-emerald-50 hover:bg-emerald-100 inline-flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -1392,6 +2025,249 @@ import { subscribeDashboard } from "./dashboard-service.js";
         openDetailModal(this.getAttribute("data-doc-id"));
       });
     });
+  }
+
+  function renderTaskManagement() {
+    const tbody = document.getElementById("task-table-body");
+    const queueList = document.getElementById("service-queue-list");
+    const donutEl = document.getElementById("task-donut-chart");
+    const legendEl = document.getElementById("task-donut-legend");
+    if (!tbody || !queueList || !donutEl || !reports) return;
+
+    // 1. Process Reports into "Tasks" applying Upvote Priority Logic
+    let allTasks = reports.map(r => {
+      const sev = r.severity || 0;
+      const upvotes = r.upvotes || 1;
+      
+      // PRIORITY LOGIC: Community upvotes make it rise in urgency!
+      let priority = 'Low';
+      if (sev >= 4 || upvotes >= 10) priority = 'High';
+      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
+
+      // Due Date: 48 Hours from reported time
+      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
+      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
+      
+      let uiStatus = r.status;
+      let isOverdue = false;
+      if (r.status === 'Pending Verification' && ageMs > (48 * 60 * 60 * 1000)) {
+          uiStatus = 'Overdue';
+          isOverdue = true;
+      }
+
+      let assignee = 'Unassigned';
+      if (r.status === 'In Progress') assignee = 'Response Team';
+      else if (r.status === 'Resolved') assignee = 'Completed Unit';
+
+      return {
+        id: r.id,
+        docId: r.docId,
+        title: `${r.category} Clearing`,
+        barangay: r.barangay,
+        assignee: assignee,
+        priority: priority,
+        status: uiStatus,
+        isOverdue: isOverdue,
+        upvotes: upvotes,
+        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        rawDate: targetDate.getTime()
+      };
+    });
+
+    // 2. Update KPI Cards & Tab Counts
+    const activeTasks = allTasks.filter(t => t.status !== 'Resolved' && t.status !== 'Dismissed');
+    const totalActive = activeTasks.length;
+    const assignedCount = allTasks.filter(t => t.status === 'In Progress').length;
+    const overdueCount = allTasks.filter(t => t.isOverdue).length;
+    const completedCount = allTasks.filter(t => t.status === 'Resolved').length;
+
+    // Fixed IDs to match HTML
+    if(document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
+    if(document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
+    if(document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
+    if(document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
+
+    if(document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
+    if(document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
+    if(document.getElementById("task-count-completed")) document.getElementById("task-count-completed").textContent = `(${completedCount})`;
+
+    // 3. Apply Filters
+    let filteredTasks = [...allTasks];
+    
+   // Fix: Show ALL tasks in 'all' tab, don't restrict to activeTasks
+    if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+    else if (taskCurrentTab === 'overdue') filteredTasks = filteredTasks.filter(t => t.isOverdue);
+    else if (taskCurrentTab === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
+
+    if (taskCurrentPriority !== 'all') {
+      filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
+    }
+
+    if (taskSearchQuery) {
+      const q = taskSearchQuery.toLowerCase();
+      filteredTasks = filteredTasks.filter(t => 
+        t.title.toLowerCase().includes(q) || 
+        t.id.toLowerCase().includes(q) || 
+        t.barangay.toLowerCase().includes(q)
+      );
+    }
+
+    filteredTasks.sort((a, b) => a.rawDate - b.rawDate);
+
+    // 4. Render Paginated Table
+    const totalPages = Math.max(1, Math.ceil(filteredTasks.length / tasksPerPage));
+    if (taskCurrentPage > totalPages) taskCurrentPage = 1;
+    const start = (taskCurrentPage - 1) * tasksPerPage;
+    const pageItems = filteredTasks.slice(start, start + tasksPerPage);
+
+    tbody.innerHTML = "";
+    if (pageItems.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
+    } else {
+      pageItems.forEach((t, i) => {
+        const priorityColors = {
+          High: 'bg-rose-50 text-rose-600 border-rose-200',
+          Medium: 'bg-amber-50 text-amber-700 border-amber-200',
+          Low: 'bg-blue-50 text-blue-600 border-blue-200'
+        };
+
+        const statusStyles = {
+          'Pending': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' },
+          'In Progress': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>`, pill: 'bg-blue-50 text-blue-700 border-blue-200' },
+          'Overdue': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' },
+          'Completed': { icon: `<svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`, pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          'Failed': { icon: `<svg class="w-2.5 h-2.5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' } // Workflow C UI
+        };
+
+        const st = statusStyles[t.status] || statusStyles['Pending'];
+        
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-100" style="animation-delay: ${i * 30}ms;">
+            <td class="px-5 py-4 font-mono text-[11px] font-bold text-slate-500">#${t.id}</td>
+            <td class="px-5 py-4">
+              <p class="font-bold text-slate-800">${t.title}</p>
+              <p class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1" title="Community Upvotes raise priority">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
+                ${t.upvotes} Votes
+              </p>
+            </td>
+            <td class="px-5 py-4 text-xs font-semibold text-slate-600">${t.barangay}</td>
+            <td class="px-5 py-4">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded border ${priorityColors[t.priority]}">${t.priority}</span>
+            </td>
+            <td class="px-5 py-4 text-xs font-bold ${t.isOverdue ? 'text-rose-600' : 'text-slate-600'}">${t.due}</td>
+            <td class="px-5 py-4">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${st.pill}">
+                <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+              </span>
+            </td>
+            <td class="px-5 py-4 text-right">
+              <button onclick="window.openTaskModal('${t.docId}')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="View Detail">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    const counter = document.getElementById("task-table-counter");
+    if(counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
+
+    const pager = document.getElementById("task-pagination-controls");
+    if (pager) {
+        pager.innerHTML = "";
+        if (totalPages > 1) {
+            const createBtn = (label, pageNum, disabled, isActive) => {
+                const b = document.createElement("button");
+                b.innerHTML = label;
+                b.disabled = disabled;
+                if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
+                else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
+                else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
+                if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
+                return b;
+            };
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
+            for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
+        }
+    }
+
+    // 5. Sidebar: Service Queue
+    const brgyCounts = {};
+    activeTasks.forEach(t => {
+      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
+    });
+    
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 6);
+    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+    
+    queueList.innerHTML = "";
+    if(queueData.length === 0) queueList.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>`;
+    
+    queueData.forEach(q => {
+      const pct = (q.count / maxQueue) * 100;
+      let barColor = 'bg-emerald-500';
+      if(q.count > 10) barColor = 'bg-rose-500';
+      else if(q.count > 4) barColor = 'bg-amber-500';
+
+      queueList.innerHTML += `
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
+            <span class="text-[11px] font-black text-slate-900">${q.count}</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 6. Sidebar: Donut Chart
+    const statusCounts = { 'Pending Verification': 0, 'In Progress': 0, 'Overdue': 0, 'Resolved': 0 };
+    allTasks.forEach(t => {
+      if(statusCounts[t.status] !== undefined) statusCounts[t.status]++;
+    });
+
+    const dTotal = allTasks.filter(t => t.status !== 'Dismissed').length;
+    if(document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
+
+    const oData = [
+      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
+      { label: 'Pending', val: statusCounts['Pending Verification'], color: '#f59e0b' },
+      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
+      { label: 'Completed', val: statusCounts['Resolved'], color: '#10b981' }
+    ].filter(d => d.val > 0);
+
+    legendEl.innerHTML = "";
+    if (oData.length === 0) {
+       donutEl.style.background = "#e2e8f0";
+       legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
+    } else {
+      let cursor = 0;
+      const stops = oData.map(o => {
+          const startPct = (cursor / dTotal) * 100;
+          cursor += o.val;
+          const endPct = (cursor / dTotal) * 100;
+          return `${o.color} ${startPct}% ${endPct}%`;
+      }).join(', ');
+      donutEl.style.background = `conic-gradient(${stops})`;
+
+      oData.forEach(o => {
+          const pct = Math.round((o.val / dTotal) * 100);
+          legendEl.innerHTML += `
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                <span class="truncate">${o.label}</span>
+              </span>
+              <span class="text-slate-500 font-bold">${pct}%</span>
+            </div>
+          `;
+      });
+    }
   }
 
   function updateTabHighlight(activeKey) {
@@ -1470,8 +2346,8 @@ import { subscribeDashboard } from "./dashboard-service.js";
     // TIMELINE RENDERING (Top 3 recent)
     const timelineReports = blockchainReports.slice(0, 3);
     timelineReports.forEach((r, index) => {
-      const timeStr = r.createdAt ? r.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
-      const dateStr = r.createdAt ? r.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+      const timeStr = r.reportedAt ? r.reportedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "N/A";
+      const dateStr = r.reportedAt ? r.reportedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
       const isFirst = index === 0;
       const statusLabel = r.status === "Pending Verification" ? "Report Submitted" : r.status;
 
@@ -1495,8 +2371,8 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const tableReports = blockchainReports.slice(0, 5);
     tableReports.forEach(r => {
       let timeAgo = "Just now";
-      if (r.createdAt) {
-        const diffMs = Date.now() - r.createdAt.getTime();
+      if (r.reportedAt) {
+        const diffMs = Date.now() - r.reportedAt.getTime();
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
@@ -1526,9 +2402,26 @@ import { subscribeDashboard } from "./dashboard-service.js";
   // 8. MODAL LOGIC
   // ==========================================
 
-  function populateModal(report) {
+  const CATEGORY_ICONS = {
+    "Recyclable": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" /></svg>`,
+    "Nabubulok": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>`,
+    "Non-recyclable": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`,
+    "Mixed Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>`,
+    "Hazardous Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 13.33 1.924 3 3.464 3z" /></svg>`,
+    "Healthcare Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>`,
+    "default": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+  };
+
+function populateModal(report) {
     modalReportId.textContent = `Report #${report.id}`;
     modalCategory.textContent = report.category;
+    
+    // Inject Category Icon dynamically
+    const iconContainer = document.getElementById("modal-cat-icon-container");
+    if (iconContainer) {
+        iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
+    }
+
     modalLocation.textContent = report.location;
     modalSubmitter.textContent = report.submittedBy;
     if (modalContactInfo) modalContactInfo.textContent = report.contactInfo || "Not Provided";
@@ -1539,12 +2432,21 @@ import { subscribeDashboard } from "./dashboard-service.js";
     updateModalStatusBadge(report.status);
     modalReportImage.src = report.imageUrl || PLACEHOLDER_IMAGE;
 
+   // Hide all dynamic inputs first
+    if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
+    if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
+    if (assigneeContainer) assigneeContainer.classList.add("hidden");
+
+    // Show and populate only the relevant one based on current status
     if (report.status === "Dismissed") {
       if (dismissalReasonContainer) dismissalReasonContainer.classList.remove("hidden");
       if (dismissalReasonInput) dismissalReasonInput.value = report.dismissalReason || "";
-    } else {
-      if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
-      if (dismissalReasonInput) dismissalReasonInput.value = "";
+    } else if (report.status === "Resolved") {
+      if (resolvedByContainer) resolvedByContainer.classList.remove("hidden");
+      if (resolvedByInput) resolvedByInput.value = report.resolvedByCode || "";
+    } else if (report.status === "In Progress") {
+      if (assigneeContainer) assigneeContainer.classList.remove("hidden");
+      if (assigneeInput) assigneeInput.value = report.assignedToCode || "";
     }
 
     if (modalBlockchainUrl && blockchainUrlContainer) {
@@ -1566,8 +2468,13 @@ import { subscribeDashboard } from "./dashboard-service.js";
     document.body.classList.add("overflow-hidden");
   }
 
-  function updateModalStatusBadge(status) {
-    modalStatusBadge.className = "inline-flex items-center gap-2 mt-1 px-3 py-1 rounded-full text-xs font-semibold";
+function updateModalStatusBadge(status) {
+    const editBox = document.getElementById("modal-status-edit-box");
+    const titleText = document.getElementById("modal-status-title-text");
+    const saveBtn = document.getElementById("modal-btn-save");
+    const footerSpacer = document.getElementById("footer-spacer");
+
+    modalStatusBadge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-white shadow-sm border border-slate-200 text-slate-700";
     let dotEl = modalStatusBadge.querySelector("span:first-child");
     let textEl = modalStatusBadge.querySelector("span:last-child");
 
@@ -1578,18 +2485,40 @@ import { subscribeDashboard } from "./dashboard-service.js";
     }
 
     textEl.textContent = status;
+    
+    // Reset Edit Box Base Classes
+    if(editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
+    if(titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
+    
+    // Reset Save Button
+    if(saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+
+    // Show spacer by default, hide if Resolved (so Resolved UI takes the space)
+    if(footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
+
     if (status === "Resolved") {
-      modalStatusBadge.classList.add("bg-green-50", "text-green-700", "border", "border-green-200");
-      dotEl.className = "w-2 h-2 rounded-full bg-green-500";
+      dotEl.className = "w-2 h-2 rounded-full bg-emerald-500";
+      modalStatusBadge.classList.add("text-emerald-700");
+      if(editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
+      if(titleText) titleText.classList.add("text-emerald-600");
+      if(saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
     } else if (status === "In Progress") {
-      modalStatusBadge.classList.add("bg-amber-50", "text-amber-700", "border", "border-amber-200");
-      dotEl.className = "w-2 h-2 rounded-full bg-amber-500";
+      dotEl.className = "w-2 h-2 rounded-full bg-blue-500";
+      modalStatusBadge.classList.add("text-blue-700");
+      if(editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
+      if(titleText) titleText.classList.add("text-blue-600");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
     } else if (status === "Dismissed") {
-      modalStatusBadge.classList.add("bg-rose-50", "text-rose-700", "border", "border-rose-200");
       dotEl.className = "w-2 h-2 rounded-full bg-rose-500";
+      modalStatusBadge.classList.add("text-rose-700");
+      if(editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
+      if(titleText) titleText.classList.add("text-rose-600");
+      if(saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
     } else {
-      modalStatusBadge.classList.add("bg-slate-100", "text-slate-700", "border", "border-slate-200");
       dotEl.className = "w-2 h-2 rounded-full bg-slate-400";
+      if(editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
+      if(titleText) titleText.classList.add("text-slate-500");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
     }
   }
 
@@ -1605,18 +2534,69 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
 
     const updatePayload = { status: firestoreStatus };
+    
+    // Safely structure payload based on Admin selection
     if (newStatus === "Dismissed") {
       updatePayload.dismissalReason = dismissalReasonInput ? dismissalReasonInput.value : "";
-    } else {
-      updatePayload.dismissalReason = null;
+    } 
+    else if (newStatus === "Resolved") {
+      const adminCode = resolvedByInput ? resolvedByInput.value : "";
+      if (!adminCode) {
+          showToast("Validation Error", "Please verify using your Admin ID before saving.");
+          return; 
+      }
+      updatePayload.resolvedByCode = adminCode;
+    } 
+    else if (newStatus === "In Progress") {
+      const truckCode = assigneeInput ? assigneeInput.value : "";
+      if (!truckCode) {
+          showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
+          return; 
+      }
+      updatePayload.assignedToCode = truckCode;
     }
 
     try {
       modalBtnSave.disabled = true;
-      modalBtnSave.textContent = "Saving...";
+      modalBtnSave.textContent = "Logging to Blockchain..."; // UI feedback for network delay
+
+      // --- 1. EXTRACT COORDINATES SAFELY ---
+      let lat = null, lng = null;
+      if (selectedReport.coordinates) {
+        if (selectedReport.coordinates.lat != null) {
+          lat = selectedReport.coordinates.lat;
+          lng = selectedReport.coordinates.lng;
+        } else if (Array.isArray(selectedReport.coordinates)) {
+          lat = selectedReport.coordinates[0];
+          lng = selectedReport.coordinates[1];
+        }
+      }
+
+      // --- 2. BUILD BLOCKCHAIN PAYLOAD ---
+      const hederaPayload = {
+        aiSeverityScore: selectedReport.severity,
+        category: selectedReport.category,
+        lat: lat,
+        lng: lng,
+        statusUpdate: firestoreStatus // Log the new status state
+      };
+
+      // --- 3. SEND TO HEDERA ---
+      const hashScanUrl = await logReportOnChain(hederaPayload);
+
+      // If the blockchain accepts it, attach the new receipt URL to the database update
+      if (hashScanUrl) {
+        updatePayload.hashScanUrl = hashScanUrl;
+      }
+
+      modalBtnSave.textContent = "Saving to Database...";
+
+      // --- 4. UPDATE FIRESTORE ---
       await updateDoc(doc(db, "reports", selectedReport.docId), updatePayload);
       closeModal();
-      showToast("Report Updated", "Status changes saved successfully.");
+      // Use your existing toast system for feedback
+      showToast("Report Updated", "Status changes saved to Blockchain and Database.");
+
     } catch (error) {
       console.error("Failed to save report status change:", error);
       showToast("Save Failed", error.message || "Could not save status change.");
@@ -1667,41 +2647,55 @@ import { subscribeDashboard } from "./dashboard-service.js";
   // 9. EVENT LISTENERS
   // ==========================================
 
+  function handleNavClick(e, viewName) {
+    e.preventDefault(); // Prevents the page reload flicker
+    switchView(viewName, true);
+  }
+
   function setupEventListeners() {
-    // Navigation Routing
-    if (navDashboardBtn) navDashboardBtn.addEventListener("click", () => switchView("dashboard"));
-    if (navReportsBtn) navReportsBtn.addEventListener("click", () => switchView("reports"));
-    if (navMapBtn) navMapBtn.addEventListener("click", () => switchView("map"));
-    if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", () => switchView("analytics"));
+    const brgyDistrictFilter = document.getElementById("brgy-district-filter");
+    if (brgyDistrictFilter) {
+      brgyDistrictFilter.addEventListener("change", function () {
+        activeBrgyDistrictFilter = this.value;
+        renderBarangayPerformance();
+      });
+    }
 
-    const comingSoonButtons = [
-      document.getElementById("nav-routes"),
-    ];
+    const brgySearchInput = document.getElementById("brgy-search-input");
+    if (brgySearchInput) {
+      brgySearchInput.addEventListener("input", function () {
+        activeBrgySearchQuery = this.value.trim();
+        renderBarangayPerformance();
+      });
+    }
 
-    comingSoonButtons.forEach((nav) => {
-      if (nav) {
-        nav.addEventListener("click", function () {
-          const featureName = this.querySelector("span")
-            ? this.querySelector("span").textContent.trim()
-            : "This feature";
-          showToast(featureName);
-        });
-      }
-    });
+    if (navDashboardBtn) navDashboardBtn.addEventListener("click", (e) => handleNavClick(e, "dashboard"));
+    if (navReportsBtn) navReportsBtn.addEventListener("click", (e) => handleNavClick(e, "reports"));
+    if (navMapBtn) navMapBtn.addEventListener("click", (e) => handleNavClick(e, "map"));
+    if (navAnalyticsBtn) navAnalyticsBtn.addEventListener("click", (e) => handleNavClick(e, "analytics"));
+    if (navBarangayBtn) navBarangayBtn.addEventListener("click", (e) => handleNavClick(e, "barangay-performance"));
+    if (navTasksBtn) navTasksBtn.addEventListener("click", (e) => handleNavClick(e, "task-management"));
+    if (navRoutesBtn) navRoutesBtn.addEventListener("click", (e) => handleNavClick(e, "collection-routes"));
+    if (navInsightsBtn) navInsightsBtn.addEventListener("click", (e) => handleNavClick(e, "ai-insights"));
+    if (navSettingsBtn) navSettingsBtn.addEventListener("click", (e) => handleNavClick(e, "settings"));
 
     const analyticsDateFilter = document.getElementById("analytics-date-filter");
     if (analyticsDateFilter) {
       analyticsDateFilter.addEventListener("change", updateAnalyticsMetrics);
     }
 
-    const analyticsBrgyFilter = document.getElementById("analytics-brgy-filter");
-    if (analyticsBrgyFilter) {
-      analyticsBrgyFilter.addEventListener("click", function () {
-        showToast("Barangay filtering");
-      });
+    const headerCityBtn = document.getElementById("header-city-btn");
+    if (headerCityBtn) {
+        headerCityBtn.addEventListener("click", () => {
+            showToast("Only Quezon City for now", "Future cities will be added in the next update.");
+        });
     }
 
-    // --- Analytics Simulated Table Row Click Handlers ---
+    const analyticsDistFilter = document.getElementById("analytics-district-filter");
+    if (analyticsDistFilter) {
+      analyticsDistFilter.addEventListener("change", updateAnalyticsMetrics);
+    }
+
     const analyticsTableRows = document.querySelectorAll("#view-analytics-panel table tbody tr");
     analyticsTableRows.forEach(row => {
       row.classList.add("cursor-pointer", "hover:bg-slate-50", "transition-colors");
@@ -1710,8 +2704,70 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     });
 
-    // --- Analytics Simulated Bar Graph Column Click Handlers ---
-    // Fix: Escaped the colon in the Tailwind class to prevent SyntaxError in querySelectorAll
+    const tSearchInput = document.getElementById("task-search-input");
+    if(tSearchInput) {
+      tSearchInput.addEventListener("input", function() {
+        taskSearchQuery = this.value;
+        taskCurrentPage = 1;
+        renderTaskManagement();
+      });
+    }
+
+    const tTabs = ['all', 'overdue', 'completed'];
+    tTabs.forEach(key => {
+      const btn = document.getElementById(`task-tab-${key}`);
+      if(btn) {
+        btn.addEventListener('click', () => {
+          taskCurrentTab = key;
+          taskCurrentPage = 1;
+          
+          tTabs.forEach(k => {
+             const b = document.getElementById(`task-tab-${k}`);
+             if(b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
+          });
+          btn.className = "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold transition-all";
+          renderTaskManagement();
+        });
+      }
+    });
+
+    const tPriBtn = document.getElementById("dd-task-priority-btn");
+    const tPriMenu = document.getElementById("dd-task-priority-menu");
+    const tPriText = document.getElementById("dd-task-priority-text");
+    
+    if(tPriBtn && tPriMenu) {
+      tPriBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tPriMenu.classList.toggle("hidden");
+      });
+      tPriMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          taskCurrentPriority = e.target.dataset.value;
+          if(tPriText) tPriText.textContent = e.target.textContent;
+          tPriMenu.classList.add("hidden");
+          taskCurrentPage = 1;
+          renderTaskManagement();
+        });
+      });
+    }
+
+    document.addEventListener("click", () => {
+        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+    });
+
+    const tResetBtn = document.getElementById("task-reset-btn");
+    if (tResetBtn) {
+       tResetBtn.addEventListener("click", () => {
+          taskSearchQuery = '';
+          if(tSearchInput) tSearchInput.value = '';
+          taskCurrentPriority = 'all';
+          if(tPriText) tPriText.textContent = 'All Priorities';
+          taskCurrentPage = 1;
+          renderTaskManagement();
+       });
+    }
+
     const responseTimeBars = document.querySelectorAll("#view-analytics-panel .lg\\:col-span-5 .flex-1.flex.items-end > div");
     responseTimeBars.forEach(barCol => {
       barCol.classList.add("cursor-pointer", "hover:opacity-80", "transition-opacity");
@@ -1725,6 +2781,11 @@ import { subscribeDashboard } from "./dashboard-service.js";
     // Modal & Table Setup
     window.openDetailModal = openDetailModal;
     window.saveStatusChange = saveStatusChange;
+    window.switchView = switchView;
+    window.exportToCSV = exportToCSV;
+    window.openTaskModal = openTaskModal;
+    window.closeTaskModals = closeTaskModals;
+    window.submitNewTask = submitNewTask;
 
     if (reportSearchInput) {
       reportSearchInput.addEventListener("input", () => {
@@ -1744,23 +2805,31 @@ import { subscribeDashboard } from "./dashboard-service.js";
     if (modalStatusSelect) {
       modalStatusSelect.addEventListener("change", function () {
         updateModalStatusBadge(this.value);
-        if (dismissalReasonContainer) {
-          if (this.value === "Dismissed") {
+        
+        if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
+        if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
+        if (assigneeContainer) assigneeContainer.classList.add("hidden");
+
+        if (this.value === "Dismissed" && dismissalReasonContainer) {
             dismissalReasonContainer.classList.remove("hidden");
-          } else {
-            dismissalReasonContainer.classList.add("hidden");
-          }
+        } else if (this.value === "Resolved" && resolvedByContainer) {
+            resolvedByContainer.classList.remove("hidden");
+        } else if (this.value === "In Progress" && assigneeContainer) {
+            assigneeContainer.classList.remove("hidden");
         }
       });
     }
 
     const backdrop = document.getElementById("modal-backdrop");
     if (backdrop) backdrop.addEventListener("click", closeModal);
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" || e.key === "Esc") closeModal(); });
+    document.addEventListener("keydown", (e) => { 
+        if (e.key === "Escape" || e.key === "Esc") {
+            closeModal();
+            closeTaskModals();
+        }
+    });
 
     // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
-
-    // Status Dropdown
     const rptStatusBtn = document.getElementById("reports-dropdown-status-btn");
     const rptStatusMenu = document.getElementById("reports-dropdown-status-menu");
     const rptStatusText = document.getElementById("reports-dropdown-status-text");
@@ -1787,9 +2856,58 @@ import { subscribeDashboard } from "./dashboard-service.js";
           renderReportsTable();
         });
       });
+
+    const rptDistBtn = document.getElementById("reports-dropdown-district-btn");
+    const rptDistMenu = document.getElementById("reports-dropdown-district-menu");
+    if (rptDistBtn && rptDistMenu) {
+      rptDistBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptDistMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+      });
     }
 
-    // Category Dropdown
+    document.addEventListener("click", () => {
+      [
+        "reports-dropdown-status-menu",
+        "reports-dropdown-category-menu",
+        "reports-dropdown-district-menu", 
+        "reports-dropdown-sort-menu",
+        "dropdown-status-menu",
+        "dropdown-category-menu"
+      ].forEach(id => {
+        const menu = document.getElementById(id);
+        if (menu && !menu.classList.contains("hidden")) menu.classList.add("hidden");
+      });
+    });
+
+    const filterBtn = document.getElementById("filter-btn");
+    if (filterBtn) {
+      filterBtn.addEventListener("click", function () {
+        if (reportSearchInput) reportSearchInput.value = "";
+
+        currentStatusFilter = "all";
+        currentCategoryFilter = "all";
+        currentDistrictFilter = "all"; 
+        currentSortOrder = "date-desc";
+
+        const rptStatusText = document.getElementById("reports-dropdown-status-text");
+        const rptSortText = document.getElementById("reports-dropdown-sort-text");
+
+        if (rptStatusText) rptStatusText.textContent = "All Status";
+        if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
+        if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts"; 
+        if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
+
+        updateTabHighlight("all");
+        currentPage = 1;
+        renderReportsTable();
+      });
+    }
+    }
+
     const rptCatBtn = document.getElementById("reports-dropdown-category-btn");
     const rptCatMenu = document.getElementById("reports-dropdown-category-menu");
     if (rptCatBtn && rptCatMenu) {
@@ -1801,7 +2919,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     }
 
-    // Sort Dropdown
     const rptSortBtn = document.getElementById("reports-dropdown-sort-btn");
     const rptSortMenu = document.getElementById("reports-dropdown-sort-menu");
     const rptSortText = document.getElementById("reports-dropdown-sort-text");
@@ -1826,13 +2943,11 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     }
 
-    // Barangay Dropdown (Coming Soon)
     const rptBrgyBtn = document.getElementById("reports-dropdown-barangay-btn");
     if (rptBrgyBtn) {
       rptBrgyBtn.addEventListener("click", () => showToast("Barangay Mapping"));
     }
 
-    // Filter Reset Button
     const filterBtn = document.getElementById("filter-btn");
     if (filterBtn) {
       filterBtn.addEventListener("click", function () {
@@ -1857,7 +2972,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       exportBtn.addEventListener("click", exportToCSV);
     }
 
-    // Map overlay filter listeners
     const mapFilterStatus = document.getElementById("map-filter-status");
     if (mapFilterStatus) {
       mapFilterStatus.addEventListener("change", function () {
@@ -1898,7 +3012,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     }
 
-    // Map filters reset listener
     const mapBtnFilters = document.getElementById("map-btn-filters");
     if (mapBtnFilters) {
       mapBtnFilters.addEventListener("click", function () {
@@ -1924,7 +3037,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
         showToast("Map filters have been successfully reset.");
       });
     }
-    // --- Custom Map Dropdown Toggle Logic ---
     const statusBtn = document.getElementById("dropdown-status-btn");
     const statusMenu = document.getElementById("dropdown-status-menu");
     const statusText = document.getElementById("dropdown-status-text");
@@ -1957,7 +3069,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     }
 
-    // Global Click Listener to close all open dropdowns
     document.addEventListener("click", () => {
       [
         "reports-dropdown-status-menu",
@@ -1971,7 +3082,6 @@ import { subscribeDashboard } from "./dashboard-service.js";
       });
     });
 
-    // Map overlay layer listeners
     const layerToggleHeatmap = document.getElementById("layer-toggle-heatmap");
     if (layerToggleHeatmap) {
       layerToggleHeatmap.addEventListener("change", function () {
@@ -2014,16 +3124,253 @@ import { subscribeDashboard } from "./dashboard-service.js";
     const mapBtnViewAll = document.getElementById("map-btn-view-all");
     if (mapBtnViewAll) {
       mapBtnViewAll.addEventListener("click", () => {
-        switchView("reports");
+        switchView("reports", true);
       });
     }
 
-    // Initialize Sub-Tab Filters
     setupTabFilters();
+
+    window.addEventListener("resize", () => {
+        if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
+            drawBarangayTrendChart();
+        }
+    });
   }
 
   // ==========================================
-  // 10. EXECUTION HOOK
+  // 10. ISOLATED TASK MANAGEMENT MODALS (Workflows A, B, C)
+  // ==========================================
+
+  let selectedTaskReport = null;
+
+  function openTaskModal(docId) {
+      selectedTaskReport = reports.find((r) => r.docId === docId);
+      if (!selectedTaskReport) return;
+
+      if (selectedTaskReport.status === "Pending Verification" || selectedTaskReport.status === "Overdue") {
+          populateTaskCreateModal(selectedTaskReport);
+          document.getElementById("task-create-modal").classList.remove("hidden");
+      } else {
+          populateTaskDetailsModal(selectedTaskReport);
+          document.getElementById("task-details-modal").classList.remove("hidden");
+      }
+      document.body.classList.add("overflow-hidden");
+  }
+
+  function closeTaskModals() {
+      const tcModal = document.getElementById("task-create-modal");
+      const tdModal = document.getElementById("task-details-modal");
+      if (tcModal) tcModal.classList.add("hidden");
+      if (tdModal) tdModal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+      selectedTaskReport = null;
+  }
+
+  async function submitNewTask() {
+      if (!selectedTaskReport) return;
+
+      const assignToDrop = document.getElementById("tc-assign-to");
+      const assignTo = assignToDrop ? assignToDrop.value : "";
+      
+      const priorityElement = document.querySelector('input[name="tc-priority"]:checked');
+      const priority = priorityElement ? priorityElement.value : "Medium";
+      
+      const dueDate = document.getElementById("tc-due-date") ? document.getElementById("tc-due-date").value : "";
+      const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
+      const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
+
+      if (!assignTo) {
+          showToast("Validation Error", "Please select a team or truck to assign this task to.");
+          return;
+      }
+
+      try {
+          const btn = document.getElementById("tc-submit-btn");
+          if(btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
+
+          const updatePayload = {
+              status: "in_progress",
+              assignedToCode: assignTo,
+              taskPriority: priority,
+              taskDueDate: dueDate,
+              taskType: taskType,
+              taskDescription: desc
+          };
+
+          // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
+          let lat = null, lng = null;
+          if (selectedTaskReport.coordinates) {
+              if (selectedTaskReport.coordinates.lat != null) {
+                  lat = selectedTaskReport.coordinates.lat;
+                  lng = selectedTaskReport.coordinates.lng;
+              } else if (Array.isArray(selectedTaskReport.coordinates)) {
+                  lat = selectedTaskReport.coordinates[0];
+                  lng = selectedTaskReport.coordinates[1];
+              }
+          }
+
+          const hederaPayload = {
+              aiSeverityScore: selectedTaskReport.severity,
+              category: taskType || selectedTaskReport.category,
+              lat: lat,
+              lng: lng,
+              statusUpdate: "in_progress"
+          };
+
+          const hashScanUrl = await logReportOnChain(hederaPayload);
+          if (hashScanUrl) {
+              updatePayload.hashScanUrl = hashScanUrl;
+          }
+          
+          await updateDoc(doc(db, "reports", selectedTaskReport.docId), updatePayload);
+
+          closeTaskModals();
+          showToast("Task Assigned", "The task has been successfully created and assigned to the route.");
+      } catch (error) {
+          console.error("Task assignment failed:", error);
+          showToast("Error", "Could not assign task. Check console.");
+      } finally {
+          const btn = document.getElementById("tc-submit-btn");
+          if(btn) { btn.disabled = false; btn.textContent = "Create Task"; }
+      }
+  }
+
+  function populateTaskCreateModal(report) {
+      const titleInput = document.getElementById("tc-title");
+      if (titleInput) titleInput.value = report.category + " Clearing";
+      
+      const brgyDrop = document.getElementById("tc-barangay");
+      if(brgyDrop) {
+          if (![...brgyDrop.options].some(opt => opt.value === report.barangay)) {
+              brgyDrop.innerHTML += `<option value="${report.barangay}">${report.barangay}</option>`;
+          }
+          brgyDrop.value = report.barangay;
+      }
+
+      const catDrop = document.getElementById("tc-task-type");
+      if(catDrop) {
+           if (![...catDrop.options].some(opt => opt.value === report.category)) {
+               catDrop.innerHTML += `<option value="${report.category}">${report.category}</option>`;
+           }
+           catDrop.value = report.category;
+      }
+
+      const descInput = document.getElementById("tc-desc");
+      if (descInput) descInput.value = report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+
+      const assignToDrop = document.getElementById("tc-assign-to");
+      if (assignToDrop) assignToDrop.value = "";
+      
+      const dueDateInput = document.getElementById("tc-due-date");
+      if (dueDateInput) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          dueDateInput.value = tomorrow.toISOString().split('T')[0]; 
+      }
+      
+      const pri = report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low";
+      const priRadio = document.querySelector(`input[name="tc-priority"][value="${pri}"]`);
+      if(priRadio) priRadio.checked = true;
+  }
+
+  function populateTaskDetailsModal(report) {
+      const idEl = document.getElementById("td-id");
+      if (idEl) idEl.textContent = `#${report.id}`;
+      
+      const st = report.status;
+      const stColor = st === 'Resolved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+      const stEl = document.getElementById("td-status");
+      if(stEl) {
+          stEl.className = `text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border ${stColor}`;
+          stEl.textContent = st;
+      }
+
+      const titleEl = document.getElementById("td-title");
+      if (titleEl) titleEl.textContent = report.taskType ? report.taskType + " Clearing" : report.category + " Clearing";
+      
+      const brgyEl = document.getElementById("td-barangay");
+      if (brgyEl) brgyEl.textContent = report.barangay;
+      
+      const descEl = document.getElementById("td-desc");
+      if (descEl) descEl.textContent = report.taskDescription || report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+      
+      const dueEl = document.getElementById("td-due");
+      if (dueEl) dueEl.textContent = report.taskDueDate ? new Date(report.taskDueDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}) : "Not set";
+
+      const pri = report.taskPriority || (report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low");
+      const priColor = pri === 'High' ? 'text-rose-600 bg-rose-50 border-rose-200' : pri === 'Medium' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200';
+      const priEl = document.getElementById("td-priority");
+      if (priEl) priEl.innerHTML = `<span class="px-2.5 py-1 rounded border ${priColor} text-[10px] font-bold">${pri}</span>`;
+
+      const assignedToEl = document.getElementById("td-assigned-to");
+      if (assignedToEl) assignedToEl.textContent = report.assignedToCode || "Unassigned";
+      
+      const assignedOnEl = document.getElementById("td-assigned-on");
+      if (assignedOnEl) assignedOnEl.textContent = report.reportedAt ? report.reportedAt.toLocaleString('en-US', {month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : "N/A";
+      
+      const badgeEl = document.getElementById("td-assign-badge");
+      if(badgeEl) {
+          badgeEl.textContent = st === 'Resolved' ? "Completed" : st === 'Dismissed' ? "Halted" : "On Route";
+          badgeEl.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${st === 'Resolved' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-blue-100 text-blue-600 border-blue-200'}`;
+      }
+
+      // WORKFLOW C & GENERAL STEPPER RENDERING
+      const stepperContainer = document.getElementById("task-stepper-container");
+      if(!stepperContainer) return;
+      
+      const isDismissed = report.status === 'Dismissed';
+      const isResolved = report.status === 'Resolved';
+      const isAssigned = report.status === 'In Progress' || isResolved || isDismissed;
+
+      const chk = `<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+      const xx = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+
+      let sHTML = '';
+
+      sHTML += `
+          <div class="flex flex-col items-center relative flex-1">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 ${isAssigned ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'} shadow-sm ring-4 ring-white">
+                  ${chk}
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-wider mt-2 ${isAssigned ? 'text-emerald-600' : 'text-slate-400'}">Assigned</span>
+              <div class="absolute top-3 left-[50%] w-full h-[2px] ${isAssigned ? 'bg-emerald-200' : 'bg-slate-200'} -z-0"></div>
+          </div>
+      `;
+
+      sHTML += `
+          <div class="flex flex-col items-center relative flex-1">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isAssigned && !isDismissed && !isResolved ? 'border-blue-500 text-blue-500' : isResolved || isDismissed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
+                  ${isResolved || isDismissed ? chk : '<div class="w-2 h-2 rounded-full bg-blue-500"></div>'}
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-wider mt-2 ${isAssigned && !isDismissed && !isResolved ? 'text-blue-600' : isResolved || isDismissed ? 'text-slate-700' : 'text-slate-400'}">In Progress</span>
+              <div class="absolute top-3 left-[50%] w-full h-[2px] ${isResolved || isDismissed ? 'bg-emerald-200' : 'bg-slate-200'} -z-0"></div>
+          </div>
+      `;
+
+      sHTML += `
+          <div class="flex flex-col items-center relative flex-1">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved ? 'border-emerald-500 bg-emerald-500 text-white' : isDismissed ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
+                  ${isResolved ? chk : isDismissed ? xx : '<div class="w-2 h-2 rounded-full bg-slate-300"></div>'}
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-wider mt-2 ${isResolved ? 'text-slate-700' : isDismissed ? 'text-rose-600' : 'text-slate-400'}">${isDismissed ? 'Failed / Dismissed' : 'Completed'}</span>
+              <div class="absolute top-3 left-[50%] w-full h-[2px] ${isResolved ? 'bg-emerald-200' : 'bg-slate-200'} -z-0"></div>
+          </div>
+      `;
+
+      sHTML += `
+          <div class="flex flex-col items-center relative flex-1 pr-6">
+              <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved && report.resolvedByCode ? 'border-emerald-500 text-white bg-emerald-500' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
+                  ${isResolved && report.resolvedByCode ? chk : '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>'}
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-wider mt-2 ${isResolved && report.resolvedByCode ? 'text-emerald-600' : 'text-slate-400'}">Verified</span>
+          </div>
+      `;
+
+      stepperContainer.innerHTML = sHTML;
+  }
+
+  // ==========================================
+  // 11. EXECUTION HOOK
   // ==========================================
 
   document.addEventListener("DOMContentLoaded", init);

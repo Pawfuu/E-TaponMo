@@ -20,7 +20,7 @@
 
         <!-- Background Image (Covering the entire section) -->
         <div class="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
-            <img src="/pitch/assets/hero_bg.png" alt="Background Illustration"
+            <img src="./assets/hero_bg.png" alt="Background Illustration"
                 class="w-full h-full object-cover opacity-80 mix-blend-multiply">
         </div>
 
@@ -49,7 +49,7 @@
                 <div
                     class="inline-flex items-center gap-2.5 bg-white w-max pl-1.5 pr-4 py-1.5 rounded-full mb-6 border border-slate-200 shadow-sm">
                     <!-- Hedera Logo -->
-                    <img src="/pitch/assets/Hedera.svg" alt="Hedera Logo" class="w-6 h-6 object-contain">
+                    <img src="./assets/Hedera.svg" alt="Hedera Logo" class="w-6 h-6 object-contain">
                     <!-- Text with trademark symbol -->
                     <span class="text-[11px] font-bold text-[#0A2517] tracking-widest uppercase mt-0.5">Decentralized on
                         Hedera&trade;</span>
@@ -70,10 +70,10 @@
                 <!-- Role Selection / CTAs (Moved directly below paragraph) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
                     <!-- Citizen CTA -->
-                    <a href="/user-app/index.html"
+                    <a href="../user-app/index.html"
                         class="group bg-[#0A2517] hover:bg-[#0f3622] text-white p-5 rounded-[1.25rem] shadow-[0_8px_30px_rgb(10,37,23,0.2)] transition-all flex flex-col justify-between min-h-[140px]">
                         <div class="flex items-start gap-3 mb-3">
-                            <img src="/pitch/assets/group.png" alt="Citizen Icon"
+                            <img src="./assets/group.png" alt="Citizen Icon"
                                 class="w-8 h-8 object-contain shrink-0 mt-0.5">
                             <div class="flex flex-col">
                                 <span class="text-sm font-bold tracking-wide text-white mb-1">I'm a Citizen</span>
@@ -91,10 +91,10 @@
                     </a>
 
                     <!-- Admin CTA -->
-                    <a href="/lgu-dashboard/lgu.html"
+                    <a href="../lgu-dashboard/lgu.html"
                         class="group bg-white hover:bg-slate-50 border-2 border-slate-100 text-slate-800 p-5 rounded-[1.25rem] shadow-sm transition-all flex flex-col justify-between min-h-[140px]">
                         <div class="flex items-start gap-3 mb-3">
-                            <img src="/pitch/assets/admin-panel.png" alt="Admin Icon"
+                            <img src="./assets/admin-panel.png" alt="Admin Icon"
                                 class="w-8 h-8 object-contain shrink-0 mt-0.5">
                             <div class="flex flex-col">
                                 <span class="text-sm font-bold tracking-wide text-[#0A2517] mb-1">I'm an Admin</span>
@@ -125,7 +125,7 @@
                         <div
                             class="w-full bg-[#1a1a1a] p-2 md:p-3 rounded-t-xl md:rounded-t-2xl shadow-2xl ring-1 ring-white/10">
                             <div class="w-full aspect-[16/10] bg-slate-900 rounded-sm overflow-hidden relative block">
-                                <img src="/pitch/assets/mockup pc.png" alt="Dashboard Preview"
+                                <img src="./assets/mockup pc.png" alt="Dashboard Preview"
                                     class="w-full h-full object-cover object-top">
                             </div>
                         </div>
@@ -146,7 +146,7 @@
                         </div>
                         <div class="w-full h-full rounded-[1.2rem] overflow-hidden relative block bg-white">
                             <!-- FIXED IMAGE: Reverted to w-full h-full object-cover object-top. This forces the image to fill the screen but anchors it strictly to the top edge. -->
-                            <img src="/pitch/assets/hero-phone-mockup.png" alt="Mobile App Preview"
+                            <img src="./assets/hero-phone-mockup.png" alt="Mobile App Preview"
                                 class="w-full h-full object-cover object-top">
                         </div>
                     </div>
@@ -171,7 +171,7 @@
         <!-- Section Header with Leaf -->
         <div class="text-center mb-12 flex flex-col items-center">
             <div class="w-10 h-10 mb-4 relative flex items-center justify-center">
-                <img src="/pitch/assets/leaf.png" alt="Leaf Icon" class="w-full h-full object-contain">
+                <img src="./assets/leaf.png" alt="Leaf Icon" class="w-full h-full object-contain">
             </div>
             <h2 class="text-xl md:text-2xl font-bold text-[#0A2517]">Everything you need for a cleaner community</h2>
         </div>
@@ -276,7 +276,7 @@
             <!-- Background Graphic Setup -->
             <div
                 class="absolute bottom-0 left-0 z-0 opacity-90 pointer-events-none w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[480px]">
-                <img src="/pitch/assets/how-it-works-bg.png" alt="City Skyline and Park Background"
+                <img src="./assets/how-it-works-bg.png" alt="City Skyline and Park Background"
                     class="w-full h-auto object-contain object-bottom"
                     onerror="this.onerror=null; this.src='https://placehold.co/480x220/ffffff/208A56?text=City+Park+Background';">
             </div>
@@ -304,7 +304,8 @@
 
                     <!-- Dashed Connecting Lines with Arrows -->
                     <!-- Centered exactly at 3rem (mobile) and 3.5rem (desktop) to match circle centers perfectly -->
-                    <div class="hidden lg:block absolute top-[3rem] lg:top-[3.5rem] left-[5%] right-[5%] z-0 pointer-events-none">
+                    <div
+                        class="hidden lg:block absolute top-[3rem] lg:top-[3.5rem] left-[5%] right-[5%] z-0 pointer-events-none">
                         <div class="w-full flex justify-between items-center px-[6%]">
                             <div class="flex-1 flex items-center px-1 sm:px-2">
                                 <div class="w-full border-t-2 border-dashed border-slate-300"></div>
@@ -347,23 +348,24 @@
 
                     <!-- Steps Grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-3">
-<!-- Step 1: Spot an Issue -->
-<div class="flex flex-col items-center text-center relative z-10 w-full px-1">
-    <div
-        class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
-        <!-- Badge -->
-        <span
-            class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">1</span>
-        <!-- Image Container -->
-        <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-            <img src="/pitch/assets/scan.png" alt="Spot an Issue Icon"
-                class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
-        </div>
-    </div>
-    <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Spot an Issue</h3>
-    <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">See waste
-        or illegal dumping in your area.</p>
-</div>
+                        <!-- Step 1: Spot an Issue -->
+                        <div class="flex flex-col items-center text-center relative z-10 w-full px-1">
+                            <div
+                                class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
+                                <!-- Badge -->
+                                <span
+                                    class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">1</span>
+                                <!-- Image Container -->
+                                <div
+                                    class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <img src="./assets/scan.png" alt="Spot an Issue Icon"
+                                        class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
+                                </div>
+                            </div>
+                            <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Spot an Issue</h3>
+                            <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">See waste
+                                or illegal dumping in your area.</p>
+                        </div>
 
                         <!-- Step 2: Report with Details -->
                         <div class="flex flex-col items-center text-center relative z-10 w-full px-1">
@@ -373,16 +375,21 @@
                                 <span
                                     class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">2</span>
                                 <!-- Image Container (Cropped to circle) -->
-                                <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                                    <svg class="w-full h-full object-contain object-center p-4 lg:p-5" viewBox="0 0 80 80" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
+                                <div
+                                    class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <svg class="w-full h-full object-contain object-center p-4 lg:p-5"
+                                        viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <rect x="25" y="14" width="30" height="54" rx="5" fill="#0A2517" />
                                         <rect x="27" y="18" width="26" height="46" rx="3" fill="#F4F8F6" />
-                                        <rect x="36" y="16" width="8" height="1.5" rx="0.75" fill="#FFFFFF" opacity="0.6" />
-                                        <path d="M27 28h26M27 38h26M27 48h26M35 18v46M45 18v46" stroke="#E2E8F0" stroke-width="1.5" />
-                                        <path d="M30 54c6-4 8-12 11-18s8-6 10-12" stroke="#CBD5E1" stroke-width="2.5" stroke-dasharray="2 2" fill="none" />
+                                        <rect x="36" y="16" width="8" height="1.5" rx="0.75" fill="#FFFFFF"
+                                            opacity="0.6" />
+                                        <path d="M27 28h26M27 38h26M27 48h26M35 18v46M45 18v46" stroke="#E2E8F0"
+                                            stroke-width="1.5" />
+                                        <path d="M30 54c6-4 8-12 11-18s8-6 10-12" stroke="#CBD5E1" stroke-width="2.5"
+                                            stroke-dasharray="2 2" fill="none" />
                                         <ellipse cx="40" cy="44" rx="6" ry="2.5" fill="#0A2517" opacity="0.15" />
-                                        <path d="M40 22c-5 0-9 4-9 9 0 6.5 9 14 9 14s9-7.5 9-14c0-5-4-9-9-9z" fill="#208A56" />
+                                        <path d="M40 22c-5 0-9 4-9 9 0 6.5 9 14 9 14s9-7.5 9-14c0-5-4-9-9-9z"
+                                            fill="#208A56" />
                                         <circle cx="40" cy="31" r="3.5" fill="#FFFFFF" />
                                     </svg>
                                 </div>
@@ -400,18 +407,22 @@
                                 <span
                                     class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">3</span>
                                 <!-- Image Container (Cropped to circle) -->
-                                <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                                    <svg class="w-full h-full object-contain object-center p-4 lg:p-5" viewBox="0 0 80 80" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
+                                <div
+                                    class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <svg class="w-full h-full object-contain object-center p-4 lg:p-5"
+                                        viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M34 56h12v7H34z" fill="#0A2517" />
                                         <path d="M28 63h24v3H28z" fill="#0A2517" rx="1.5" />
                                         <rect x="16" y="18" width="48" height="38" rx="4" fill="#0A2517" />
                                         <rect x="18" y="20" width="44" height="34" rx="2" fill="#FFFFFF" />
-                                        <path d="M22 26l2.5 2.5 5-5" stroke="#208A56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M22 26l2.5 2.5 5-5" stroke="#208A56" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
                                         <rect x="32" y="25" width="22" height="3" rx="1.5" fill="#CBD5E1" />
-                                        <path d="M22 34l2.5 2.5 5-5" stroke="#208A56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M22 34l2.5 2.5 5-5" stroke="#208A56" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
                                         <rect x="32" y="33" width="18" height="3" rx="1.5" fill="#CBD5E1" />
-                                        <path d="M22 42l2.5 2.5 5-5" stroke="#208A56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M22 42l2.5 2.5 5-5" stroke="#208A56" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
                                         <rect x="32" y="41" width="14" height="3" rx="1.5" fill="#CBD5E1" />
                                         <circle cx="53" cy="42" r="7" fill="#0A2517" />
                                         <circle cx="53" cy="40" r="2.5" fill="#FFFFFF" />
@@ -424,45 +435,122 @@
                                 reviews and validates the report.</p>
                         </div>
 
-                       <!-- Step 4: Action Taken -->
-<div class="flex flex-col items-center text-center relative z-10 w-full px-1">
-    <div
-        class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
-        <!-- Badge -->
-        <span
-            class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">4</span>
-        <!-- Image Container -->
-        <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-            <img src="/pitch/assets/truck.png" alt="Action Taken Truck"
-                class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
-        </div>
-    </div>
-    <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Action Taken</h3>
-    <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">Task is
-        assigned and cleanup is initiated.</p>
-</div>
+                        <!-- Step 4: Action Taken -->
+                        <div class="flex flex-col items-center text-center relative z-10 w-full px-1">
+                            <div
+                                class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
+                                <!-- Badge -->
+                                <span
+                                    class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">4</span>
+                                <!-- Image Container -->
+                                <div
+                                    class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <img src="./assets/truck.png" alt="Action Taken Truck"
+                                        class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
+                                </div>
+                            </div>
+                            <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Action Taken</h3>
+                            <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">Task is
+                                assigned and cleanup is initiated.</p>
+                        </div>
 
-                       <!-- Step 5: Stay Updated -->
-<div class="flex flex-col items-center text-center relative z-10 w-full px-1">
-    <div
-        class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
-        <!-- Badge -->
-        <span
-            class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">5</span>
-        <!-- Image Container -->
-        <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-            <img src="/pitch/assets/check.png" alt="Stay Updated Icon"
-                class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
-        </div>
-    </div>
-    <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Stay Updated</h3>
-    <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">Track
-        progress in real-time until it's resolved.</p>
-</div>
+                        <!-- Step 5: Stay Updated -->
+                        <div class="flex flex-col items-center text-center relative z-10 w-full px-1">
+                            <div
+                                class="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-[#F4F8F6] flex items-center justify-center mb-5 relative shadow-sm border-[4px] border-white shrink-0">
+                                <!-- Badge -->
+                                <span
+                                    class="absolute -top-[4px] -left-[4px] w-7 h-7 lg:w-8 lg:h-8 bg-[#0A2517] text-white rounded-full flex items-center justify-center text-xs font-black shadow-md border-2 border-white z-20">5</span>
+                                <!-- Image Container -->
+                                <div
+                                    class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <img src="./assets/check.png" alt="Stay Updated Icon"
+                                        class="w-full h-full object-contain object-center p-3 lg:p-4 mix-blend-multiply">
+                                </div>
+                            </div>
+                            <h3 class="text-xs lg:text-sm font-bold text-[#0F291E] mb-1.5">Stay Updated</h3>
+                            <p class="text-[10px] lg:text-[11px] text-slate-500 leading-relaxed font-medium">Track
+                                progress in real-time until it's resolved.</p>
+                        </div>
 
                     </div>
                 </div>
     </section>
+    <!-- ==========================================
+         LGU ADMIN DASHBOARD PROMO
+         ========================================== -->
+    <section
+        class="max-w-[85rem] mx-auto px-4 sm:px-8 mb-24 lg:mb-32 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center overflow-visible">
+
+        <!-- Left Text Column -->
+        <div class="lg:col-span-4 lg:pr-2">
+            <span class="text-xs font-bold text-[#208A56] uppercase tracking-widest block mb-4">For LGU
+                Administrators</span>
+            <h2 class="text-4xl lg:text-5xl xl:text-5xl font-black text-[#0A2517] leading-tight mb-4">
+                Powerful Dashboard for Better Management
+            </h2>
+            <p class="text-base text-slate-600 mb-8 font-medium">
+                Monitor reports, manage tasks, analyze data and make informed decisions for a cleaner community.
+            </p>
+            <a href="../lgu-dashboard/lgu.html"
+                class="inline-flex items-center gap-2 text-base font-bold text-[#208A56] hover:text-[#15613c] transition-colors">
+                Explore Admin Dashboard
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+
+        <!-- Right Dashboard Image (SCALED UP) -->
+        <div
+            class="lg:col-span-8 flex items-center justify-center relative lg:scale-105 xl:scale-110 transform origin-center transition-transform duration-300">
+            <img src="./assets/pc_mockup.png" alt="Admin Dashboard"
+                class="w-full shadow-2xl rounded-xl border border-slate-200">
+        </div>
+    </section>
+
+    <!-- ==========================================
+         USER / CITIZEN APP PROMO
+         ========================================== -->
+    <section
+        class="max-w-[85rem] mx-auto px-4 sm:px-8 mb-16 lg:mb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+
+        <!-- Left Mobile Mockup Column (BACKGROUND REMOVED) -->
+        <div class="lg:col-span-8 flex items-center justify-center p-0">
+            <!-- SCALED UP PHONE: max-w increased from 320px to 380px -->
+            <div
+                class="relative w-full max-w-[380px] aspect-[1/2.15] bg-slate-900 rounded-[2.5rem] shadow-2xl border-[12px] border-[#1a1a1a] flex flex-col overflow-hidden">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[45%] h-5 bg-[#1a1a1a] rounded-b-xl z-40"></div>
+                <div class="w-full h-full rounded-[1.5rem] overflow-hidden relative block bg-white">
+                    <img src="./assets/phone_mockup.png" alt="Citizen Mobile App Preview"
+                        class="w-full h-full object-cover object-top">
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Text Column -->
+        <div class="lg:col-span-4 lg:pl-4">
+            <span class="text-xs font-bold text-[#208A56] uppercase tracking-widest block mb-4">For Citizens &
+                Residents</span>
+            <!-- SCALED UP FONT: from 3xl/4xl/5xl to 4xl/5xl/6xl -->
+            <h2 class="text-4xl lg:text-5xl xl:text-6xl font-black text-[#0A2517] leading-tight mb-4">
+                Your Community in Your Pocket
+            </h2>
+            <!-- SCALED UP FONT: from text-sm to text-base -->
+            <p class="text-base text-slate-600 mb-8 font-medium">
+                Snap a photo, drop a pin, and report waste issues instantly. Track your reports and see direct action
+                taken by your local government in real-time.
+            </p>
+            <a href="../user-app/index.html"
+                class="inline-flex items-center gap-2 text-base font-bold text-[#208A56] hover:text-[#15613c] transition-colors">
+                Open Citizen App
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+    </section>
+
 
     <!-- ==========================================
          BLOCKCHAIN SECTION
@@ -483,9 +571,9 @@
                 </p>
 
                 <!-- Centered CTA Button -->
-                <a href="/pitch/explorer.html"
+                <a href="./explorer.html"
                     class="relative w-full bg-[#347A53] hover:bg-[#276141] text-white p-4 rounded-xl flex items-center justify-center mb-8 shadow-sm transition-colors group">
-                    <span class="font-bold text-sm tracking-wide">Explore E-Tapon Mo Explorer</span>
+                    <span class="font-bold text-sm tracking-wide">Explore E-Tapon Mo Ledger</span>
                     <div class="absolute right-4">
                         <svg class="w-5 h-5 text-white/90 group-hover:text-white transition-colors" fill="none"
                             stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -772,7 +860,7 @@
 
         <!-- Full-Bleed Background Layer: center top so the canopy/trees show at the top -->
         <div class="absolute inset-0 z-0 pointer-events-none"
-            style="background-image: url('/pitch/assets/bg_footer.png'); background-size: cover; background-position: center top; background-repeat: no-repeat;">
+            style="background-image: url('./assets/bg_footer.png'); background-size: cover; background-position: center top; background-repeat: no-repeat;">
         </div>
 
         <!-- TOP white fade: makes the background image appear to bleed in from the white section above -->
@@ -811,7 +899,7 @@
             <div class="flex flex-col sm:flex-row justify-center gap-5 w-full max-w-3xl mb-10 lg:mb-14">
 
                 <!-- Report an Issue Button -->
-                <a href="/user-app/index.html"
+                <a href="../user-app/index.html"
                     class="flex-1 group bg-[#0A2517] hover:bg-[#0f3622] text-white p-4 lg:p-5 rounded-2xl shadow-lg transition-all flex items-center justify-start gap-4 border border-[#0A2517]">
                     <div class="w-11 h-11 shrink-0 bg-white/10 rounded-full flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -822,7 +910,8 @@
                     </div>
                     <div class="flex flex-col text-left flex-1">
                         <span class="text-base font-bold">Report an Issue</span>
-                        <span class="text-xs text-slate-300 font-medium mt-0.5 leading-tight">Fast and easy reporting</span>
+                        <span class="text-xs text-slate-300 font-medium mt-0.5 leading-tight">Fast and easy
+                            reporting</span>
                     </div>
                     <svg class="w-5 h-5 text-white shrink-0 group-hover:translate-x-1 transition-transform" fill="none"
                         stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -831,7 +920,7 @@
                 </a>
 
                 <!-- Admin Portal Button -->
-                <a href="/lgu-dashboard/lgu.html"
+                <a href="../lgu-dashboard/lgu.html"
                     class="flex-1 group bg-white hover:bg-slate-50 border border-slate-200 p-4 lg:p-5 rounded-2xl shadow-sm transition-all flex items-center justify-start gap-4">
                     <div
                         class="w-11 h-11 shrink-0 bg-[#F4F8F6] rounded-full flex items-center justify-center text-[#208A56]">
@@ -925,7 +1014,7 @@
         </div>
     </section>
 
-    <script type="module" src="/pitch/pitch.js"></script>
+    <script type="module" src="./pitch.js"></script>
 </body>
 
 </html>

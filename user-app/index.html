@@ -431,6 +431,210 @@
     </div>
   </div>
 
+  <!-- Duplicate Report Modal -->
+  <div id="duplicate-modal"
+    class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:px-4 sm:py-8 transition-all duration-200 ease-in-out hidden"
+    aria-modal="true" role="dialog" tabindex="-1">
+
+    <!-- Main Wrapper: Fixed Max Height & Hidden Overflow to contain flex children -->
+    <div
+      class="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+
+      <!-- Header (Fixed) -->
+      <div class="flex-shrink-0 px-5 pt-5 pb-2">
+        <!-- Top Drag Handle -->
+        <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-3"></div>
+
+        <div class="flex items-start justify-between w-full">
+          <div class="flex gap-4">
+            <!-- Search Icon -->
+            <div
+              class="flex-shrink-0 w-12 h-12 rounded-full border border-green-100 bg-green-50 flex items-center justify-center text-green-700">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z">
+                </path>
+              </svg>
+            </div>
+            <!-- Title & Subtitle -->
+            <div class="flex flex-col justify-center">
+              <h3 class="text-[17px] font-extrabold text-gray-900 leading-tight mb-0.5">
+                Nearby report found
+              </h3>
+              <p class="text-[13px] text-gray-500 leading-snug pr-2">
+                Check if this matches your report.
+              </p>
+            </div>
+          </div>
+          <!-- Close Button -->
+          <button id="close-duplicate-modal"
+            class="flex-shrink-0 w-8 h-8 rounded-full border border-green-100 bg-green-50 flex items-center justify-center text-green-700 hover:bg-green-100 transition mt-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Body (This fixes the layout squish/push issue) -->
+      <div class="flex-1 overflow-y-auto px-5 pb-2 space-y-4">
+
+        <!-- Badge & Carousel Counter -->
+        <div class="flex flex-col items-center mt-1 gap-2">
+          <div
+            class="inline-flex items-center justify-center gap-2 bg-green-50 border border-green-100 px-4 py-2 rounded-xl">
+            <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" stroke-width="1.5"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2">
+              </path>
+            </svg>
+            <span class="text-sm font-bold text-green-800">Possible Match</span>
+          </div>
+          <span id="carousel-counter-text" class="text-xs font-semibold text-gray-400">Report 1 of 1</span>
+        </div>
+
+        <!-- Image Container -->
+        <div class="relative w-full rounded-2xl overflow-hidden bg-gray-900 group isolate h-56 sm:h-64">
+          <img id="duplicate-modal-image" src="" alt="Existing Report Photo"
+            class="w-full h-full object-cover origin-center transition-transform duration-100"
+            style="transform: scale(1)" />
+
+          <!-- Prev Button -->
+          <button id="prev-duplicate-btn" type="button"
+            class="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white shadow-md transition hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <!-- Next Button -->
+          <button id="next-duplicate-btn" type="button"
+            class="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white shadow-md transition hidden">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <div
+            class="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 z-10 pointer-events-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
+              </path>
+            </svg>
+            Pinch to zoom
+          </div>
+
+          <button id="fullscreen-image-btn" type="button"
+            class="absolute bottom-4 left-3 w-9 h-9 bg-white/95 backdrop-blur-sm rounded-lg flex items-center justify-center text-gray-700 hover:bg-white z-10 shadow-sm transition pointer-events-auto">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+            </svg>
+          </button>
+
+          <div
+            class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-[65%] max-w-[220px] bg-white/95 backdrop-blur-sm rounded-full px-4 py-2 flex items-center justify-between shadow-lg pointer-events-auto">
+            <button type="button" id="zoom-out-btn"
+              class="text-gray-700 hover:text-gray-900 text-lg font-black leading-none px-2">-</button>
+            <input type="range" id="duplicate-zoom-slider" min="1" max="3" step="0.1" value="1"
+              class="w-full mx-2 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-700" />
+            <button type="button" id="zoom-in-btn"
+              class="text-gray-700 hover:text-gray-900 text-lg font-black leading-none px-2">+</button>
+          </div>
+        </div>
+
+        <!-- Carousel Dots -->
+        <div id="carousel-dots" class="flex justify-center gap-1.5 -mt-2"></div>
+
+        <!-- Metadata List -->
+        <div
+          class="flex flex-col bg-[#F8FBF8] border border-gray-100 rounded-2xl overflow-hidden mt-1 divide-y divide-gray-200">
+          <div class="flex items-center gap-4 px-4 py-3">
+            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" stroke-width="1.5"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Reported on</span>
+              <span id="duplicate-modal-time" class="text-[14px] font-bold text-gray-900">...</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 px-4 py-3">
+            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" stroke-width="1.5"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Distance</span>
+              <span class="text-[14px] font-bold text-gray-900"><span id="duplicate-modal-distance">0</span> meters
+                away</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 px-4 py-3">
+            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" stroke-width="1.5"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Reported by</span>
+              <span id="duplicate-modal-reporter" class="text-[14px] font-bold text-gray-900">...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Banner -->
+        <div
+          class="w-full bg-[#F0FDF4] border border-green-100 text-green-800 text-[13px] font-medium text-center py-3 rounded-xl flex items-center justify-center gap-2 mt-1">
+          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+            </path>
+          </svg>
+          Still not a match? You can create a new report.
+        </div>
+      </div>
+
+      <!-- Footer (Fixed) -->
+      <div class="flex-shrink-0 p-5 pt-4 bg-white border-t border-gray-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div class="flex flex-col gap-2.5">
+          <button id="confirm-upvote-btn" type="button"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#418B46] px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:bg-green-700 focus:outline-none">
+            <div class="bg-white rounded-full p-0.5 text-[#418B46]">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            Yes, this is the same
+          </button>
+          <button id="cancel-upvote-btn" type="button"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-gray-300 px-6 py-3.5 text-[15px] font-bold text-gray-700 transition hover:bg-gray-50 focus:outline-none shadow-sm">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            No, create new report
+          </button>
+        </div>
+        <div class="text-center text-[12px] text-gray-400 flex items-center justify-center gap-1.5 mt-3">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+            </path>
+          </svg>
+          Your report is safe and confidential.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <script>
     // --- Dynamic location rendering from ?barangay & ?street ---
     (function () {
@@ -529,41 +733,6 @@
       });
     })();
   </script>
-
-  <!-- Leaflet Map Integration
-      <div
-      id="map-modal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 transition-all duration-200 ease-in-out hidden"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div class="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl flex flex-col h-[85vh] max-h-[800px] overflow-hidden">
-        
-        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
-          <h3 class="text-lg font-bold text-gray-900">Search & Pin Location</h3>
-          <button id="close-map-icon" class="text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        </div>
-        
-        <div id="leaflet-map" class="w-full flex-grow z-0"></div>
-        
-        <div class="p-5 bg-white border-t border-gray-100 space-y-3 z-10">
-          <p id="map-address-text" class="text-sm text-gray-600 text-center font-medium line-clamp-2">
-            Search a place or drag the map to pin the exact trash location.
-          </p>
-
-          <button type="button" id="confirm-location-btn" class="w-full rounded-xl bg-green-700 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed">
-            Confirm This Pin
-          </button>
-          
-          <button type="button" id="gps-fallback-btn" class="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-6 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-200">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
-            Use My Current GPS
-          </button>
-        </div>
-      </div>
-    </div>  -->
 
   <!-- Leaflet Map Integration (Modernized) -->
   <div id="map-modal"
