@@ -635,194 +635,181 @@
         </div>
       </section>
 
-      <!-- ========================================================
-           VIEW 2: DETAILED REPORTS LIST PANEL (Updated Mockup Style)
-           ======================================================== -->
-      <section id="view-reports-panel" class="space-y-6 hidden">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-xl font-bold text-slate-900">Reports</h3>
-            <p class="text-xs text-slate-500 mt-0.5">
-              Manage and monitor all civic reports
-            </p>
-          </div>
-          <!-- Export Action Button -->
-          <button id="export-btn"
-            class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>Export</span>
-          </button>
+<!-- ========================================================
+     VIEW 2: DETAILED REPORTS LIST PANEL 
+     ======================================================== -->
+<section id="view-reports-panel" class="space-y-6 hidden">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="text-xl font-bold text-slate-900">Reports</h3>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Manage and monitor all civic reports
+      </p>
+    </div>
+    <!-- Export Action Button -->
+    <button id="export-btn"
+      class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+      <span>Export</span>
+    </button>
+  </div>
+
+  <!-- Filter Control Toolbar -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col xl:flex-row gap-4 items-center justify-between shadow-sm">
+    <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full xl:w-auto z-[600]">
+      <!-- Search reports input -->
+      <div class="relative w-full sm:w-64">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
+        <input id="report-search-input" type="text" placeholder="Search reports..."
+          class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm" />
+      </div>
 
-        <!-- Filter Control Toolbar -->
-        <div
-          class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col xl:flex-row gap-4 items-center justify-between shadow-sm">
-          <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full xl:w-auto z-[600]">
-            <!-- Search reports input -->
-            <div class="relative w-full sm:w-64">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input id="report-search-input" type="text" placeholder="Search reports..."
-                class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm" />
-            </div>
-
-            <!-- 1. Custom Status Dropdown -->
-            <div class="relative w-full sm:w-auto">
-              <button type="button" id="reports-dropdown-status-btn"
-                class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
-                <span id="reports-dropdown-status-text" class="truncate">All Status</span>
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
-                  viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div id="reports-dropdown-status-menu"
-                class="absolute top-full left-0 mt-1 w-full sm:w-44 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1">
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="all">All Status</div>
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="Pending Verification">Pending Verification</div>
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="In Progress">In Progress</div>
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="Resolved">Resolved</div>
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="Dismissed">Dismissed</div>
-              </div>
-            </div>
-
-            <!-- 2. Custom Category Dropdown -->
-            <div class="relative w-full sm:w-auto">
-              <button type="button" id="reports-dropdown-category-btn"
-                class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
-                <span id="reports-dropdown-category-text" class="truncate">All Categories</span>
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
-                  viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div id="reports-dropdown-category-menu"
-                class="absolute top-full left-0 mt-1 w-full sm:w-40 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar">
-                <!-- Injected via JS -->
-              </div>
-            </div>
-
-            <!-- 3. Custom District Dropdown -->
-            <div class="relative w-full sm:w-auto">
-              <button type="button" id="reports-dropdown-district-btn"
-                class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
-                <span id="reports-dropdown-district-text" class="truncate">All Districts</span>
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div id="reports-dropdown-district-menu"
-                class="absolute top-full left-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar z-[600]">
-                <!-- Injected via JS -->
-              </div>
-            </div>
-
-            <!-- Filter Reset Button -->
-            <button id="filter-btn"
-              class="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 bg-white hover:bg-slate-50 shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
-              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
-                viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              <span>Filter</span>
-            </button>
-          </div>
-
-          <!-- 4. Sort Select (By Date) -->
-          <div class="flex items-center gap-3 w-full xl:w-auto justify-end z-[600]">
-            <span class="text-xs font-semibold text-slate-500 uppercase">Sort By:</span>
-            <div class="relative w-full sm:w-auto">
-              <button type="button" id="reports-dropdown-sort-btn"
-                class="flex items-center justify-between w-full sm:w-48 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
-                <span id="reports-dropdown-sort-text" class="truncate">Reported At (Newest)</span>
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
-                  viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div id="reports-dropdown-sort-menu"
-                class="absolute top-full right-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1">
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="date-desc">Reported At (Newest)</div>
-                <div
-                  class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors"
-                  data-value="date-asc">Reported At (Oldest)</div>
-              </div>
-            </div>
-          </div>
+      <!-- 1. Custom Status Dropdown -->
+      <div class="relative w-full sm:w-auto">
+        <button type="button" id="reports-dropdown-status-btn"
+          class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+          <span id="reports-dropdown-status-text" class="truncate">All Status</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="reports-dropdown-status-menu"
+          class="absolute top-full left-0 mt-1 w-full sm:w-44 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1 z-[600]">
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Status</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="Pending Verification">Pending Verification</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="In Progress">In Progress</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="Resolved">Resolved</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="Dismissed">Dismissed</div>
         </div>
+      </div>
 
-        <!-- Status Filter Sub-Tabs -->
-        <div class="border-b border-slate-200 flex flex-wrap gap-2 text-sm font-medium text-slate-500">
-          <button id="filter-tab-all"
-            class="px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-filter-tab transition-all">
-            All Reports
-            <span id="tab-count-all" class="text-xs font-normal text-slate-400">(0)</span>
-          </button>
-          <button id="filter-tab-pending"
-            class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
-            Pending
-            <span id="tab-count-pending" class="text-xs font-normal text-slate-400">(0)</span>
-          </button>
-          <button id="filter-tab-progress"
-            class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
-            In Progress
-            <span id="tab-count-progress" class="text-xs font-normal text-slate-400">(0)</span>
-          </button>
-          <button id="filter-tab-resolved"
-            class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
-            Resolved
-            <span id="tab-count-resolved" class="text-xs font-normal text-slate-400">(0)</span>
-          </button>
+      <!-- 2. Custom Category Dropdown -->
+      <div class="relative w-full sm:w-auto">
+        <button type="button" id="reports-dropdown-category-btn"
+          class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+          <span id="reports-dropdown-category-text" class="truncate">All Categories</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="reports-dropdown-category-menu"
+          class="absolute top-full left-0 mt-1 w-full sm:w-40 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar z-[600]">
+          <!-- Injected via JS -->
         </div>
+      </div>
 
-        <!-- Dynamic Data Table Wrapper -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr
-                  class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th class="px-6 py-4">Report ID</th>
-                  <th class="px-6 py-4">Category</th>
-                  <th class="px-6 py-4">Location</th>
-                  <th class="px-6 py-4">Status</th>
-                  <th class="px-6 py-4">Priority</th>
-                  <th class="px-6 py-4">Reported At</th>
-                  <th class="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="reports-table-body" class="divide-y divide-slate-100 text-sm text-slate-700">
-                <!-- Data injected dynamically via JavaScript -->
-              </tbody>
-            </table>
-          </div>
+      <!-- 3. Custom District Dropdown -->
+      <div class="relative w-full sm:w-auto">
+        <button type="button" id="reports-dropdown-district-btn"
+          class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+          <span id="reports-dropdown-district-text" class="truncate">All Districts</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="reports-dropdown-district-menu"
+          class="absolute top-full left-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar z-[600]">
+          <!-- Injected via JS -->
         </div>
+      </div>
 
-        <div class="flex justify-between items-center text-xs font-medium text-slate-500 px-2 mt-4">
-          <span id="table-results-counter">Showing 0 reports</span>
-          <div id="pagination-controls" class="flex items-center gap-1.5"></div>
+      <!-- 4. Custom Assignee Dropdown -->
+      <div class="relative w-full sm:w-auto">
+        <button type="button" id="reports-dropdown-assignee-btn"
+          class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+          <span id="reports-dropdown-assignee-text" class="truncate">All Assignees</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="reports-dropdown-assignee-menu"
+          class="absolute top-full left-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar z-[600]">
+          <!-- Injected via JS -->
         </div>
-      </section>
+      </div>
+
+      <!-- Filter Reset Button -->
+      <button id="filter-btn"
+        class="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-emerald-600 bg-white hover:bg-slate-50 shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+        <span>Filter</span>
+      </button>
+    </div>
+
+    <!-- 5. Sort Select (By Date & Votes) -->
+    <div class="flex items-center gap-3 w-full xl:w-auto justify-end z-[600]">
+      <span class="text-xs font-semibold text-slate-500 uppercase">Sort By:</span>
+      <div class="relative w-full sm:w-auto">
+        <button type="button" id="reports-dropdown-sort-btn"
+          class="flex items-center justify-between w-full sm:w-48 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+          <span id="reports-dropdown-sort-text" class="truncate">Reported At (Newest)</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="reports-dropdown-sort-menu"
+          class="absolute top-full right-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-hidden py-1 z-[600]">
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="date-desc">Reported At (Newest)</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="date-asc">Reported At (Oldest)</div>
+          <div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="votes-desc">Votes (Highest)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Filter Sub-Tabs -->
+  <div class="border-b border-slate-200 flex flex-wrap gap-2 text-sm font-medium text-slate-500">
+    <button id="filter-tab-all" class="px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-filter-tab transition-all">
+      All Reports <span id="tab-count-all" class="text-xs font-normal text-slate-400">(0)</span>
+    </button>
+    <button id="filter-tab-pending" class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+      Pending <span id="tab-count-pending" class="text-xs font-normal text-slate-400">(0)</span>
+    </button>
+    <button id="filter-tab-progress" class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+      In Progress <span id="tab-count-progress" class="text-xs font-normal text-slate-400">(0)</span>
+    </button>
+    <button id="filter-tab-resolved" class="px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all">
+      Resolved <span id="tab-count-resolved" class="text-xs font-normal text-slate-400">(0)</span>
+    </button>
+  </div>
+
+  <!-- Dynamic Data Table Wrapper -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <th class="px-6 py-4">Report ID</th>
+            <th class="px-6 py-4">Category &amp; Location</th>
+            <th class="px-6 py-4">Priority</th>
+            <th class="px-6 py-4">Assigned To</th>
+            <th class="px-6 py-4">Due Date</th>
+            <th class="px-6 py-4">Status</th>
+            <th class="px-6 py-4">Votes</th>
+            <th class="px-6 py-4">Reported At</th>
+            <th class="px-6 py-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reports-table-body" class="divide-y divide-slate-100 text-sm text-slate-700">
+          <!-- Data injected dynamically via JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center text-xs font-medium text-slate-500 px-2 mt-4">
+    <span id="table-results-counter">Showing 0 reports</span>
+    <div id="pagination-controls" class="flex items-center gap-1.5"></div>
+  </div>
+</section>
 
       <!-- ========================================================
             VIEW 3: LIVE REPORTS MAP PANEL (Hidden by Default)
@@ -1611,19 +1598,19 @@
             <p class="text-xs text-slate-500 mt-0.5">Manage tasks and assignments by barangay</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <div class="relative">
-              <button type="button" id="scope-barangay-btn" class="flex items-center gap-2 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg px-3 py-2 font-bold focus:outline-none transition-colors">
-                <span>All Barangays</span>
-                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            <!-- Custom Task District Dropdown -->
+            <div class="relative w-full sm:w-auto z-[600]">
+              <button type="button" id="task-dropdown-district-btn" class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
+                <span id="task-dropdown-district-text" class="truncate">All Districts</span>
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
               </button>
+              <div id="task-dropdown-district-menu" class="absolute top-full left-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar">
+                <!-- Injected via JS -->
+              </div>
             </div>
            <button type="button" onclick="switchView('live-sync')" class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors cursor-pointer group">
               <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               <span class="text-xs font-bold text-slate-700">Live Database Sync</span>
-            </button>
-            <button id="new-task-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
-              <span>New Task</span>
             </button>
           </div>
         </div>
@@ -1754,16 +1741,15 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                  <thead>
+                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th class="px-5 py-3.5">Task ID</th>
+                      <th class="px-5 py-3.5 w-24">Task ID</th>
                       <th class="px-5 py-3.5">Title</th>
-                      <th class="px-5 py-3.5">Barangay</th>
-                      <th class="px-5 py-3.5">Assigned To</th>
-                      <th class="px-5 py-3.5">Priority</th>
-                      <th class="px-5 py-3.5">Due Date</th>
-                      <th class="px-5 py-3.5">Status</th>
-                      <th class="px-5 py-3.5 text-right">&nbsp;</th>
+                      <th class="px-5 py-3.5 w-32">Barangay</th>
+                      <th class="px-5 py-3.5 w-24">Priority</th>
+                      <th class="px-5 py-3.5 w-32">Due Date</th>
+                      <th class="px-5 py-3.5 w-32">Status</th>
+                      <th class="px-5 py-3.5 w-16 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody id="task-table-body" class="divide-y divide-slate-100 text-sm text-slate-700">
@@ -3264,6 +3250,200 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ========================================================
+         TASK CREATE MODAL (Workflow A)
+         ======================================================== -->
+    <div id="task-create-modal" class="fixed inset-0 z-[1010] hidden flex items-center justify-center p-4 sm:p-6">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeTaskModals()"></div>
+      <div class="relative bg-white rounded-3xl text-left shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden animate-table-row">
+        
+        <!-- Header -->
+        <div class="px-8 py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-sm">4</div>
+            <div>
+              <h3 class="text-xl font-black text-slate-900 tracking-tight">New Task <span class="text-slate-500 font-medium text-sm ml-1">(Create Task Modal)</span></h3>
+              <p class="text-xs font-medium text-slate-500 mt-0.5">Create a new task and assign it to a team.</p>
+            </div>
+          </div>
+          <button onclick="closeTaskModals()" class="text-slate-400 hover:text-slate-700 hover:bg-white p-2 rounded-xl transition-colors cursor-pointer shadow-sm border border-transparent hover:border-slate-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="px-8 py-6 grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+          
+          <!-- Left Col: Info -->
+          <div class="space-y-4">
+            <h4 class="text-sm font-black text-slate-800 tracking-wide">Task Information</h4>
+            
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-600">Title <span class="text-rose-500">*</span></label>
+              <input type="text" id="tc-title" class="w-full text-sm font-semibold text-slate-800 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm" placeholder="Ex. Mixed Waste Clearing">
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-600">Barangay <span class="text-rose-500">*</span></label>
+              <select id="tc-barangay" class="w-full text-sm font-semibold text-slate-800 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer bg-white">
+                <option value="Pulong Buhangin">Pulong Buhangin</option>
+                <option value="Poblacion">Poblacion</option>
+                <option value="San Isidro">San Isidro</option>
+              </select>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-600">Task Type <span class="text-rose-500">*</span></label>
+              <select id="tc-task-type" class="w-full text-sm font-semibold text-slate-800 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer bg-white">
+                <option value="Healthcare Waste">Healthcare Waste</option>
+                <option value="Mixed Waste">Mixed Waste</option>
+                <option value="Recyclable">Recyclable</option>
+              </select>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-600">Description</label>
+              <textarea id="tc-desc" rows="3" class="w-full text-sm font-medium text-slate-600 border border-slate-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm resize-none" placeholder="Add additional details..."></textarea>
+            </div>
+          </div>
+
+          <!-- Right Col: Assignment -->
+          <div class="space-y-4">
+            <h4 class="text-sm font-black text-slate-800 tracking-wide">Assignment</h4>
+            
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-600">Assign To</label>
+              <select id="tc-assign-to" class="w-full text-sm font-semibold text-slate-800 border border-emerald-200 bg-emerald-50/30 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer">
+                <option value="" disabled selected>Select a team or truck</option>
+                <option value="TRK-04-JDC">Truck #04 - Juan Dela Cruz</option>
+                <option value="TRK-08-MS">Truck #08 - Maria Santos</option>
+                <option value="TRK-12-PG">Truck #12 - Pedro Garcia</option>
+                <option value="EMP-192-CD">Response Unit - Carlos Dizon</option>
+              </select>
+            </div>
+
+            <div class="space-y-1.5 pt-2">
+              <label class="text-xs font-bold text-slate-600 block mb-2">Priority</label>
+              <div class="flex items-center gap-2">
+                <label class="flex-1 cursor-pointer">
+                  <input type="radio" name="tc-priority" value="Low" class="peer sr-only">
+                  <div class="text-center text-xs font-bold py-2 rounded-lg border border-slate-200 text-blue-600 peer-checked:bg-blue-50 peer-checked:border-blue-300 transition-all">Low</div>
+                </label>
+                <label class="flex-1 cursor-pointer">
+                  <input type="radio" name="tc-priority" value="Medium" class="peer sr-only" checked>
+                  <div class="text-center text-xs font-bold py-2 rounded-lg border border-slate-200 text-amber-600 peer-checked:bg-amber-50 peer-checked:border-amber-300 transition-all">Medium</div>
+                </label>
+                <label class="flex-1 cursor-pointer">
+                  <input type="radio" name="tc-priority" value="High" class="peer sr-only">
+                  <div class="text-center text-xs font-bold py-2 rounded-lg border border-slate-200 text-rose-600 peer-checked:bg-rose-50 peer-checked:border-rose-300 transition-all">High</div>
+                </label>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 pt-2">
+              <label class="text-xs font-bold text-slate-600">Due Date</label>
+              <input type="date" id="tc-due-date" class="w-full text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-text">
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
+          <button onclick="closeTaskModals()" class="px-5 py-2.5 text-slate-600 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">Cancel</button>
+          <button id="tc-submit-btn" onclick="submitNewTask()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-md transition-all active:scale-95 cursor-pointer">Create Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         TASK DETAILS MODAL (Workflow B & C)
+         ======================================================== -->
+    <div id="task-details-modal" class="fixed inset-0 z-[1010] hidden flex items-center justify-center p-4 sm:p-6">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeTaskModals()"></div>
+      <div class="relative bg-white rounded-3xl text-left shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden animate-table-row">
+        
+        <!-- Header -->
+        <div class="px-8 py-5 flex items-center justify-between border-b border-slate-100">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-sm">5</div>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              Task Details
+              <span id="td-id" class="text-xs font-mono font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-md tracking-widest border border-slate-200">#Y122KOJD</span>
+            </h3>
+          </div>
+          <div class="flex items-center gap-4">
+            <span id="td-status" class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-emerald-50 text-emerald-600 border border-emerald-200">In Progress</span>
+            <button onclick="closeTaskModals()" class="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="px-8 py-6 grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+          <!-- Left Col -->
+          <div class="space-y-5">
+            <h4 class="text-sm font-black text-slate-800 tracking-wide">Task Information</h4>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Title</p>
+              <p class="text-sm font-bold text-slate-800" id="td-title">Healthcare Waste Clearing</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Barangay</p>
+              <p class="text-sm font-semibold text-slate-700" id="td-barangay">Pulong Buhangin</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Description</p>
+              <p class="text-xs font-medium text-slate-600 leading-relaxed pr-4" id="td-desc">Clearing of healthcare and medical waste...</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Due Date</p>
+              <p class="text-sm font-semibold text-slate-700" id="td-due">July 31, 2026</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Priority</p>
+              <div id="td-priority">
+                 <span class="px-2.5 py-1 rounded border border-blue-200 bg-blue-50 text-blue-600 text-[10px] font-bold">Low</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Col -->
+          <div class="space-y-5">
+            <h4 class="text-sm font-black text-slate-800 tracking-wide">Assignment</h4>
+            <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 flex justify-between items-center">
+               <div>
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Assigned To</p>
+                  <p class="text-sm font-bold text-slate-800" id="td-assigned-to">Truck #04 - Juan Dela Cruz</p>
+               </div>
+               <span class="text-[9px] font-black uppercase text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded tracking-wider" id="td-assign-badge">On Route</span>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Assigned On</p>
+              <p class="text-sm font-semibold text-slate-700" id="td-assigned-on">July 30, 2026, 09:15 AM</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Assigned By</p>
+              <p class="text-sm font-semibold text-slate-700" id="td-assigned-by">Admin (Maria Santos)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Progress Stepper -->
+        <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">
+          <h4 class="text-sm font-black text-slate-800 tracking-wide mb-6">Task Progress</h4>
+          <div class="flex items-center w-full max-w-2xl mx-auto" id="task-stepper-container">
+            <!-- Stepper elements injected via JS -->
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-8 py-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+          <button onclick="closeTaskModals()" class="px-6 py-2 text-slate-600 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">Close</button>
+        </div>
       </div>
     </div>
     <!-- END REPORT DETAIL MODAL -->
