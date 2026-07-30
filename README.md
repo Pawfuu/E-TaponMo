@@ -115,7 +115,7 @@ Our platform is divided into two seamless experiences: a public-facing reporting
 
 |                               Dashboard Overview                                |
 | :-----------------------------------------------------------------------------: |
-| <img src="user-app/assets/" width="100%" alt="Dashboard Overview"> |
+| <img src="user-app/assets/dashboard.gif" width="100%" alt="Dashboard Overview"> |
 
 
 > [!IMPORTANT]
