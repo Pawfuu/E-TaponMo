@@ -280,8 +280,12 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       "Hazardous Waste", "Healthcare Waste", "Mixed Waste"
     ];
     
-    // Extract unique assigned Barangays
-    const barangays = [...new Set(reportsList.map(r => r.barangay).filter(b => b && b !== "Unassigned"))].sort();
+    // Hardcode explicit districts for consistent UI
+    const districts = [
+      "District 1", "District 2", "District 3", 
+      "District 4", "District 5", "District 6", 
+      "Provincial / Outside QC"
+    ];
 
     // 1. Reports View Category Dropdown
     const reportsCatMenu = document.getElementById("reports-dropdown-category-menu");
@@ -307,42 +311,42 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    // 2. Reports View Barangay Dropdown
-    const reportsBrgyMenu = document.getElementById("reports-dropdown-barangay-menu");
-    const reportsBrgyText = document.getElementById("reports-dropdown-barangay-text");
-    if (reportsBrgyMenu) {
-      reportsBrgyMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Barangays</div>`;
-      barangays.forEach(brgy => {
+    // 2. Reports View District Dropdown
+    const reportsDistMenu = document.getElementById("reports-dropdown-district-menu");
+    const reportsDistText = document.getElementById("reports-dropdown-district-text");
+    if (reportsDistMenu) {
+      reportsDistMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Districts</div>`;
+      districts.forEach(dist => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = brgy;
-        optionDiv.textContent = brgy;
-        reportsBrgyMenu.appendChild(optionDiv);
+        optionDiv.dataset.value = dist; 
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
+        reportsDistMenu.appendChild(optionDiv);
       });
-      reportsBrgyMenu.querySelectorAll("div[data-value]").forEach(opt => {
+      reportsDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
-          currentBarangayFilter = e.target.dataset.value;
-          if (reportsBrgyText) reportsBrgyText.textContent = e.target.textContent;
-          reportsBrgyMenu.classList.add("hidden");
+          currentDistrictFilter = e.target.dataset.value;
+          if (reportsDistText) reportsDistText.textContent = e.target.textContent;
+          reportsDistMenu.classList.add("hidden");
           currentPage = 1;
           renderReportsTable();
         });
       });
     }
 
-    // 3. Analytics View Barangay Filter (Select Menu)
-    const analyticsBrgySelect = document.getElementById("analytics-brgy-filter");
-    if (analyticsBrgySelect) {
-      const currentVal = analyticsBrgySelect.value;
-      analyticsBrgySelect.innerHTML = `<option value="all">All Barangays</option>`;
-      barangays.forEach(brgy => {
+    // 3. Analytics View District Filter (Select Menu)
+    const analyticsDistSelect = document.getElementById("analytics-district-filter");
+    if (analyticsDistSelect) {
+      const currentVal = analyticsDistSelect.value;
+      analyticsDistSelect.innerHTML = `<option value="all">All Districts</option>`;
+      districts.forEach(dist => {
         const opt = document.createElement("option");
-        opt.value = brgy;
-        opt.textContent = brgy;
-        analyticsBrgySelect.appendChild(opt);
+        opt.value = dist;
+        opt.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
+        analyticsDistSelect.appendChild(opt);
       });
-      if (barangays.includes(currentVal)) analyticsBrgySelect.value = currentVal;
+      if (districts.includes(currentVal)) analyticsDistSelect.value = currentVal;
     }
 
     // 4. Map View Category Dropdown
@@ -368,6 +372,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
   }
+
   function formatReportedAt(date) {
     if (!date) return "N/A";
     const options = { month: "short", day: "numeric" };
@@ -629,20 +634,19 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   }
 
   function updateAnalyticsMetrics() {
-    const dateFilterEl = document.getElementById("analytics-date-filter");
-    const brgyFilterEl = document.getElementById("analytics-brgy-filter");
+   const dateFilterEl = document.getElementById("analytics-date-filter");
+    const distFilterEl = document.getElementById("analytics-district-filter");
     
     const dateVal = dateFilterEl ? dateFilterEl.value : "7days";
-    const brgyVal = brgyFilterEl ? brgyFilterEl.value : "all";
+    const distVal = distFilterEl ? distFilterEl.value : "all";
 
     const now = new Date();
     let filtered = [...reports];
     let prevFiltered = [];
 
-    // 1. First, apply Barangay Filter
-    if (brgyVal !== "all") {
-      filtered = filtered.filter(r => r.barangay === brgyVal);
-      // We will also filter prevFiltered after we determine dates
+    // 1. First, apply District Filter
+    if (distVal !== "all") {
+      filtered = filtered.filter(r => r.district === distVal);
     }
 
     // 2. Determine Date Ranges
@@ -678,8 +682,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         prevFiltered = [...reports]; // Fallback for all time
     }
     
-    if (brgyVal !== "all" && dateVal !== "all") {
-        prevFiltered = prevFiltered.filter(r => r.barangay === brgyVal);
+    if (distVal !== "all" && dateVal !== "all") {
+        prevFiltered = prevFiltered.filter(r => r.district === distVal);
     }
 
     // 3. Compute Metrics
@@ -1469,8 +1473,11 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     if (viewSettingsPanel) viewSettingsPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
+    
+    // Ensure the top header is ALWAYS visible across all pages
+    if (mainHeader) mainHeader.classList.remove("hidden");
+
     if (viewName === "dashboard") {
-      if (mainHeader) mainHeader.classList.remove("hidden");
       if (viewDashboardPanel) viewDashboardPanel.classList.remove("hidden");
       if (navDashboardBtn) navDashboardBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Dashboard";
@@ -1479,55 +1486,51 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       renderMapMarkers();
       refreshMapSizes(100);
     } 
-    else {
-      if (mainHeader) mainHeader.classList.add("hidden");
-      
-      if (viewName === "reports") {
-        if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
-        if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Civic Reports Database";
-        renderReportsTable();
-      } 
-      else if (viewName === "map") {
-        if (viewMapPanel) viewMapPanel.classList.remove("hidden");
-        if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Live Reports Map";
-        initLeafletMap();
-        if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
-        renderMapMarkers();
-        refreshMapSizes(100);
-      } 
-      else if (viewName === "analytics") {
-        if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
-        if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Analytics Overview";
-        updateAnalyticsMetrics();
-      }
-      else if (viewName === "barangay-performance") {
-        if (viewBarangayPanel) viewBarangayPanel.classList.remove("hidden");
-        if (navBarangayBtn) navBarangayBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Barangay Performance";
-      }
-      else if (viewName === "task-management") {
-        if (viewTasksPanel) viewTasksPanel.classList.remove("hidden");
-        if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Task Management";
-      }
-      else if (viewName === "collection-routes") {
-        if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
-        if (navRoutesBtn) navRoutesBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Collection Routes";
-      }
-      else if (viewName === "ai-insights") {
-        if (viewInsightsPanel) viewInsightsPanel.classList.remove("hidden");
-        if (navInsightsBtn) navInsightsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "AI Insights";
-      }
-      else if (viewName === "settings") {
-        if (viewSettingsPanel) viewSettingsPanel.classList.remove("hidden");
-        if (navSettingsBtn) navSettingsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
-        if (viewTitle) viewTitle.textContent = "Settings";
-      }
+    else if (viewName === "reports") {
+      if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
+      if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Civic Reports Database";
+      renderReportsTable();
+    } 
+    else if (viewName === "map") {
+      if (viewMapPanel) viewMapPanel.classList.remove("hidden");
+      if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Live Reports Map";
+      initLeafletMap();
+      if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
+      renderMapMarkers();
+      refreshMapSizes(100);
+    } 
+    else if (viewName === "analytics") {
+      if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
+      if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Analytics Overview";
+      updateAnalyticsMetrics();
+    }
+    else if (viewName === "barangay-performance") {
+      if (viewBarangayPanel) viewBarangayPanel.classList.remove("hidden");
+      if (navBarangayBtn) navBarangayBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Barangay Performance";
+    }
+    else if (viewName === "task-management") {
+      if (viewTasksPanel) viewTasksPanel.classList.remove("hidden");
+      if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Task Management";
+    }
+    else if (viewName === "collection-routes") {
+      if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
+      if (navRoutesBtn) navRoutesBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Collection Routes";
+    }
+    else if (viewName === "ai-insights") {
+      if (viewInsightsPanel) viewInsightsPanel.classList.remove("hidden");
+      if (navInsightsBtn) navInsightsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "AI Insights";
+    }
+    else if (viewName === "settings") {
+      if (viewSettingsPanel) viewSettingsPanel.classList.remove("hidden");
+      if (navSettingsBtn) navSettingsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      if (viewTitle) viewTitle.textContent = "Settings";
     }
 
     // Update URL history silently
@@ -1543,6 +1546,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
+  let currentDistrictFilter = "all";
   let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
 
@@ -1582,9 +1586,9 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       filteredList = filteredList.filter(r => r.category === currentCategoryFilter);
     }
 
-    // ADD THIS: Apply Barangay filter
-    if (currentBarangayFilter && currentBarangayFilter !== "all") {
-      filteredList = filteredList.filter(r => r.barangay === currentBarangayFilter);
+    // ADD THIS: Apply District filter
+    if (currentDistrictFilter && currentDistrictFilter !== "all") {
+      filteredList = filteredList.filter(r => r.district === currentDistrictFilter);
     }
 
     // Apply text query filter
@@ -2049,11 +2053,18 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       analyticsDateFilter.addEventListener("change", updateAnalyticsMetrics);
     }
 
-    const analyticsBrgyFilter = document.getElementById("analytics-brgy-filter");
-    if (analyticsBrgyFilter) {
-      analyticsBrgyFilter.addEventListener("click", function () {
-        showToast("Barangay filtering");
-      });
+    // --- Header Toast ---
+    const headerCityBtn = document.getElementById("header-city-btn");
+    if (headerCityBtn) {
+        headerCityBtn.addEventListener("click", () => {
+            showToast("Only Quezon City for now", "Future cities will be added in the next update.");
+        });
+    }
+
+    // --- Analytics Filter Change ---
+    const analyticsDistFilter = document.getElementById("analytics-district-filter");
+    if (analyticsDistFilter) {
+      analyticsDistFilter.addEventListener("change", updateAnalyticsMetrics);
     }
 
     // --- Analytics Simulated Table Row Click Handlers ---
@@ -2142,13 +2153,13 @@ function drawReportsOverTimeChart(filtered, dateVal) {
         });
       });
 
-      // Barangay Dropdown Setup (Reports Menu)
-    const rptBrgyBtn = document.getElementById("reports-dropdown-barangay-btn");
-    const rptBrgyMenu = document.getElementById("reports-dropdown-barangay-menu");
-    if (rptBrgyBtn && rptBrgyMenu) {
-      rptBrgyBtn.addEventListener("click", (e) => {
+      // --- Reports Menu District Dropdown ---
+    const rptDistBtn = document.getElementById("reports-dropdown-district-btn");
+    const rptDistMenu = document.getElementById("reports-dropdown-district-menu");
+    if (rptDistBtn && rptDistMenu) {
+      rptDistBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        rptBrgyMenu.classList.toggle("hidden");
+        rptDistMenu.classList.toggle("hidden");
         document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
@@ -2160,7 +2171,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       [
         "reports-dropdown-status-menu",
         "reports-dropdown-category-menu",
-        "reports-dropdown-barangay-menu", // <-- ADD THIS
+        "reports-dropdown-district-menu", 
         "reports-dropdown-sort-menu",
         "dropdown-status-menu",
         "dropdown-category-menu"
@@ -2178,19 +2189,22 @@ function drawReportsOverTimeChart(filtered, dateVal) {
 
         currentStatusFilter = "all";
         currentCategoryFilter = "all";
-        currentBarangayFilter = "all"; // <-- ADD THIS
+        currentDistrictFilter = "all"; 
         currentSortOrder = "date-desc";
+
+        const rptStatusText = document.getElementById("reports-dropdown-status-text");
+        const rptSortText = document.getElementById("reports-dropdown-sort-text");
 
         if (rptStatusText) rptStatusText.textContent = "All Status";
         if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
-        if (document.getElementById("reports-dropdown-barangay-text")) document.getElementById("reports-dropdown-barangay-text").textContent = "All Barangays"; // <-- ADD THIS
+        if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts"; 
         if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
 
         updateTabHighlight("all");
         currentPage = 1;
         renderReportsTable();
       });
-      }
+    }
     }
 
     // Category Dropdown

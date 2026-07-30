@@ -719,16 +719,16 @@
               </div>
             </div>
 
-            <!-- 3. Custom Barangay Dropdown -->
+            <!-- 3. Custom District Dropdown -->
             <div class="relative w-full sm:w-auto">
-              <button type="button" id="reports-dropdown-barangay-btn"
+              <button type="button" id="reports-dropdown-district-btn"
                 class="flex items-center justify-between w-full sm:w-40 bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 text-xs rounded-lg pl-3 pr-2 py-2 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm">
-                <span id="reports-dropdown-barangay-text" class="truncate">All Barangays</span>
+                <span id="reports-dropdown-district-text" class="truncate">All Districts</span>
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <div id="reports-dropdown-barangay-menu"
+              <div id="reports-dropdown-district-menu"
                 class="absolute top-full left-0 mt-1 w-full sm:w-48 bg-white border border-slate-100 rounded-xl shadow-lg hidden overflow-y-auto max-h-48 py-1 custom-scrollbar z-[600]">
                 <!-- Injected via JS -->
               </div>
@@ -1184,11 +1184,17 @@
               </select>
             </div>
 
-            <!-- Barangay Filter Dropdown -->
+            <!-- District Filter Dropdown -->
             <div class="relative">
-              <select id="analytics-brgy-filter" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
-                <option value="all">All Barangays</option>
-                <!-- JS will inject options -->
+              <select id="analytics-district-filter" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
+                <option value="all">All Districts</option>
+                <option value="District 1">District 1 (QC)</option>
+                <option value="District 2">District 2 (QC)</option>
+                <option value="District 3">District 3 (QC)</option>
+                <option value="District 4">District 4 (QC)</option>
+                <option value="District 5">District 5 (QC)</option>
+                <option value="District 6">District 6 (QC)</option>
+                <option value="Provincial / Outside QC">Provincial / Outside QC</option>
               </select>
             </div>
           </div>
