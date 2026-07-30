@@ -141,6 +141,8 @@ export class DashboardService {
             reportedAt: data.reportedAt?.toDate?.() || null, 
             hashScanUrl: data.hashScanUrl || null,
             dismissalReason: data.dismissalReason || "",
+            resolvedByCode: data.resolvedByCode || null,
+            assignedToCode: data.assignedToCode || null,
         };
     }
 

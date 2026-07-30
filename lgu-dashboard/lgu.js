@@ -106,6 +106,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // 3. GLOBAL STATE & DOM ELEMENTS
   // ==========================================
 
+// NEW: Task Management State Variables
+  let taskCurrentTab = 'all';
+  let taskCurrentPriority = 'all';
+  let taskSearchQuery = '';
+  let taskCurrentPage = 1;
+  const tasksPerPage = 7;
+
   let reports = [];
   let dashboardMetrics = null;
   let lastFilteredReports = [];
@@ -149,6 +156,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   const viewRoutesPanel = document.getElementById("view-collection-routes-panel");
   const viewInsightsPanel = document.getElementById("view-ai-insights-panel");
   const viewSettingsPanel = document.getElementById("view-settings-panel");
+  const viewLiveSyncPanel = document.getElementById("view-live-sync-panel");
   
   const viewTitle = document.getElementById("view-title");
   const mainHeader = document.getElementById("main-header");
@@ -177,6 +185,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   const modalReportImage = document.getElementById("modal-report-image");
   const dismissalReasonContainer = document.getElementById("dismissal-reason-container");
   const dismissalReasonInput = document.getElementById("dismissal-reason");
+  const resolvedByContainer = document.getElementById("resolved-by-container");
+  const resolvedByInput = document.getElementById("resolved-by-code");
+  const assigneeContainer = document.getElementById("assignee-container");
+  const assigneeInput = document.getElementById("assignee-code");
   const modalBlockchainUrl = document.getElementById("modal-blockchain-url");
   const blockchainUrlContainer = document.getElementById("modal-blockchain-url-container");
 
@@ -242,6 +254,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (typeof renderBlockchainActivity === "function") renderBlockchainActivity(reports);
 
         renderBarangayPerformance();
+        renderTaskManagement();
 
         // ADD THIS: Auto-center the map on the first successful data load
         if (!window.hasAutoCentered && window.recenterMap) {
@@ -903,6 +916,269 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     drawBarangayTrendChart();
   }
 
+  function renderTaskManagement() {
+    const tbody = document.getElementById('task-table-body');
+    const counter = document.getElementById('task-table-results-counter');
+    const pager = document.getElementById('task-pagination-controls');
+    if (!tbody || !reports) return;
+
+    // 1. Synthesize Tasks from live Reports
+    let allTasks = reports.map((r, i) => {
+      const sev = r.severity || 0;
+      const upvotes = r.upvotes || 1;
+      
+      // Upvotes organically raise priority!
+      let priority = 'Low';
+      if (sev >= 4 || upvotes >= 10) priority = 'High';
+      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
+
+      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
+      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
+      
+      let status = 'Planning';
+      let isOverdue = false;
+      if (r.status === 'Resolved') status = 'Completed';
+      else if (r.status === 'In Progress') status = 'In Progress';
+      else if (ageMs > (48 * 60 * 60 * 1000) && r.status === 'Pending Verification') { 
+        status = 'Overdue'; 
+        isOverdue = true; 
+      }
+      else status = 'Pending';
+
+      // Simulate Assignees for realism for 'Pending' tasks
+      const assignees = ["Juan Dela Cruz", "Maria Santos", "Pedro Garcia", "Ana Reyes", "Carlos Dizon"];
+      const teams = ["Team A", "Team B", "Team C", "Team A", "Team D"];
+      const hash = r.id.charCodeAt(0) % 5;
+
+      let assignee = 'Unassigned';
+      let team = 'Response Unit';
+      
+      if (status === 'Completed' && r.resolvedByCode) {
+          assignee = `Verified: ${r.resolvedByCode.split(' ')[0]}`; // Clean Admin ID
+          team = 'Admin Finalized';
+      } else if (status === 'In Progress' && r.assignedToCode) {
+          assignee = `${r.assignedToCode}`; // Clean Truck ID
+          team = 'Active Deployment';
+      } else if (status === 'In Progress' || status === 'Completed' || status === 'Pending') {
+          assignee = assignees[hash];
+          team = teams[hash];
+      }
+
+      return {
+        id: `TSK-${new Date().getFullYear()}-${1000 + i}`,
+        refId: r.id,
+        docId: r.docId,
+        title: r.category === 'Uncategorized' ? 'Waste Clearing' : `${r.category} Collection`,
+        barangay: r.barangay,
+        assignee: assignee,
+        team: team,
+        priority: priority,
+        status: status,
+        isOverdue: isOverdue,
+        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        rawDate: targetDate.getTime()
+      };
+    });
+
+    // Update Top KPIs
+    document.getElementById('task-stat-total').textContent = allTasks.length;
+    document.getElementById('task-stat-assigned').textContent = allTasks.filter(t => t.status === 'In Progress').length;
+    document.getElementById('task-stat-overdue').textContent = allTasks.filter(t => t.isOverdue).length;
+    document.getElementById('task-stat-completed').textContent = allTasks.filter(t => t.status === 'Completed').length;
+
+    // Update Tab Counts
+    document.getElementById('task-count-all').textContent = `(${allTasks.length})`;
+    document.getElementById('task-count-mine').textContent = `(${allTasks.filter(t => t.assignee === 'Maria Santos').length})`;
+    document.getElementById('task-count-overdue').textContent = `(${allTasks.filter(t => t.isOverdue).length})`;
+    document.getElementById('task-count-completed').textContent = `(${allTasks.filter(t => t.status === 'Completed').length})`;
+
+    // 2. Apply Filters
+    let list = [...allTasks];
+    if (taskState.tab === 'mine') list = list.filter(t => t.assignee === 'Maria Santos');
+    if (taskState.tab === 'overdue') list = list.filter(t => t.isOverdue);
+    if (taskState.tab === 'completed') list = list.filter(t => t.status === 'Completed');
+
+    if (taskState.status !== 'all') list = list.filter(t => t.status === taskState.status);
+    if (taskState.priority !== 'all') list = list.filter(t => t.priority === taskState.priority);
+    if (taskState.assignee !== 'all') list = list.filter(t => t.assignee === taskState.assignee);
+
+    if (taskState.search.trim()) {
+        const q = taskState.search.trim().toLowerCase();
+        list = list.filter(t => t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.barangay.toLowerCase().includes(q));
+    }
+
+    list.sort((a, b) => a.rawDate - b.rawDate);
+
+    // 3. Render Table
+    const totalPages = Math.max(1, Math.ceil(list.length / TASK_PAGE_SIZE));
+    if (taskState.page > totalPages) taskState.page = totalPages;
+    const start = (taskState.page - 1) * TASK_PAGE_SIZE;
+    const pageItems = list.slice(start, start + TASK_PAGE_SIZE);
+
+    tbody.innerHTML = '';
+    const priorityStyle = { High: 'bg-rose-50 text-rose-600 border border-rose-100', Medium: 'bg-amber-50 text-amber-700 border border-amber-100', Low: 'bg-blue-50 text-blue-600 border border-blue-100' };
+    const statusStyle = {
+        Planning: { dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600' },
+        Assigned: { dot: 'bg-indigo-500', pill: 'bg-indigo-50 text-indigo-600' },
+        Pending: { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700' },
+        'In Progress': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-600' },
+        Overdue: { dot: 'bg-rose-500', pill: 'bg-rose-50 text-rose-600' },
+        Completed: { dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-600' },
+    };
+
+    if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks match your filters.</td></tr>`;
+    } else {
+        pageItems.forEach((t, i) => {
+            const st = statusStyle[t.status] || statusStyle.Planning;
+            // Extrapolate initials safely, handling "Ref: CODE" edge cases
+            const initArr = t.assignee.replace('Ref: ', '').split(' ');
+            const initials = initArr.map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'NA';
+            
+            tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-50" style="animation-delay: ${i * 30}ms;">
+                <td class="px-5 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">${t.id}</td>
+                <td class="px-5 py-3.5">
+                  <p class="font-semibold text-slate-800">${t.title}</p>
+                </td>
+                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.barangay}</td>
+                <td class="px-5 py-3.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-[10px] font-black flex-shrink-0">${initials}</span>
+                    <div class="min-w-0">
+                      <p class="font-semibold text-slate-800 text-xs truncate">${t.assignee}</p>
+                      <p class="text-[10px] text-slate-400 truncate">${t.team}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-5 py-3.5">
+                  <span class="text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${priorityStyle[t.priority]}">${t.priority}</span>
+                </td>
+                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.due}</td>
+                <td class="px-5 py-3.5">
+                  <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${st.pill}">
+                    <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+                  </span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
+                  <button onclick="window.openDetailModal('${t.docId}')" class="w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition-colors inline-flex items-center justify-center cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
+                  </button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    if(counter) counter.textContent = list.length ? `Showing ${start + 1} to ${Math.min(start + TASK_PAGE_SIZE, list.length)} of ${list.length} tasks` : 'Showing 0 tasks';
+
+    // Pagination render
+    if (pager) {
+        pager.innerHTML = '';
+        if (totalPages > 1) {
+            const mkBtn = (lbl, pg, active, disabled) => {
+                const b = document.createElement('button');
+                b.innerHTML = lbl; b.disabled = disabled;
+                b.className = `w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`;
+                if (!disabled) b.addEventListener('click', () => { taskState.page = pg; renderTaskManagement(); });
+                return b;
+            };
+            pager.appendChild(mkBtn('‹', Math.max(1, taskState.page - 1), false, taskState.page === 1));
+            for (let p = 1; p <= totalPages; p++) pager.appendChild(mkBtn(String(p), p, p === taskState.page, false));
+            pager.appendChild(mkBtn('›', Math.min(totalPages, taskState.page + 1), false, taskState.page === totalPages));
+        }
+    }
+
+    // 4. Update Assignee Dropdown Dynamically
+    const assgnMenu = document.getElementById("dd-task-assignee-menu");
+    if(assgnMenu && assgnMenu.children.length <= 1) {
+        const uniques = [...new Set(allTasks.map(t => t.assignee))];
+        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
+        uniques.forEach(v => {
+            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
+        });
+        
+        assgnMenu.querySelectorAll('.dd-opt').forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                taskState.assignee = opt.dataset.value;
+                document.getElementById('dd-task-assignee-text').textContent = opt.dataset.value === 'all' ? 'All Assignees' : opt.dataset.value;
+                assgnMenu.classList.add('hidden');
+                taskState.page = 1;
+                renderTaskManagement();
+            });
+        });
+    }
+
+    // 5. Sidebar: Service Queue
+    const brgyCounts = {};
+    allTasks.filter(t => t.status !== 'Completed').forEach(t => {
+      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
+    });
+    
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 5);
+    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+    
+    const queueContainer = document.getElementById("service-queue-list");
+    if(queueContainer) {
+      queueContainer.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Queue is empty.</p>` : "";
+      queueData.forEach(q => {
+        const pct = (q.count / maxQueue) * 100;
+        let c = 'bg-emerald-500'; let tc = 'text-emerald-600';
+        if(q.count > 10) { c = 'bg-rose-500'; tc = 'text-rose-600'; }
+        else if(q.count > 5) { c = 'bg-amber-500'; tc = 'text-amber-600'; }
+
+        queueContainer.innerHTML += `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-slate-700">${q.name}</span>
+              <span class="text-xs font-black ${tc}">${q.count}</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full ${c} rounded-full" style="width:${pct}%"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 6. Sidebar: Donut Chart
+    const statusCounts = { 'In Progress': 0, 'Pending': 0, 'Overdue': 0, 'Planning': 0 };
+    allTasks.forEach(t => { if(statusCounts[t.status] !== undefined) statusCounts[t.status]++; });
+
+    document.getElementById("task-donut-total").textContent = allTasks.length;
+    const oData = [
+      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
+      { label: 'Pending', val: statusCounts['Pending'], color: '#f59e0b' },
+      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
+      { label: 'Planning', val: statusCounts['Planning'], color: '#94a3b8' }
+    ].filter(d => d.val > 0);
+
+    if (donutEl && legendEl) {
+      legendEl.innerHTML = oData.length === 0 ? `<p class="text-xs text-slate-400 italic py-4">No data</p>` : "";
+      let cursor = 0;
+      const stops = oData.map(o => {
+          const startPct = (cursor / allTasks.length) * 100;
+          cursor += o.val;
+          const endPct = (cursor / allTasks.length) * 100;
+          return `${o.color} ${startPct}% ${endPct}%`;
+      }).join(', ');
+      donutEl.style.background = `conic-gradient(${stops})`;
+
+      oData.forEach(o => {
+          const pct = Math.round((o.val / allTasks.length) * 100);
+          legendEl.innerHTML += `
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <span class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                <span class="truncate">${o.label}</span>
+              </span>
+              <span class="text-slate-400 font-semibold">${pct}%</span>
+            </div>
+          `;
+      });
+    }
+  }
+
   function drawBarangayTrendChart() {
     const container = document.getElementById("brgy-trend-chart");
     if (!container || !dashboardMetrics) return;
@@ -1470,7 +1746,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     if (viewTasksPanel) viewTasksPanel.classList.add("hidden");
     if (viewRoutesPanel) viewRoutesPanel.classList.add("hidden");
     if (viewInsightsPanel) viewInsightsPanel.classList.add("hidden");
-    if (viewSettingsPanel) viewSettingsPanel.classList.add("hidden");
+    if (viewLiveSyncPanel) viewLiveSyncPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
     
@@ -1517,6 +1793,13 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Task Management";
     }
+    else if (viewName === "live-sync") {
+      if (viewLiveSyncPanel) viewLiveSyncPanel.classList.remove("hidden");
+      // Highlight the parent Task Management nav button
+      if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
+      // Hide the global view title since this specific page has its own breadcrumb header
+      if (mainHeader) mainHeader.classList.add("hidden"); 
+    }
     else if (viewName === "collection-routes") {
       if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
       if (navRoutesBtn) navRoutesBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
@@ -1550,9 +1833,19 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
 
-  // NEW: Barangay Performance Panel Filter States
-  let activeBrgyDistrictFilter = "all";
-  let activeBrgySearchQuery = "";
+let activeBrgyDistrictFilter = "all";
+let activeBrgySearchQuery = "";
+
+// NEW: Task Management State Variables
+  let taskState = {
+      tab: 'all',
+      status: 'all',
+      priority: 'all',
+      assignee: 'all',
+      search: '',
+      page: 1,
+  };
+  const TASK_PAGE_SIZE = 7;
 
   function renderReportsTable() {
     if (!reportsTableBody) return;
@@ -1705,6 +1998,247 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     });
   }
 
+  function renderTaskManagement() {
+    const tbody = document.getElementById("task-table-body");
+    const queueList = document.getElementById("service-queue-list");
+    const donutEl = document.getElementById("task-donut-chart");
+    const legendEl = document.getElementById("task-donut-legend");
+    if (!tbody || !queueList || !donutEl || !reports) return;
+
+    // 1. Process Reports into "Tasks" applying Upvote Priority Logic
+    let allTasks = reports.map(r => {
+      const sev = r.severity || 0;
+      const upvotes = r.upvotes || 1;
+      
+      // PRIORITY LOGIC: Community upvotes make it rise in urgency!
+      let priority = 'Low';
+      if (sev >= 4 || upvotes >= 10) priority = 'High';
+      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
+
+      // Due Date: 48 Hours from reported time
+      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
+      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
+      
+      let uiStatus = r.status;
+      let isOverdue = false;
+      if (r.status === 'Pending Verification' && ageMs > (48 * 60 * 60 * 1000)) {
+          uiStatus = 'Overdue';
+          isOverdue = true;
+      }
+
+      let assignee = 'Unassigned';
+      if (r.status === 'In Progress') assignee = 'Response Team';
+      else if (r.status === 'Resolved') assignee = 'Completed Unit';
+
+      return {
+        id: r.id,
+        docId: r.docId,
+        title: `${r.category} Clearing`,
+        barangay: r.barangay,
+        assignee: assignee,
+        priority: priority,
+        status: uiStatus,
+        isOverdue: isOverdue,
+        upvotes: upvotes,
+        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        rawDate: targetDate.getTime()
+      };
+    });
+
+    // 2. Update KPI Cards & Tab Counts
+    const activeTasks = allTasks.filter(t => t.status !== 'Resolved' && t.status !== 'Dismissed');
+    const totalActive = activeTasks.length;
+    const assignedCount = allTasks.filter(t => t.status === 'In Progress').length;
+    const overdueCount = allTasks.filter(t => t.isOverdue).length;
+    const completedCount = allTasks.filter(t => t.status === 'Resolved').length;
+
+    if(document.getElementById("stat-task-total")) document.getElementById("stat-task-total").textContent = totalActive;
+    if(document.getElementById("stat-task-assigned")) document.getElementById("stat-task-assigned").textContent = assignedCount;
+    if(document.getElementById("stat-task-overdue")) document.getElementById("stat-task-overdue").textContent = overdueCount;
+    if(document.getElementById("stat-task-completed")) document.getElementById("stat-task-completed").textContent = completedCount;
+
+    if(document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
+    if(document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
+    if(document.getElementById("task-count-completed")) document.getElementById("task-count-completed").textContent = `(${completedCount})`;
+
+    // 3. Apply Filters
+    let filteredTasks = [...allTasks];
+    
+    if (taskCurrentTab === 'all') filteredTasks = activeTasks;
+    else if (taskCurrentTab === 'overdue') filteredTasks = filteredTasks.filter(t => t.isOverdue);
+    else if (taskCurrentTab === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
+
+    if (taskCurrentPriority !== 'all') {
+      filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
+    }
+
+    if (taskSearchQuery) {
+      const q = taskSearchQuery.toLowerCase();
+      filteredTasks = filteredTasks.filter(t => 
+        t.title.toLowerCase().includes(q) || 
+        t.id.toLowerCase().includes(q) || 
+        t.barangay.toLowerCase().includes(q)
+      );
+    }
+
+    filteredTasks.sort((a, b) => a.rawDate - b.rawDate);
+
+    // 4. Render Paginated Table
+    const totalPages = Math.max(1, Math.ceil(filteredTasks.length / tasksPerPage));
+    if (taskCurrentPage > totalPages) taskCurrentPage = 1;
+    const start = (taskCurrentPage - 1) * tasksPerPage;
+    const pageItems = filteredTasks.slice(start, start + tasksPerPage);
+
+    tbody.innerHTML = "";
+    if (pageItems.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
+    } else {
+      pageItems.forEach((t, i) => {
+        const priorityColors = {
+          High: 'bg-rose-50 text-rose-600 border-rose-200',
+          Medium: 'bg-amber-50 text-amber-700 border-amber-200',
+          Low: 'bg-blue-50 text-blue-600 border-blue-200'
+        };
+
+        const statusStyles = {
+          'Pending Verification': { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700 border-amber-200' },
+          'In Progress': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-700 border-blue-200' },
+          'Overdue': { dot: 'bg-rose-500', pill: 'bg-rose-50 text-rose-700 border-rose-200' },
+          'Resolved': { dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          'Dismissed': { dot: 'bg-slate-400', pill: 'bg-slate-50 text-slate-600 border-slate-200' }
+        };
+
+        const st = statusStyles[t.status] || statusStyles['Pending Verification'];
+        
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-100" style="animation-delay: ${i * 30}ms;">
+            <td class="px-5 py-4 font-mono text-[11px] font-bold text-slate-500">#${t.id}</td>
+            <td class="px-5 py-4">
+              <p class="font-bold text-slate-800">${t.title}</p>
+              <p class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1" title="Community Upvotes raise priority">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
+                ${t.upvotes} Votes
+              </p>
+            </td>
+            <td class="px-5 py-4 text-xs font-semibold text-slate-600">${t.barangay}</td>
+            <td class="px-5 py-4">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded border ${priorityColors[t.priority]}">${t.priority}</span>
+            </td>
+            <td class="px-5 py-4 text-xs font-bold ${t.isOverdue ? 'text-rose-600' : 'text-slate-600'}">${t.due}</td>
+            <td class="px-5 py-4">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${st.pill}">
+                <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+              </span>
+            </td>
+            <td class="px-5 py-4 text-right">
+              <button onclick="window.openDetailModal('${t.docId}')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="View Detail">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    const counter = document.getElementById("task-table-counter");
+    if(counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
+
+    const pager = document.getElementById("task-pagination-controls");
+    if (pager) {
+        pager.innerHTML = "";
+        if (totalPages > 1) {
+            const createBtn = (label, pageNum, disabled, isActive) => {
+                const b = document.createElement("button");
+                b.innerHTML = label;
+                b.disabled = disabled;
+                if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
+                else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
+                else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
+                if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
+                return b;
+            };
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
+            for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
+        }
+    }
+
+    // 5. Sidebar: Service Queue
+    const brgyCounts = {};
+    activeTasks.forEach(t => {
+      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
+    });
+    
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 6);
+    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+    
+    queueList.innerHTML = "";
+    if(queueData.length === 0) queueList.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>`;
+    
+    queueData.forEach(q => {
+      const pct = (q.count / maxQueue) * 100;
+      let barColor = 'bg-emerald-500';
+      if(q.count > 10) barColor = 'bg-rose-500';
+      else if(q.count > 4) barColor = 'bg-amber-500';
+
+      queueList.innerHTML += `
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
+            <span class="text-[11px] font-black text-slate-900">${q.count}</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 6. Sidebar: Donut Chart
+    const statusCounts = { 'Pending Verification': 0, 'In Progress': 0, 'Overdue': 0, 'Resolved': 0 };
+    allTasks.forEach(t => {
+      if(statusCounts[t.status] !== undefined) statusCounts[t.status]++;
+    });
+
+    const dTotal = allTasks.filter(t => t.status !== 'Dismissed').length;
+    if(document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
+
+    const oData = [
+      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
+      { label: 'Pending', val: statusCounts['Pending Verification'], color: '#f59e0b' },
+      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
+      { label: 'Completed', val: statusCounts['Resolved'], color: '#10b981' }
+    ].filter(d => d.val > 0);
+
+    legendEl.innerHTML = "";
+    if (oData.length === 0) {
+       donutEl.style.background = "#e2e8f0";
+       legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
+    } else {
+      let cursor = 0;
+      const stops = oData.map(o => {
+          const startPct = (cursor / dTotal) * 100;
+          cursor += o.val;
+          const endPct = (cursor / dTotal) * 100;
+          return `${o.color} ${startPct}% ${endPct}%`;
+      }).join(', ');
+      donutEl.style.background = `conic-gradient(${stops})`;
+
+      oData.forEach(o => {
+          const pct = Math.round((o.val / dTotal) * 100);
+          legendEl.innerHTML += `
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                <span class="truncate">${o.label}</span>
+              </span>
+              <span class="text-slate-500 font-bold">${pct}%</span>
+            </div>
+          `;
+      });
+    }
+  }
+
   function updateTabHighlight(activeKey) {
     const tabs = {
       all: document.getElementById("filter-tab-all"),
@@ -1837,9 +2371,26 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   // 8. MODAL LOGIC
   // ==========================================
 
-  function populateModal(report) {
+  const CATEGORY_ICONS = {
+    "Recyclable": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" /></svg>`,
+    "Nabubulok": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>`,
+    "Non-recyclable": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`,
+    "Mixed Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>`,
+    "Hazardous Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 13.33 1.924 3 3.464 3z" /></svg>`,
+    "Healthcare Waste": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>`,
+    "default": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+  };
+
+function populateModal(report) {
     modalReportId.textContent = `Report #${report.id}`;
     modalCategory.textContent = report.category;
+    
+    // Inject Category Icon dynamically
+    const iconContainer = document.getElementById("modal-cat-icon-container");
+    if (iconContainer) {
+        iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
+    }
+
     modalLocation.textContent = report.location;
     modalSubmitter.textContent = report.submittedBy;
     if (modalContactInfo) modalContactInfo.textContent = report.contactInfo || "Not Provided";
@@ -1850,12 +2401,21 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     updateModalStatusBadge(report.status);
     modalReportImage.src = report.imageUrl || PLACEHOLDER_IMAGE;
 
+   // Hide all dynamic inputs first
+    if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
+    if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
+    if (assigneeContainer) assigneeContainer.classList.add("hidden");
+
+    // Show and populate only the relevant one based on current status
     if (report.status === "Dismissed") {
       if (dismissalReasonContainer) dismissalReasonContainer.classList.remove("hidden");
       if (dismissalReasonInput) dismissalReasonInput.value = report.dismissalReason || "";
-    } else {
-      if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
-      if (dismissalReasonInput) dismissalReasonInput.value = "";
+    } else if (report.status === "Resolved") {
+      if (resolvedByContainer) resolvedByContainer.classList.remove("hidden");
+      if (resolvedByInput) resolvedByInput.value = report.resolvedByCode || "";
+    } else if (report.status === "In Progress") {
+      if (assigneeContainer) assigneeContainer.classList.remove("hidden");
+      if (assigneeInput) assigneeInput.value = report.assignedToCode || "";
     }
 
     if (modalBlockchainUrl && blockchainUrlContainer) {
@@ -1877,8 +2437,13 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     document.body.classList.add("overflow-hidden");
   }
 
-  function updateModalStatusBadge(status) {
-    modalStatusBadge.className = "inline-flex items-center gap-2 mt-1 px-3 py-1 rounded-full text-xs font-semibold";
+function updateModalStatusBadge(status) {
+    const editBox = document.getElementById("modal-status-edit-box");
+    const titleText = document.getElementById("modal-status-title-text");
+    const saveBtn = document.getElementById("modal-btn-save");
+    const footerSpacer = document.getElementById("footer-spacer");
+
+    modalStatusBadge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-white shadow-sm border border-slate-200 text-slate-700";
     let dotEl = modalStatusBadge.querySelector("span:first-child");
     let textEl = modalStatusBadge.querySelector("span:last-child");
 
@@ -1889,18 +2454,40 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     }
 
     textEl.textContent = status;
+    
+    // Reset Edit Box Base Classes
+    if(editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
+    if(titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
+    
+    // Reset Save Button
+    if(saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+
+    // Show spacer by default, hide if Resolved (so Resolved UI takes the space)
+    if(footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
+
     if (status === "Resolved") {
-      modalStatusBadge.classList.add("bg-green-50", "text-green-700", "border", "border-green-200");
-      dotEl.className = "w-2 h-2 rounded-full bg-green-500";
+      dotEl.className = "w-2 h-2 rounded-full bg-emerald-500";
+      modalStatusBadge.classList.add("text-emerald-700");
+      if(editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
+      if(titleText) titleText.classList.add("text-emerald-600");
+      if(saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
     } else if (status === "In Progress") {
-      modalStatusBadge.classList.add("bg-amber-50", "text-amber-700", "border", "border-amber-200");
-      dotEl.className = "w-2 h-2 rounded-full bg-amber-500";
+      dotEl.className = "w-2 h-2 rounded-full bg-blue-500";
+      modalStatusBadge.classList.add("text-blue-700");
+      if(editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
+      if(titleText) titleText.classList.add("text-blue-600");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
     } else if (status === "Dismissed") {
-      modalStatusBadge.classList.add("bg-rose-50", "text-rose-700", "border", "border-rose-200");
       dotEl.className = "w-2 h-2 rounded-full bg-rose-500";
+      modalStatusBadge.classList.add("text-rose-700");
+      if(editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
+      if(titleText) titleText.classList.add("text-rose-600");
+      if(saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
     } else {
-      modalStatusBadge.classList.add("bg-slate-100", "text-slate-700", "border", "border-slate-200");
       dotEl.className = "w-2 h-2 rounded-full bg-slate-400";
+      if(editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
+      if(titleText) titleText.classList.add("text-slate-500");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
     }
   }
 
@@ -1916,10 +2503,26 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
 
     const updatePayload = { status: firestoreStatus };
+    
+    // Safely structure payload based on Admin selection
     if (newStatus === "Dismissed") {
       updatePayload.dismissalReason = dismissalReasonInput ? dismissalReasonInput.value : "";
-    } else {
-      updatePayload.dismissalReason = null;
+    } 
+    else if (newStatus === "Resolved") {
+      const adminCode = resolvedByInput ? resolvedByInput.value : "";
+      if (!adminCode) {
+          showToast("Validation Error", "Please verify using your Admin ID before saving.");
+          return; 
+      }
+      updatePayload.resolvedByCode = adminCode;
+    } 
+    else if (newStatus === "In Progress") {
+      const truckCode = assigneeInput ? assigneeInput.value : "";
+      if (!truckCode) {
+          showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
+          return; 
+      }
+      updatePayload.assignedToCode = truckCode;
     }
 
     try {
@@ -2076,6 +2679,72 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       });
     });
 
+// --- TASK MANAGEMENT LISTENERS ---
+    const tSearchInput = document.getElementById("task-search-input");
+    if(tSearchInput) {
+      tSearchInput.addEventListener("input", function() {
+        taskSearchQuery = this.value;
+        taskCurrentPage = 1;
+        renderTaskManagement();
+      });
+    }
+
+    const tTabs = ['all', 'overdue', 'completed'];
+    tTabs.forEach(key => {
+      const btn = document.getElementById(`task-tab-${key}`);
+      if(btn) {
+        btn.addEventListener('click', () => {
+          taskCurrentTab = key;
+          taskCurrentPage = 1;
+          
+          tTabs.forEach(k => {
+             const b = document.getElementById(`task-tab-${k}`);
+             if(b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
+          });
+          btn.className = "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold transition-all";
+          renderTaskManagement();
+        });
+      }
+    });
+
+    const tPriBtn = document.getElementById("dd-task-priority-btn");
+    const tPriMenu = document.getElementById("dd-task-priority-menu");
+    const tPriText = document.getElementById("dd-task-priority-text");
+    
+    if(tPriBtn && tPriMenu) {
+      tPriBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tPriMenu.classList.toggle("hidden");
+      });
+      tPriMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          taskCurrentPriority = e.target.dataset.value;
+          if(tPriText) tPriText.textContent = e.target.textContent;
+          tPriMenu.classList.add("hidden");
+          taskCurrentPage = 1;
+          renderTaskManagement();
+        });
+      });
+    }
+
+    // Connect the Global Click Escaper to the new Priority Menu
+    document.addEventListener("click", () => {
+        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+    });
+
+    const tResetBtn = document.getElementById("task-reset-btn");
+    if (tResetBtn) {
+       tResetBtn.addEventListener("click", () => {
+          taskSearchQuery = '';
+          if(tSearchInput) tSearchInput.value = '';
+          taskCurrentPriority = 'all';
+          if(tPriText) tPriText.textContent = 'All Priorities';
+          taskCurrentPage = 1;
+          renderTaskManagement();
+       });
+    }
+
     // --- Analytics Simulated Bar Graph Column Click Handlers ---
     const responseTimeBars = document.querySelectorAll("#view-analytics-panel .lg\\:col-span-5 .flex-1.flex.items-end > div");
     responseTimeBars.forEach(barCol => {
@@ -2087,9 +2756,14 @@ function drawReportsOverTimeChart(filtered, dateVal) {
 
     setupSidebarToggle();
 
+    
+
     // Modal & Table Setup
     window.openDetailModal = openDetailModal;
     window.saveStatusChange = saveStatusChange;
+
+    window.switchView = switchView;
+    window.exportToCSV = exportToCSV;
 
     if (reportSearchInput) {
       reportSearchInput.addEventListener("input", () => {
@@ -2109,12 +2783,19 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     if (modalStatusSelect) {
       modalStatusSelect.addEventListener("change", function () {
         updateModalStatusBadge(this.value);
-        if (dismissalReasonContainer) {
-          if (this.value === "Dismissed") {
+        
+        // Hide all dynamically
+        if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
+        if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
+        if (assigneeContainer) assigneeContainer.classList.add("hidden");
+
+        // Show based on user selection
+        if (this.value === "Dismissed" && dismissalReasonContainer) {
             dismissalReasonContainer.classList.remove("hidden");
-          } else {
-            dismissalReasonContainer.classList.add("hidden");
-          }
+        } else if (this.value === "Resolved" && resolvedByContainer) {
+            resolvedByContainer.classList.remove("hidden");
+        } else if (this.value === "In Progress" && assigneeContainer) {
+            assigneeContainer.classList.remove("hidden");
         }
       });
     }
