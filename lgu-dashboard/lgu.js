@@ -2178,7 +2178,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       });
     }
 
-    // Initialize Sub-Tab Filters
+    // Initialize Sub-Tab Filters  
     setupTabFilters();
   }
 
