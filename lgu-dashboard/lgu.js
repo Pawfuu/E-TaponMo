@@ -109,6 +109,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // NEW: Task Management State Variables
   let taskCurrentTab = 'all';
   let taskCurrentPriority = 'all';
+  let taskCurrentStatus = 'all';
+  let taskCurrentAssignee = 'all';
   let taskSearchQuery = '';
   let taskCurrentPage = 1;
   const tasksPerPage = 7;
@@ -397,7 +399,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    // 5. Task Management View District Dropdown
+   // 5. Task Management View District Dropdown
     const taskDistMenu = document.getElementById("task-dropdown-district-menu");
     const taskDistText = document.getElementById("task-dropdown-district-text");
     if (taskDistMenu && taskDistMenu.children.length === 0) {
@@ -408,6 +410,32 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         optionDiv.dataset.value = dist; 
         optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
         taskDistMenu.appendChild(optionDiv);
+      });
+    }
+
+    // 6. Reports View Assignee Dropdown
+    const reportsAssgnMenu = document.getElementById("reports-dropdown-assignee-menu");
+    const reportsAssgnText = document.getElementById("reports-dropdown-assignee-text");
+    if (reportsAssgnMenu) {
+      const uniques = [...new Set(reportsList.map(r => r.assignedToCode || "Unassigned"))];
+      reportsAssgnMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Assignees</div>`;
+      uniques.forEach(v => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
+        optionDiv.dataset.value = v;
+        optionDiv.textContent = v;
+        reportsAssgnMenu.appendChild(optionDiv);
+      });
+      
+      reportsAssgnMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          currentAssigneeFilter = e.target.dataset.value;
+          if (reportsAssgnText) reportsAssgnText.textContent = e.target.textContent;
+          reportsAssgnMenu.classList.add("hidden");
+          currentPage = 1;
+          renderReportsTable();
+        });
       });
     }
   }
@@ -597,7 +625,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("stat-resolved")) document.getElementById("stat-resolved").textContent = String(resolvedCount);
 
     // 2. Dynamic Map View Stats (Active non-resolved alerts)
-    const activeAlerts = reports.filter(r => r.status !== "Resolved");
+    const activeAlerts = reports.filter(r => r.status !== "Resolved" && r.status !== "Dismissed");
     const totalActive = activeAlerts.length;
 
     // Calculate how many active reports were submitted TODAY
@@ -943,269 +971,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     drawBarangayTrendChart();
   }
 
-  function renderTaskManagement() {
-    const tbody = document.getElementById('task-table-body');
-    const counter = document.getElementById('task-table-results-counter');
-    const pager = document.getElementById('task-pagination-controls');
-    if (!tbody || !reports) return;
-
-    // 1. Synthesize Tasks from live Reports
-    let allTasks = reports.map((r, i) => {
-      const sev = r.severity || 0;
-      const upvotes = r.upvotes || 1;
-      
-      // Upvotes organically raise priority!
-      let priority = 'Low';
-      if (sev >= 4 || upvotes >= 10) priority = 'High';
-      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
-
-      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
-      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
-      
-      let status = 'Planning';
-      let isOverdue = false;
-      if (r.status === 'Resolved') status = 'Completed';
-      else if (r.status === 'Dismissed') status = 'Failed'; // Workflow C: Map Dismissed to Failed
-      else if (r.status === 'In Progress') status = 'In Progress';
-      else if (ageMs > (48 * 60 * 60 * 1000) && r.status === 'Pending Verification') { 
-        status = 'Overdue'; 
-        isOverdue = true; 
-      }
-      else status = 'Pending';
-
-      // Keep unassigned tasks cleanly separate for Workflow A mapping
-      let assignee = 'Unassigned';
-      let team = 'Pending Assignment';
-      
-      if (status === 'Completed' && r.resolvedByCode) {
-          assignee = `Verified: ${r.resolvedByCode.split(' ')[0]}`; // Clean Admin ID
-          team = 'Admin Finalized';
-      } else if (status === 'In Progress' && r.assignedToCode) {
-          assignee = `${r.assignedToCode}`; // Clean Truck ID
-          team = 'Active Deployment';
-      } else if (status === 'Completed') {
-          assignee = 'Completed Unit';
-          team = 'Operations';
-      } else if (status === 'In Progress') {
-          assignee = 'Response Team';
-          team = 'Operations';
-      }
-
-      return {
-        id: `TSK-${new Date().getFullYear()}-${1000 + i}`,
-        refId: r.id,
-        docId: r.docId,
-        title: r.category === 'Uncategorized' ? 'Waste Clearing' : `${r.category} Collection`,
-        barangay: r.barangay,
-        assignee: assignee,
-        team: team,
-        priority: priority,
-        status: status,
-        isOverdue: isOverdue,
-        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        rawDate: targetDate.getTime()
-      };
-    });
-
-    // Update Top KPIs
-    document.getElementById('task-stat-total').textContent = allTasks.length;
-    document.getElementById('task-stat-assigned').textContent = allTasks.filter(t => t.status === 'In Progress').length;
-    document.getElementById('task-stat-overdue').textContent = allTasks.filter(t => t.isOverdue).length;
-    document.getElementById('task-stat-completed').textContent = allTasks.filter(t => t.status === 'Completed').length;
-
-    // Update Tab Counts
-    document.getElementById('task-count-all').textContent = `(${allTasks.length})`;
-    document.getElementById('task-count-mine').textContent = `(${allTasks.filter(t => t.assignee === 'Maria Santos').length})`;
-    document.getElementById('task-count-overdue').textContent = `(${allTasks.filter(t => t.isOverdue).length})`;
-    document.getElementById('task-count-completed').textContent = `(${allTasks.filter(t => t.status === 'Completed').length})`;
-
-    // 2. Apply Filters
-    let list = [...allTasks];
-    if (taskState.tab === 'mine') list = list.filter(t => t.assignee === 'Maria Santos');
-    if (taskState.tab === 'overdue') list = list.filter(t => t.isOverdue);
-    if (taskState.tab === 'completed') list = list.filter(t => t.status === 'Completed');
-
-    if (taskState.status !== 'all') list = list.filter(t => t.status === taskState.status);
-    if (taskState.priority !== 'all') list = list.filter(t => t.priority === taskState.priority);
-    if (taskState.assignee !== 'all') list = list.filter(t => t.assignee === taskState.assignee);
-
-    if (taskState.search.trim()) {
-        const q = taskState.search.trim().toLowerCase();
-        list = list.filter(t => t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.barangay.toLowerCase().includes(q));
-    }
-
-    list.sort((a, b) => a.rawDate - b.rawDate);
-
-    // 3. Render Table
-    const totalPages = Math.max(1, Math.ceil(list.length / TASK_PAGE_SIZE));
-    if (taskState.page > totalPages) taskState.page = totalPages;
-    const start = (taskState.page - 1) * TASK_PAGE_SIZE;
-    const pageItems = list.slice(start, start + TASK_PAGE_SIZE);
-
-    tbody.innerHTML = '';
-    const priorityStyle = { High: 'bg-rose-50 text-rose-600 border border-rose-100', Medium: 'bg-amber-50 text-amber-700 border border-amber-100', Low: 'bg-blue-50 text-blue-600 border border-blue-100' };
-    const statusStyle = {
-        Planning: { dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600' },
-        Assigned: { dot: 'bg-indigo-500', pill: 'bg-indigo-50 text-indigo-600' },
-        Pending: { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700' },
-        'In Progress': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-600' },
-        Overdue: { dot: 'bg-rose-500', pill: 'bg-rose-50 text-rose-600' },
-        Completed: { dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-600' },
-    };
-
-    if (pageItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks match your filters.</td></tr>`;
-    } else {
-        pageItems.forEach((t, i) => {
-            const st = statusStyle[t.status] || statusStyle.Planning;
-            // Extrapolate initials safely, handling "Ref: CODE" edge cases
-            const initArr = t.assignee.replace('Ref: ', '').replace('Verified: ', '').split(' ');
-            const initials = initArr.map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'NA';
-            
-            tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-50" style="animation-delay: ${i * 30}ms;">
-                <td class="px-5 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">${t.id}</td>
-                <td class="px-5 py-3.5">
-                  <p class="font-semibold text-slate-800">${t.title}</p>
-                </td>
-                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.barangay}</td>
-                <td class="px-5 py-3.5">
-                  <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-[10px] font-black flex-shrink-0">${initials}</span>
-                    <div class="min-w-0">
-                      <p class="font-semibold text-slate-800 text-xs truncate">${t.assignee}</p>
-                      <p class="text-[10px] text-slate-400 truncate">${t.team}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-5 py-3.5">
-                  <span class="text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${priorityStyle[t.priority]}">${t.priority}</span>
-                </td>
-                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.due}</td>
-                <td class="px-5 py-3.5">
-                  <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${st.pill}">
-                    <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
-                  </span>
-                </td>
-                <td class="px-5 py-3.5 text-right">
-                  <button onclick="window.openTaskModal('${t.docId}')" class="w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition-colors inline-flex items-center justify-center cursor-pointer">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
-                  </button>
-                </td>
-            </tr>`;
-        });
-    }
-
-    if(counter) counter.textContent = list.length ? `Showing ${start + 1} to ${Math.min(start + TASK_PAGE_SIZE, list.length)} of ${list.length} tasks` : 'Showing 0 tasks';
-
-    // Pagination render
-    if (pager) {
-        pager.innerHTML = '';
-        if (totalPages > 1) {
-            const mkBtn = (lbl, pg, active, disabled) => {
-                const b = document.createElement('button');
-                b.innerHTML = lbl; b.disabled = disabled;
-                b.className = `w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`;
-                if (!disabled) b.addEventListener('click', () => { taskState.page = pg; renderTaskManagement(); });
-                return b;
-            };
-            pager.appendChild(mkBtn('‹', Math.max(1, taskState.page - 1), false, taskState.page === 1));
-            for (let p = 1; p <= totalPages; p++) pager.appendChild(mkBtn(String(p), p, p === taskState.page, false));
-            pager.appendChild(mkBtn('›', Math.min(totalPages, taskState.page + 1), false, taskState.page === totalPages));
-        }
-    }
-
-    // 4. Update Assignee Dropdown Dynamically
-    const assgnMenu = document.getElementById("dd-task-assignee-menu");
-    if(assgnMenu && assgnMenu.children.length <= 1) {
-        const uniques = [...new Set(allTasks.map(t => t.assignee))];
-        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
-        uniques.forEach(v => {
-            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
-        });
-        
-        assgnMenu.querySelectorAll('.dd-opt').forEach(opt => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                taskState.assignee = opt.dataset.value;
-                document.getElementById('dd-task-assignee-text').textContent = opt.dataset.value === 'all' ? 'All Assignees' : opt.dataset.value;
-                assgnMenu.classList.add('hidden');
-                taskState.page = 1;
-                renderTaskManagement();
-            });
-        });
-    }
-
-    // 5. Sidebar: Service Queue
-    const brgyCounts = {};
-    allTasks.filter(t => t.status !== 'Completed').forEach(t => {
-      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
-    });
-    
-    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 5);
-    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
-    
-    const queueContainer = document.getElementById("service-queue-list");
-    if(queueContainer) {
-      queueContainer.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Queue is empty.</p>` : "";
-      queueData.forEach(q => {
-        const pct = (q.count / maxQueue) * 100;
-        let c = 'bg-emerald-500'; let tc = 'text-emerald-600';
-        if(q.count > 10) { c = 'bg-rose-500'; tc = 'text-rose-600'; }
-        else if(q.count > 5) { c = 'bg-amber-500'; tc = 'text-amber-600'; }
-
-        queueContainer.innerHTML += `
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-bold text-slate-700">${q.name}</span>
-              <span class="text-xs font-black ${tc}">${q.count}</span>
-            </div>
-            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-full ${c} rounded-full" style="width:${pct}%"></div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    // 6. Sidebar: Donut Chart
-    const statusCounts = { 'In Progress': 0, 'Pending': 0, 'Overdue': 0, 'Planning': 0 };
-    allTasks.forEach(t => { if(statusCounts[t.status] !== undefined) statusCounts[t.status]++; });
-
-    document.getElementById("task-donut-total").textContent = allTasks.length;
-    const oData = [
-      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
-      { label: 'Pending', val: statusCounts['Pending'], color: '#f59e0b' },
-      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
-      { label: 'Planning', val: statusCounts['Planning'], color: '#94a3b8' }
-    ].filter(d => d.val > 0);
-
-    if (donutEl && legendEl) {
-      legendEl.innerHTML = oData.length === 0 ? `<p class="text-xs text-slate-400 italic py-4">No data</p>` : "";
-      let cursor = 0;
-      const stops = oData.map(o => {
-          const startPct = (cursor / allTasks.length) * 100;
-          cursor += o.val;
-          const endPct = (cursor / allTasks.length) * 100;
-          return `${o.color} ${startPct}% ${endPct}%`;
-      }).join(', ');
-      donutEl.style.background = `conic-gradient(${stops})`;
-
-      oData.forEach(o => {
-          const pct = Math.round((o.val / allTasks.length) * 100);
-          legendEl.innerHTML += `
-            <div class="flex items-center justify-between gap-2 mb-2.5">
-              <span class="flex items-center gap-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
-                <span class="truncate">${o.label}</span>
-              </span>
-              <span class="text-slate-400 font-semibold">${pct}%</span>
-            </div>
-          `;
-      });
-    }
-  }
-
   function drawBarangayTrendChart() {
     const container = document.getElementById("brgy-trend-chart");
     if (!container || !dashboardMetrics) return;
@@ -1540,7 +1305,9 @@ function drawReportsOverTimeChart(filtered, dateVal) {
 
     // Evaluate Status First (Base Color)
     if (report.status === "Resolved") {
-      pinColorClass = "text-slate-400";
+      pinColorClass = "text-emerald-500";
+    } else if (report.status === "Dismissed") {
+      pinColorClass = "text-slate-800 opacity-60"; 
     } else if (report.status === "In Progress") {
       pinColorClass = "text-blue-500";
       // If severe AND in progress -> Blue Pin, Blue Pulse
@@ -1854,10 +1621,11 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   // 7. REPORTS TABLE LOGIC
   // ==========================================
 
-  // Track active sub-filter tab and dropdown states globally
+ // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
   let currentDistrictFilter = "all";
+  let currentAssigneeFilter = "all";
   let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
 
@@ -1885,13 +1653,15 @@ let activeBrgySearchQuery = "";
       all: reports.length,
       pending: reports.filter(r => r.status === "Pending Verification").length,
       progress: reports.filter(r => r.status === "In Progress").length,
-      resolved: reports.filter(r => r.status === "Resolved").length
+      resolved: reports.filter(r => r.status === "Resolved").length,
+      dismissed: reports.filter(r => r.status === "Dismissed").length
     };
 
     if (document.getElementById("tab-count-all")) document.getElementById("tab-count-all").textContent = `(${counts.all})`;
     if (document.getElementById("tab-count-pending")) document.getElementById("tab-count-pending").textContent = `(${counts.pending})`;
     if (document.getElementById("tab-count-progress")) document.getElementById("tab-count-progress").textContent = `(${counts.progress})`;
     if (document.getElementById("tab-count-resolved")) document.getElementById("tab-count-resolved").textContent = `(${counts.resolved})`;
+    if (document.getElementById("tab-count-dismissed")) document.getElementById("tab-count-dismissed").textContent = `(${counts.dismissed})`;
 
     // Filter list based on selected sub-tab
     let filteredList = [...reports];
@@ -1901,6 +1671,8 @@ let activeBrgySearchQuery = "";
       filteredList = filteredList.filter(r => r.status === "In Progress");
     } else if (currentStatusFilter === "resolved") {
       filteredList = filteredList.filter(r => r.status === "Resolved");
+    } else if (currentStatusFilter === "dismissed") {
+      filteredList = filteredList.filter(r => r.status === "Dismissed");
     }
 
     // Apply secondary category filter from custom dropdown
@@ -1911,6 +1683,14 @@ let activeBrgySearchQuery = "";
     // ADD THIS: Apply District filter
     if (currentDistrictFilter && currentDistrictFilter !== "all") {
       filteredList = filteredList.filter(r => r.district === currentDistrictFilter);
+    }
+
+    // Apply Assignee filter
+    if (currentAssigneeFilter && currentAssigneeFilter !== "all") {
+      filteredList = filteredList.filter(r => {
+        const assignee = r.assignedToCode || "Unassigned";
+        return assignee === currentAssigneeFilter;
+      });
     }
 
     // Apply text query filter
@@ -1981,6 +1761,8 @@ let activeBrgySearchQuery = "";
         badgeColorClass = "bg-blue-50 text-blue-700 border border-blue-200";
       } else if (report.status === "Pending Verification") {
         badgeColorClass = "bg-amber-50 text-amber-700 border border-amber-200";
+      } else if (report.status === "Dismissed") {
+        badgeColorClass = "bg-rose-50 text-rose-700 border border-rose-200";
       }
 
       // 2. Calculate Priority Badge Styles
@@ -1997,19 +1779,30 @@ let activeBrgySearchQuery = "";
 
       tr.innerHTML = `
         <td class="px-6 py-4 font-mono font-semibold text-slate-900">#${report.id}</td>
-        <td class="px-6 py-4 font-semibold text-slate-800 capitalize">${report.category}</td>
-        <td class="px-6 py-4 text-slate-600 max-w-xs truncate">${report.location}</td>
         <td class="px-6 py-4">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeColorClass}">
-            ${report.status}
-          </span>
+          <div class="font-semibold text-slate-800 capitalize">${report.category}</div>
+          <div class="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">${report.location}</div>
         </td>
         <td class="px-6 py-4">
           <span class="${priorityClass}">
             ${priorityText}
           </span>
         </td>
-        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
+        <td class="px-6 py-4 text-sm font-semibold whitespace-nowrap ${!report.assignedToCode ? 'text-slate-400 italic' : 'text-slate-700'}">
+          ${report.assignedToCode || 'Unassigned'}
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+          N/A
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeColorClass}">
+            ${report.status}
+          </span>
+        </td>
+        <td class="px-6 py-4 text-sm font-bold text-emerald-600">
+          ${report.upvotes || 0}
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
         <td class="px-6 py-4 text-right">
           <button data-doc-id="${report.docId}" class="action-view-btn text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors px-3 py-1.5 rounded bg-emerald-50 hover:bg-emerald-100 inline-flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -2032,10 +1825,12 @@ let activeBrgySearchQuery = "";
     const queueList = document.getElementById("service-queue-list");
     const donutEl = document.getElementById("task-donut-chart");
     const legendEl = document.getElementById("task-donut-legend");
+    const counter = document.getElementById("task-table-results-counter");
+    const pager = document.getElementById("task-pagination-controls");
     if (!tbody || !queueList || !donutEl || !reports) return;
 
     // 1. Process Reports into "Tasks" applying Upvote Priority Logic
-    let allTasks = reports.map(r => {
+    let allTasks = reports.map((r, i) => {
       const sev = r.severity || 0;
       const upvotes = r.upvotes || 1;
       
@@ -2055,9 +1850,9 @@ let activeBrgySearchQuery = "";
           isOverdue = true;
       }
 
-      let assignee = 'Unassigned';
-      if (r.status === 'In Progress') assignee = 'Response Team';
-      else if (r.status === 'Resolved') assignee = 'Completed Unit';
+      // ASSIGNEE MAPPING: Pull exact code directly from the database record
+      let assignee = r.assignedToCode || 'Unassigned';
+      let team = r.assignedToCode ? 'Active Deployment' : 'Pending Assignment';
 
       return {
         id: r.id,
@@ -2065,6 +1860,7 @@ let activeBrgySearchQuery = "";
         title: `${r.category} Clearing`,
         barangay: r.barangay,
         assignee: assignee,
+        team: team,
         priority: priority,
         status: uiStatus,
         isOverdue: isOverdue,
@@ -2080,28 +1876,31 @@ let activeBrgySearchQuery = "";
     const assignedCount = allTasks.filter(t => t.status === 'In Progress').length;
     const overdueCount = allTasks.filter(t => t.isOverdue).length;
     const completedCount = allTasks.filter(t => t.status === 'Resolved').length;
+    const dismissedCount = allTasks.filter(t => t.status === 'Dismissed').length;
 
-    // Fixed IDs to match HTML
     if(document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
     if(document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
     if(document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
     if(document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
-
+    if(document.getElementById("task-stat-dismissed")) document.getElementById("task-stat-dismissed").textContent = dismissedCount;
+    
     if(document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
+    if(document.getElementById("task-count-mine")) document.getElementById("task-count-mine").textContent = `(${assignedCount})`;
     if(document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
-    if(document.getElementById("task-count-completed")) document.getElementById("task-count-completed").textContent = `(${completedCount})`;
-
+    if(document.getElementById("task-count-resolved")) document.getElementById("task-count-resolved").textContent = `(${completedCount})`;
+    if(document.getElementById("task-count-dismissed")) document.getElementById("task-count-dismissed").textContent = `(${dismissedCount})`;
     // 3. Apply Filters
     let filteredTasks = [...allTasks];
     
-   // Fix: Show ALL tasks in 'all' tab, don't restrict to activeTasks
-    if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+   if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+    else if (taskCurrentTab === 'mine') filteredTasks = filteredTasks.filter(t => t.status === 'In Progress');
     else if (taskCurrentTab === 'overdue') filteredTasks = filteredTasks.filter(t => t.isOverdue);
-    else if (taskCurrentTab === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
-
-    if (taskCurrentPriority !== 'all') {
-      filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
-    }
+    else if (taskCurrentTab === 'resolved') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
+    else if (taskCurrentTab === 'dismissed') filteredTasks = filteredTasks.filter(t => t.status === 'Dismissed');
+    
+    if (taskCurrentPriority !== 'all') filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
+    if (taskCurrentStatus !== 'all') filteredTasks = filteredTasks.filter(t => t.status === taskCurrentStatus);
+    if (taskCurrentAssignee !== 'all') filteredTasks = filteredTasks.filter(t => t.assignee === taskCurrentAssignee);
 
     if (taskSearchQuery) {
       const q = taskSearchQuery.toLowerCase();
@@ -2122,7 +1921,7 @@ let activeBrgySearchQuery = "";
 
     tbody.innerHTML = "";
     if (pageItems.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
     } else {
       pageItems.forEach((t, i) => {
         const priorityColors = {
@@ -2132,14 +1931,14 @@ let activeBrgySearchQuery = "";
         };
 
         const statusStyles = {
-          'Pending': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' },
+          'Pending Verification': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' },
           'In Progress': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>`, pill: 'bg-blue-50 text-blue-700 border-blue-200' },
           'Overdue': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' },
-          'Completed': { icon: `<svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`, pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-          'Failed': { icon: `<svg class="w-2.5 h-2.5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' } // Workflow C UI
+          'Resolved': { icon: `<svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`, pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          'Dismissed': { icon: `<svg class="w-2.5 h-2.5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' }
         };
 
-        const st = statusStyles[t.status] || statusStyles['Pending'];
+        const st = statusStyles[t.status] || { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' };
         
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-100" style="animation-delay: ${i * 30}ms;">
@@ -2155,10 +1954,11 @@ let activeBrgySearchQuery = "";
             <td class="px-5 py-4">
               <span class="text-[10px] font-bold px-2.5 py-1 rounded border ${priorityColors[t.priority]}">${t.priority}</span>
             </td>
+            <td class="px-5 py-4 text-sm font-semibold whitespace-nowrap ${t.assignee === 'Unassigned' ? 'text-slate-400 italic' : 'text-slate-700 font-bold'}">${t.assignee}</td>
             <td class="px-5 py-4 text-xs font-bold ${t.isOverdue ? 'text-rose-600' : 'text-slate-600'}">${t.due}</td>
             <td class="px-5 py-4">
               <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${st.pill}">
-                <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+                ${st.icon}${t.status}
               </span>
             </td>
             <td class="px-5 py-4 text-right">
@@ -2171,10 +1971,8 @@ let activeBrgySearchQuery = "";
       });
     }
 
-    const counter = document.getElementById("task-table-counter");
     if(counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
-
-    const pager = document.getElementById("task-pagination-controls");
+   
     if (pager) {
         pager.innerHTML = "";
         if (totalPages > 1) {
@@ -2194,7 +1992,17 @@ let activeBrgySearchQuery = "";
         }
     }
 
-    // 5. Sidebar: Service Queue
+    // 5. Update Assignee Dropdown Dynamically
+    const assgnMenu = document.getElementById("dd-task-assignee-menu");
+    if(assgnMenu) {
+        const uniques = [...new Set(allTasks.map(t => t.assignee))];
+        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
+        uniques.forEach(v => {
+            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
+        });
+    }
+
+    // 6. Sidebar: Service Queue
     const brgyCounts = {};
     activeTasks.forEach(t => {
       brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
@@ -2203,29 +2011,29 @@ let activeBrgySearchQuery = "";
     const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 6);
     const maxQueue = Math.max(...queueData.map(q => q.count), 1);
     
-    queueList.innerHTML = "";
-    if(queueData.length === 0) queueList.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>`;
-    
-    queueData.forEach(q => {
-      const pct = (q.count / maxQueue) * 100;
-      let barColor = 'bg-emerald-500';
-      if(q.count > 10) barColor = 'bg-rose-500';
-      else if(q.count > 4) barColor = 'bg-amber-500';
+    if (queueList) {
+        queueList.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>` : "";
+        queueData.forEach(q => {
+          const pct = (q.count / maxQueue) * 100;
+          let barColor = 'bg-emerald-500';
+          if(q.count > 10) barColor = 'bg-rose-500';
+          else if(q.count > 4) barColor = 'bg-amber-500';
 
-      queueList.innerHTML += `
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
-            <span class="text-[11px] font-black text-slate-900">${q.count}</span>
-          </div>
-          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
-          </div>
-        </div>
-      `;
-    });
+          queueList.innerHTML += `
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
+                <span class="text-[11px] font-black text-slate-900">${q.count}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+              </div>
+            </div>
+          `;
+        });
+    }
 
-    // 6. Sidebar: Donut Chart
+    // 7. Sidebar: Donut Chart
     const statusCounts = { 'Pending Verification': 0, 'In Progress': 0, 'Overdue': 0, 'Resolved': 0 };
     allTasks.forEach(t => {
       if(statusCounts[t.status] !== undefined) statusCounts[t.status]++;
@@ -2241,32 +2049,34 @@ let activeBrgySearchQuery = "";
       { label: 'Completed', val: statusCounts['Resolved'], color: '#10b981' }
     ].filter(d => d.val > 0);
 
-    legendEl.innerHTML = "";
-    if (oData.length === 0) {
-       donutEl.style.background = "#e2e8f0";
-       legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
-    } else {
-      let cursor = 0;
-      const stops = oData.map(o => {
-          const startPct = (cursor / dTotal) * 100;
-          cursor += o.val;
-          const endPct = (cursor / dTotal) * 100;
-          return `${o.color} ${startPct}% ${endPct}%`;
-      }).join(', ');
-      donutEl.style.background = `conic-gradient(${stops})`;
+    if (legendEl && donutEl) {
+        legendEl.innerHTML = "";
+        if (oData.length === 0) {
+           donutEl.style.background = "#e2e8f0";
+           legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
+        } else {
+          let cursor = 0;
+          const stops = oData.map(o => {
+              const startPct = (cursor / dTotal) * 100;
+              cursor += o.val;
+              const endPct = (cursor / dTotal) * 100;
+              return `${o.color} ${startPct}% ${endPct}%`;
+          }).join(', ');
+          donutEl.style.background = `conic-gradient(${stops})`;
 
-      oData.forEach(o => {
-          const pct = Math.round((o.val / dTotal) * 100);
-          legendEl.innerHTML += `
-            <div class="flex items-center justify-between gap-2 mb-2">
-              <span class="flex items-center gap-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
-                <span class="truncate">${o.label}</span>
-              </span>
-              <span class="text-slate-500 font-bold">${pct}%</span>
-            </div>
-          `;
-      });
+          oData.forEach(o => {
+              const pct = Math.round((o.val / dTotal) * 100);
+              legendEl.innerHTML += `
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                    <span class="truncate">${o.label}</span>
+                  </span>
+                  <span class="text-slate-500 font-bold">${pct}%</span>
+                </div>
+              `;
+          });
+        }
     }
   }
 
@@ -2275,7 +2085,8 @@ let activeBrgySearchQuery = "";
       all: document.getElementById("filter-tab-all"),
       pending: document.getElementById("filter-tab-pending"),
       progress: document.getElementById("filter-tab-progress"),
-      resolved: document.getElementById("filter-tab-resolved")
+      resolved: document.getElementById("filter-tab-resolved"),
+      dismissed: document.getElementById("filter-tab-dismissed")
     };
     Object.keys(tabs).forEach(key => {
       const t = tabs[key];
@@ -2295,7 +2106,8 @@ let activeBrgySearchQuery = "";
       all: document.getElementById("filter-tab-all"),
       pending: document.getElementById("filter-tab-pending"),
       progress: document.getElementById("filter-tab-progress"),
-      resolved: document.getElementById("filter-tab-resolved")
+      resolved: document.getElementById("filter-tab-resolved"),
+      dismissed: document.getElementById("filter-tab-dismissed")
     };
 
     Object.keys(tabs).forEach(key => {
@@ -2311,7 +2123,8 @@ let activeBrgySearchQuery = "";
             all: "all",
             pending: "Pending Verification",
             progress: "In Progress",
-            resolved: "Resolved"
+            resolved: "Resolved",
+            dismissed: "Dismissed"
           };
           statusSelect.value = selectVals[key] || "all";
         }
@@ -2578,7 +2391,8 @@ function updateModalStatusBadge(status) {
         category: selectedReport.category,
         lat: lat,
         lng: lng,
-        statusUpdate: firestoreStatus // Log the new status state
+        statusUpdate: firestoreStatus,
+        resolvedBy: updatePayload.resolvedByCode || "N/A" // Captures the admin ID
       };
 
       // --- 3. SEND TO HEDERA ---
@@ -2713,7 +2527,7 @@ function updateModalStatusBadge(status) {
       });
     }
 
-    const tTabs = ['all', 'overdue', 'completed'];
+    const tTabs = ['all', 'mine', 'overdue', 'resolved', 'dismissed'];
     tTabs.forEach(key => {
       const btn = document.getElementById(`task-tab-${key}`);
       if(btn) {
@@ -2752,17 +2566,73 @@ function updateModalStatusBadge(status) {
       });
     }
 
-    document.addEventListener("click", () => {
-        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+   // --- STATUS & ASSIGNEE DROPDOWNS ---
+    const tStatusBtn = document.getElementById("dd-task-status-btn");
+    const tStatusMenu = document.getElementById("dd-task-status-menu");
+    const tStatusText = document.getElementById("dd-task-status-text");
+    if (tStatusBtn && tStatusMenu) {
+      tStatusBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tStatusMenu.classList.toggle("hidden");
+      });
+      tStatusMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          taskCurrentStatus = e.target.dataset.value;
+          if (tStatusText) tStatusText.textContent = e.target.textContent;
+          tStatusMenu.classList.add("hidden");
+          taskCurrentPage = 1;
+          renderTaskManagement();
+        });
+      });
+    }
+
+    const tAssgnBtn = document.getElementById("dd-task-assignee-btn");
+    const tAssgnMenu = document.getElementById("dd-task-assignee-menu");
+    if (tAssgnBtn && tAssgnMenu) {
+      tAssgnBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tAssgnMenu.classList.toggle("hidden");
+      });
+    }
+
+    // Dynamic listener for Assignee dropdown generated in renderTaskManagement
+    document.addEventListener("click", (e) => {
+        const option = e.target.closest('.dd-opt');
+        if (option && e.target.closest('#dd-task-assignee-menu')) {
+            e.stopPropagation();
+            taskCurrentAssignee = option.dataset.value; // Pull the dataset from the specific div clicked
+            const tAssgnText = document.getElementById('dd-task-assignee-text');
+            if (tAssgnText) tAssgnText.textContent = taskCurrentAssignee === 'all' ? 'All Assignees' : taskCurrentAssignee;
+            
+            if (tAssgnMenu) tAssgnMenu.classList.add('hidden');
+            taskCurrentPage = 1;
+            renderTaskManagement();
+        }
     });
 
-    const tResetBtn = document.getElementById("task-reset-btn");
+    document.addEventListener("click", () => {
+        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+        if(tStatusMenu && !tStatusMenu.classList.contains("hidden")) tStatusMenu.classList.add("hidden");
+        if(tAssgnMenu && !tAssgnMenu.classList.contains("hidden")) tAssgnMenu.classList.add("hidden");
+    });
+
+    const tResetBtn = document.getElementById("task-reset-filters-btn");
     if (tResetBtn) {
        tResetBtn.addEventListener("click", () => {
           taskSearchQuery = '';
           if(tSearchInput) tSearchInput.value = '';
+          
           taskCurrentPriority = 'all';
           if(tPriText) tPriText.textContent = 'All Priorities';
+          
+          taskCurrentStatus = 'all';
+          if(tStatusText) tStatusText.textContent = 'All Status';
+          
+          taskCurrentAssignee = 'all';
+          const tAssgnText = document.getElementById('dd-task-assignee-text');
+          if(tAssgnText) tAssgnText.textContent = 'All Assignees';
+          
           taskCurrentPage = 1;
           renderTaskManagement();
        });
@@ -2830,6 +2700,7 @@ function updateModalStatusBadge(status) {
     });
 
     // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
+   // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
     const rptStatusBtn = document.getElementById("reports-dropdown-status-btn");
     const rptStatusMenu = document.getElementById("reports-dropdown-status-menu");
     const rptStatusText = document.getElementById("reports-dropdown-status-text");
@@ -2840,13 +2711,15 @@ function updateModalStatusBadge(status) {
         rptStatusMenu.classList.toggle("hidden");
         document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
       });
 
       rptStatusMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
           const val = e.target.dataset.value;
-          const keys = { "all": "all", "Pending Verification": "pending", "In Progress": "progress", "Resolved": "resolved" };
+          const keys = { "all": "all", "Pending Verification": "pending", "In Progress": "progress", "Resolved": "resolved", "Dismissed": "dismissed" };
 
           currentStatusFilter = keys[val] || "all";
           if (rptStatusText) rptStatusText.textContent = e.target.textContent;
@@ -2856,6 +2729,7 @@ function updateModalStatusBadge(status) {
           renderReportsTable();
         });
       });
+    }
 
     const rptDistBtn = document.getElementById("reports-dropdown-district-btn");
     const rptDistMenu = document.getElementById("reports-dropdown-district-menu");
@@ -2866,6 +2740,59 @@ function updateModalStatusBadge(status) {
         document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
+      });
+    }
+
+    const rptCatBtn = document.getElementById("reports-dropdown-category-btn");
+    const rptCatMenu = document.getElementById("reports-dropdown-category-menu");
+    if (rptCatBtn && rptCatMenu) {
+      rptCatBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptCatMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
+      });
+    }
+
+    const rptAssgnBtn = document.getElementById("reports-dropdown-assignee-btn");
+    const rptAssgnMenu = document.getElementById("reports-dropdown-assignee-menu");
+    if (rptAssgnBtn && rptAssgnMenu) {
+      rptAssgnBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptAssgnMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+      });
+    }
+
+    const rptSortBtn = document.getElementById("reports-dropdown-sort-btn");
+    const rptSortMenu = document.getElementById("reports-dropdown-sort-menu");
+    const rptSortText = document.getElementById("reports-dropdown-sort-text");
+
+    if (rptSortBtn && rptSortMenu) {
+      rptSortBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptSortMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
+      });
+
+      rptSortMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          currentSortOrder = e.target.dataset.value;
+          if (rptSortText) rptSortText.textContent = e.target.textContent;
+          rptSortMenu.classList.add("hidden");
+          currentPage = 1;
+          renderReportsTable();
+        });
       });
     }
 
@@ -2874,6 +2801,7 @@ function updateModalStatusBadge(status) {
         "reports-dropdown-status-menu",
         "reports-dropdown-category-menu",
         "reports-dropdown-district-menu", 
+        "reports-dropdown-assignee-menu",
         "reports-dropdown-sort-menu",
         "dropdown-status-menu",
         "dropdown-category-menu"
@@ -2891,6 +2819,7 @@ function updateModalStatusBadge(status) {
         currentStatusFilter = "all";
         currentCategoryFilter = "all";
         currentDistrictFilter = "all"; 
+        currentAssigneeFilter = "all";
         currentSortOrder = "date-desc";
 
         const rptStatusText = document.getElementById("reports-dropdown-status-text");
@@ -2899,66 +2828,7 @@ function updateModalStatusBadge(status) {
         if (rptStatusText) rptStatusText.textContent = "All Status";
         if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
         if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts"; 
-        if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
-
-        updateTabHighlight("all");
-        currentPage = 1;
-        renderReportsTable();
-      });
-    }
-    }
-
-    const rptCatBtn = document.getElementById("reports-dropdown-category-btn");
-    const rptCatMenu = document.getElementById("reports-dropdown-category-menu");
-    if (rptCatBtn && rptCatMenu) {
-      rptCatBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        rptCatMenu.classList.toggle("hidden");
-        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
-        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
-      });
-    }
-
-    const rptSortBtn = document.getElementById("reports-dropdown-sort-btn");
-    const rptSortMenu = document.getElementById("reports-dropdown-sort-menu");
-    const rptSortText = document.getElementById("reports-dropdown-sort-text");
-
-    if (rptSortBtn && rptSortMenu) {
-      rptSortBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        rptSortMenu.classList.toggle("hidden");
-        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
-        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
-      });
-
-      rptSortMenu.querySelectorAll("div[data-value]").forEach(opt => {
-        opt.addEventListener("click", (e) => {
-          e.stopPropagation();
-          currentSortOrder = e.target.dataset.value;
-          if (rptSortText) rptSortText.textContent = e.target.textContent;
-          rptSortMenu.classList.add("hidden");
-          currentPage = 1;
-          renderReportsTable();
-        });
-      });
-    }
-
-    const rptBrgyBtn = document.getElementById("reports-dropdown-barangay-btn");
-    if (rptBrgyBtn) {
-      rptBrgyBtn.addEventListener("click", () => showToast("Barangay Mapping"));
-    }
-
-    const filterBtn = document.getElementById("filter-btn");
-    if (filterBtn) {
-      filterBtn.addEventListener("click", function () {
-        if (reportSearchInput) reportSearchInput.value = "";
-
-        currentStatusFilter = "all";
-        currentCategoryFilter = "all";
-        currentSortOrder = "date-desc";
-
-        if (rptStatusText) rptStatusText.textContent = "All Status";
-        if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
+        if (document.getElementById("reports-dropdown-assignee-text")) document.getElementById("reports-dropdown-assignee-text").textContent = "All Assignees";
         if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
 
         updateTabHighlight("all");
