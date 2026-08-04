@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "sparkpish-eco-mvp"
-  }
+  },
+  "targets": {
+    "sparkpish-eco-mvp": {
+      "hosting": {
+        "demo": [
+          "e-taponmo-ph"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

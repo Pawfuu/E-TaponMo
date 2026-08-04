@@ -27,6 +27,7 @@ export async function logReportOnChain(reportPayload) {
             category: reportPayload.category,
             lat: reportPayload.lat,
             lng: reportPayload.lng,
+            resolvedBy: reportPayload.resolvedBy || "N/A", // Maps the admin ID to the ledger
             timestamp: new Date().toISOString()
         });
 
