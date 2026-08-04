@@ -1,4 +1,4 @@
-import { db } from "../shared/firebase-config.js";
+import { db } from "./shared/firebase-config.js";
 import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // ─── DOM Elements ─────────────────────────────────────────────────────────────

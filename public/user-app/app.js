@@ -154,7 +154,7 @@ function updateStepper() {
     activeStep = 3; // Required details filled
   }
 
-  // Keep at step 4 if submitting OR if the report is finishe
+  // Keep at step 4 if submitting OR if the report is finished
   if (isSubmitting || isReportComplete) {
     activeStep = 4;
   }
@@ -263,12 +263,10 @@ function getErrorMessage(error) {
     return "Request timed out after " + REQUEST_TIMEOUT_MS / 1000 + " seconds. Please check your connection and try again.";
   }
 
-  // Only claim it's a network error if it explicitly mentions fetching/network failure
   if (error instanceof TypeError && error.message.toLowerCase().includes("fetch")) {
     return "Network error — unable to reach the Gemini API. Check your internet connection.";
   }
 
-  // Otherwise, print the actual programming error so you can see it!
   return error.message || "Unknown error. Please try again.";
 }
 
@@ -314,7 +312,7 @@ if (photoInput) {
     selectedFile = file;
     showPhotoPreview(file);
 
-    photoInput.value = ""; // Clear the input value so selecting the same file again still triggers the change event
+    photoInput.value = "";
   });
 }
 
@@ -322,9 +320,6 @@ if (photoInput) {
 // 4. GEMINI AI ANALYSIS
 // ==========================================
 
-/**
- * fetch wrapper with AbortController timeout so hung requests never block the UI.
- */
 async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(function () {
@@ -341,10 +336,6 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
-/**
- * Read a File object and return { base64, mimeType }.
- * Strips the data-URL prefix so Gemini receives raw base64 only.
- */
 function fileToBase64(file) {
   return new Promise(function (resolve, reject) {
     const reader = new FileReader();
@@ -367,10 +358,6 @@ function fileToBase64(file) {
   });
 }
 
-/**
- * Call Gemini generateContent with the image + validator prompt.
- * Uses generationConfig.responseMimeType to force strict JSON output.
- */
 async function analyzeImageWithGemini(base64, mimeType, promptText) {
   const requestBody = {
     contents: [
@@ -419,9 +406,7 @@ async function analyzeImageWithGemini(base64, mimeType, promptText) {
   return extractJsonFromGeminiResponse(data);
 }
 
-/** Pull the JSON string from Gemini's response envelope and parse it */
 function extractJsonFromGeminiResponse(data) {
-  // Catch safety blocks (memes or inappropriate images)
   if (data && data.promptFeedback && data.promptFeedback.blockReason) {
     return { valid: false, error: "Image blocked by AI safety filters." };
   }
@@ -443,23 +428,19 @@ function extractJsonFromGeminiResponse(data) {
   }
 
   try {
-    // Attempt 1: Direct parse in case it's perfectly formatted raw JSON
     return JSON.parse(text.trim());
   } catch (parseError1) {
     try {
-      // Attempt 2: Strip standard markdown code blocks and parse
       let cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
       return JSON.parse(cleanText);
     } catch (parseError2) {
       try {
-        // Attempt 3: Aggressive Regex to extract ONLY the JSON object string
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           return JSON.parse(jsonMatch[0]);
         }
         throw new Error("No JSON structure found.");
       } catch (parseError3) {
-        // If all fallbacks fail, log the raw text and throw the final error
         console.error("Raw Gemini output that failed to parse:", text);
         throw new Error("Could not parse Gemini JSON response.");
       }
@@ -479,13 +460,12 @@ const gpsBtn = document.getElementById("gps-fallback-btn");
 const displayLocation = document.getElementById("display-location");
 const mapAddressText = document.getElementById("map-address-text");
 
-// Default to Metro Manila
 const defaultLat = 14.5995;
 const defaultLng = 120.9842;
 
 function initMap() {
   if (mapInstance) {
-    mapInstance.invalidateSize(); // Fixes gray tiles if map loaded while hidden
+    mapInstance.invalidateSize();
     return;
   }
 
@@ -495,27 +475,21 @@ function initMap() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(mapInstance);
 
-  // Initialize Marker
   mapMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(
     mapInstance,
   );
 
-  // REMOVED: Leaflet Control Geocoder was removed to prevent double-search confusion.
-
-  // Update address when marker is dragged (Fine-tuning)
   mapMarker.on("dragend", function (e) {
     const position = mapMarker.getLatLng();
     updateAddressText(position.lat, position.lng);
   });
 
-  // Click map to move marker (Fine-tuning)
   mapInstance.on("click", function (e) {
     mapMarker.setLatLng(e.latlng);
     updateAddressText(e.latlng.lat, e.latlng.lng);
   });
 }
 
-// Reverse Geocode (Lat/Lng -> Address) using Nominatim
 async function updateAddressText(lat, lng) {
   mapAddressText.textContent = "Fetching address...";
   try {
@@ -535,7 +509,6 @@ async function updateAddressText(lat, lng) {
   }
 }
 
-// Modal Controls - UPDATED to sync with outside search
 openMapBtn?.addEventListener("click", () => {
   mapModal.classList.remove("hidden");
   setTimeout(() => {
@@ -544,7 +517,6 @@ openMapBtn?.addEventListener("click", () => {
       mapInstance.invalidateSize();
     }
 
-    // If the user already searched outside, jump the map directly to that spot!
     if (finalCoordinates) {
       mapInstance.setView([finalCoordinates.lat, finalCoordinates.lng], 17);
       mapMarker.setLatLng([finalCoordinates.lat, finalCoordinates.lng]);
@@ -558,21 +530,18 @@ openMapBtn?.addEventListener("click", () => {
 const closeMap = () => mapModal.classList.add("hidden");
 closeMapIcon?.addEventListener("click", closeMap);
 
-// Confirm Button
 confirmBtn?.addEventListener("click", () => {
   if (finalCoordinates) {
     const searchInput = document.getElementById("map-search-input");
     if (searchInput) {
       searchInput.value = finalAddress;
-      // Make sure the clear 'X' button shows up since it now has text
       document.getElementById("clear-search-btn")?.classList.remove("hidden");
     }
-    updateStepper(); // Update stepper progress
+    updateStepper();
     closeMap();
   }
 });
 
-// GPS Fallback Button
 gpsBtn?.addEventListener("click", () => {
   gpsBtn.innerHTML = "Locating...";
   if (navigator.geolocation) {
@@ -599,10 +568,8 @@ gpsBtn?.addEventListener("click", () => {
 // 6. FIREBASE SUBMISSION LOGIC
 // ==========================================
 
-/** Update #ai-summary and open the appropriate flash modal */
 function handleValidationResult(result, reporter, reportId, contact) {
   if (result.valid === true) {
-    // Extract score safely and generate star icons matching the rating
     const severityScore = result.severity_score != null ? result.severity_score : 3;
     const stars = "⭐".repeat(severityScore);
 
@@ -619,7 +586,6 @@ function handleValidationResult(result, reporter, reportId, contact) {
     return;
   }
 
-  // Gracefully present error text without breaking DOM state
   setSummary(result.error || "No waste detected");
 
   if (typeof window.showErrorModal === "function") {
@@ -629,7 +595,6 @@ function handleValidationResult(result, reporter, reportId, contact) {
 
 if (submitBtn) {
   submitBtn.addEventListener("click", async function (event) {
-    // Added this line to STOP the page from refreshing when user submits unrelated image
     event.preventDefault();
 
     if (isSubmitting) return;
@@ -653,7 +618,7 @@ if (submitBtn) {
       if (typeof window.showErrorModal === "function") {
         window.showErrorModal("Please select a trash category before submitting your report.");
       }
-      return; // Keeps the preview perfectly intact on early exit
+      return;
     }
 
     const reporter = getReporterData();
@@ -664,23 +629,18 @@ if (submitBtn) {
     updateStepper();
 
     try {
-      // 1. Tell user we are analyzing (Location is already grabbed from the map!)
       setSummary("Analyzing image... please wait.");
 
-      // 2. Translate image
       const imageData = await fileToBase64(selectedFile);
 
-      // 4. AI Validation
       const result = await analyzeImageWithGemini(
         imageData.base64,
         imageData.mimeType,
         promptText,
       );
 
-      // Handle validation errors instantly before attempting Firestore uploads
       if (result.valid !== true) {
         handleValidationResult(result, reporter);
-        // Add this to ensure AI errors (like "blocked by safety filter") show up clearly
         if (typeof window.showErrorModal === "function") {
           window.showErrorModal(result.error || "No waste detected");
         }
@@ -691,15 +651,12 @@ if (submitBtn) {
 
       setSummary("Trash verified. Uploading report... please wait.");
 
-      // Safe DOM extraction to prevent null pointer crashes
       const nameInput = document.getElementById("reporter-name");
       const contactInput = document.getElementById("reporter-contact");
 
-      // Fallback gracefully if fields are empty or elements are missing
       const reporterName = nameInput ? nameInput.value.trim() : "";
       const contactValue = contactInput ? contactInput.value.trim() : "Not Provided";
 
-      // Ensure we send all necessary data to the service
       const reportData = {
         wasteType: reportForm.wasteType,
         volumeEstimate: result.volume || "Unknown",
@@ -711,19 +668,15 @@ if (submitBtn) {
         severityScore: result.severity_score != null ? result.severity_score : 3,
       };
 
-      // --- NEW DEDUPLICATION HANDLING ---
       const response = await submitTrashReport(reportData, selectedFile);
 
       if (response.status === 'duplicate_found') {
-        // Stop the loading spinner
         setSubmitLoading(false);
         isSubmitting = false;
 
-        // --- CAROUSEL STATE ---
         const duplicates = response.existingReports;
         let currentDupIndex = 0;
 
-        // Grab modal DOM elements
         const dupModal = document.getElementById('duplicate-modal');
         const dupImg = document.getElementById('duplicate-modal-image');
         const dupTime = document.getElementById('duplicate-modal-time');
@@ -737,14 +690,12 @@ if (submitBtn) {
         const counterText = document.getElementById('carousel-counter-text');
         const dotsContainer = document.getElementById('carousel-dots');
 
-        // Zoom elements
         const zoomSlider = document.getElementById('duplicate-zoom-slider');
         const zoomInBtn = document.getElementById('zoom-in-btn');
         const zoomOutBtn = document.getElementById('zoom-out-btn');
         const fitBtn = document.getElementById('fit-image-btn');
         const fullscreenBtn = document.getElementById('fullscreen-image-btn');
 
-        // Initialize zoom controls (wired once, applies to current image)
         if (zoomSlider && dupImg) {
           zoomSlider.oninput = (e) => {
             dupImg.style.transform = `scale(${e.target.value})`;
@@ -766,7 +717,6 @@ if (submitBtn) {
           };
         }
 
-        // Build pagination dots
         if (dotsContainer) {
           dotsContainer.innerHTML = duplicates.map((_, i) =>
             `<button data-dot="${i}" class="w-2 h-2 rounded-full transition-all duration-200 ${i === 0 ? 'bg-green-600 w-4' : 'bg-gray-300'}"></button>`
@@ -779,18 +729,14 @@ if (submitBtn) {
           });
         }
 
-        // renderDuplicateReport: Populates modal with data for a given index
         function renderDuplicateReport(index) {
           const report = duplicates[index];
 
-          // Reset zoom
           if (zoomSlider) zoomSlider.value = 1;
           if (dupImg) dupImg.style.transform = 'scale(1)';
 
-          // Image
           if (dupImg) dupImg.src = report.imageUrl || '';
 
-          // Time
           if (dupTime) {
             const dateObj = report.reportedAt?.toDate
               ? report.reportedAt.toDate()
@@ -800,28 +746,22 @@ if (submitBtn) {
             dupTime.innerText = `${formattedDate} • ${formattedTime}`;
           }
 
-          // Distance
           if (dupDist) dupDist.innerText = report.distance ?? '?';
 
-          // Reporter name
           if (dupReporter) dupReporter.innerText = report.reporterName || 'Community Member';
 
-          // Counter text
           if (counterText) counterText.innerText = `Report ${index + 1} of ${duplicates.length}`;
 
-          // Dots: update active state
           if (dotsContainer) {
             dotsContainer.querySelectorAll('[data-dot]').forEach((dot, i) => {
               dot.className = `rounded-full transition-all duration-200 ${i === index ? 'w-4 h-2 bg-green-600' : 'w-2 h-2 bg-gray-300'}`;
             });
           }
 
-          // Prev/Next arrow visibility
           if (prevBtn) prevBtn.classList.toggle('hidden', index === 0);
           if (nextBtn) nextBtn.classList.toggle('hidden', index === duplicates.length - 1);
         }
 
-        // Wire prev/next buttons
         if (prevBtn) {
           prevBtn.onclick = () => {
             if (currentDupIndex > 0) {
@@ -839,20 +779,16 @@ if (submitBtn) {
           };
         }
 
-        // Render first report before showing the modal
         renderDuplicateReport(0);
 
-        // Show the modal
         if (dupModal) dupModal.classList.remove('hidden');
 
-        // Handle Close 'X' Icon
         if (closeIcon) {
           closeIcon.onclick = () => {
             dupModal.classList.add('hidden');
           };
         }
 
-        // Handle Upvote: always upvote the currently-viewed report
         if (upvoteBtn) {
           upvoteBtn.onclick = async () => {
             upvoteBtn.innerText = "Verifying...";
@@ -862,23 +798,19 @@ if (submitBtn) {
             dupModal.classList.add('hidden');
             document.getElementById("close-success-modal")?.click();
 
-            // Reset button HTML state
             upvoteBtn.innerHTML = `<div class="bg-white rounded-full p-0.5 text-[#418B46]"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div> Yes, this is the same`;
           };
         }
 
-        // Handle Cancel / Bypass (Submit a new report anyway)
         if (cancelBtn) {
           cancelBtn.onclick = async () => {
             dupModal.classList.add('hidden');
 
-            // Reactivate loading state and force unique submission
             setSubmitLoading(true);
             isSubmitting = true;
             setSummary("Bypassing check... Creating unique report.");
 
             try {
-              // Internal bypass flag to instruct backend to skip duplicate check
               reportData.bypassDuplicateCheck = true;
               const forceResponse = await submitTrashReport(reportData, selectedFile);
 
@@ -902,7 +834,6 @@ if (submitBtn) {
         return;
       }
 
-      // If it wasn't a duplicate, extract the ID and proceed normally
       const reportId = response.reportId;
 
       isReportComplete = true;
@@ -949,7 +880,6 @@ if (submitBtn) {
   mapSearchInput?.addEventListener("input", (e) => {
     const query = e.target.value;
 
-    // Toggle the clear 'X' button
     if (query.length > 0) {
       clearSearchBtn.classList.remove("hidden");
     } else {
@@ -958,11 +888,9 @@ if (submitBtn) {
       return;
     }
 
-    // Debounce the API call so it doesn't spam on every keystroke
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
       try {
-        // Fetch from Nominatim (restricted to PH for relevant results)
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ph&limit=5`,
         );
@@ -977,7 +905,6 @@ if (submitBtn) {
             li.className =
               "cursor-pointer p-3 hover:bg-gray-50 flex items-start gap-3";
 
-            // Format display to match image: Name on top, Address below
             const nameParts = place.display_name.split(",");
             const mainName = nameParts[0];
             const fullAddress = place.display_name
@@ -994,7 +921,6 @@ if (submitBtn) {
                         </div>
                     `;
 
-            // When a suggestion is clicked, lock it in
             li.addEventListener("click", () => {
               mapSearchInput.value = place.display_name;
               finalAddress = place.display_name;
@@ -1011,10 +937,9 @@ if (submitBtn) {
       } catch (err) {
         console.error("Geocoding search error:", err);
       }
-    }, 400); // 400ms delay
+    }, 400);
   });
 
-  // Clear button logic
   clearSearchBtn?.addEventListener("click", () => {
     mapSearchInput.value = "";
     finalAddress = "";
@@ -1024,7 +949,6 @@ if (submitBtn) {
     mapSearchInput.focus();
   });
 
-  // Hide dropdown if clicked outside
   document.addEventListener("click", (e) => {
     if (
       !mapSearchInput.contains(e.target) &&
@@ -1034,22 +958,16 @@ if (submitBtn) {
     }
   });
 
-  // ---------------------------------------------------------------------------
-  // App Reset Logic
-  // ---------------------------------------------------------------------------
-  // When the user dismisses the success modal, reset the internal app state back to Step 1
   document.getElementById("close-success-modal")?.addEventListener("click", () => {
     selectedFile = null;
     isReportComplete = false;
     finalCoordinates = null;
     finalAddress = "";
 
-    // Clear the map search bar explicitly
     const searchInput = document.getElementById("map-search-input");
     if (searchInput) searchInput.value = "";
     document.getElementById("clear-search-btn")?.classList.add("hidden");
 
-    // Recalculate the stepper (will drop back to Step 1)
     updateStepper();
   });
 }

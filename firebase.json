@@ -1,28 +1,22 @@
 {
-  "hosting": [
-    {
-      "target": "demo",
-      "public": "pitch",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ]
-    },
-    {
-      "site": "sparkpish-eco-mvp",
-      "public": ".",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "/",
-          "destination": "/pitch/pitch.html"
-        }
-      ]
-    }
-  ]
+  "hosting": {
+    "target": "demo",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ]
+  }
 }

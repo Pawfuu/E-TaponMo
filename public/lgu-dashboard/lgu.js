@@ -1,3 +1,4 @@
+import { E_TAPON_TOPIC_ID } from "../user-app/js/hedera-config.js";
 // ==========================================
 // 1. IMPORTS & CONSTANTS
 // ==========================================
@@ -109,6 +110,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // NEW: Task Management State Variables
   let taskCurrentTab = 'all';
   let taskCurrentPriority = 'all';
+  let taskCurrentStatus = 'all';
+  let taskCurrentAssignee = 'all';
+  let taskCurrentDistrict = 'all';
   let taskSearchQuery = '';
   let taskCurrentPage = 1;
   const tasksPerPage = 7;
@@ -157,7 +161,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   const viewInsightsPanel = document.getElementById("view-ai-insights-panel");
   const viewSettingsPanel = document.getElementById("view-settings-panel");
   const viewLiveSyncPanel = document.getElementById("view-live-sync-panel");
-
+  
   const viewTitle = document.getElementById("view-title");
   const mainHeader = document.getElementById("main-header");
 
@@ -202,6 +206,11 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // ==========================================
 
   function init() {
+    const lguTopicText = document.getElementById("lgu-topic-id");
+    const lguTopicLink = document.getElementById("lgu-hashscan-link");
+    if (lguTopicText) lguTopicText.textContent = E_TAPON_TOPIC_ID;
+    if (lguTopicLink) lguTopicLink.href = "https://hashscan.io/testnet/topic/" + E_TAPON_TOPIC_ID;
+
     setupEventListeners();
     updateDateDisplay();
     initLeafletMap();
@@ -259,9 +268,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
         // Auto-center the map on the first successful data load
         if (!window.hasAutoCentered && window.recenterMap) {
-          setTimeout(() => {
-            window.recenterMap();
-            window.hasAutoCentered = true;
+          setTimeout(() => { 
+            window.recenterMap(); 
+            window.hasAutoCentered = true; 
           }, 600); // Slight delay ensures Leaflet has finished painting
         }
 
@@ -278,10 +287,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (selectedTaskReport) {
           const freshTask = reports.find((r) => r.docId === selectedTaskReport.docId);
           if (freshTask) {
-            selectedTaskReport = freshTask;
-            if (!document.getElementById("task-details-modal").classList.contains("hidden")) {
-              populateTaskDetailsModal(freshTask);
-            }
+              selectedTaskReport = freshTask;
+              if(!document.getElementById("task-details-modal").classList.contains("hidden")) {
+                  populateTaskDetailsModal(freshTask);
+              }
           }
         }
       },
@@ -299,47 +308,37 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString("en-US", options);
   }
 
-  function updateDropdowns(reportsList) {
+ function updateDropdowns(reportsList) {
     const categories = [
-      "Nabubulok", "Recyclable", "Non-recyclable",
+      "Nabubulok", "Recyclable", "Non-recyclable", 
       "Hazardous Waste", "Healthcare Waste", "Mixed Waste"
     ];
-
+    
     // Hardcode explicit districts for consistent UI
     const districts = [
-      "District 1", "District 2", "District 3",
-      "District 4", "District 5", "District 6",
+      "District 1", "District 2", "District 3", 
+      "District 4", "District 5", "District 6", 
       "Provincial / Outside QC"
     ];
 
-    // 1b. Reports View Assignee Dropdown
-    const reportsAssigneeMenu = document.getElementById("reports-dropdown-assignee-menu");
-    const reportsAssigneeText = document.getElementById("reports-dropdown-assignee-text");
-    if (reportsAssigneeMenu) {
-      const assignees = [...new Set(reportsList.map(r => r.assignedToCode).filter(Boolean))];
-      reportsAssigneeMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Assignees</div>`;
-
-      assignees.forEach(assignee => {
+    // 1. Reports View Category Dropdown
+    const reportsCatMenu = document.getElementById("reports-dropdown-category-menu");
+    const reportsCatText = document.getElementById("reports-dropdown-category-text");
+    if (reportsCatMenu) {
+      reportsCatMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Categories</div>`;
+      categories.forEach(cat => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = assignee;
-        optionDiv.textContent = assignee;
-        reportsAssigneeMenu.appendChild(optionDiv);
+        optionDiv.dataset.value = cat;
+        optionDiv.textContent = cat;
+        reportsCatMenu.appendChild(optionDiv);
       });
-
-      // Also add 'Unassigned' option
-      const unassignedDiv = document.createElement("div");
-      unassignedDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-      unassignedDiv.dataset.value = "Unassigned";
-      unassignedDiv.textContent = "Unassigned";
-      reportsAssigneeMenu.appendChild(unassignedDiv);
-
-      reportsAssigneeMenu.querySelectorAll("div[data-value]").forEach(opt => {
+      reportsCatMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
-          currentAssigneeFilter = e.target.dataset.value;
-          if (reportsAssigneeText) reportsAssigneeText.textContent = e.target.textContent;
-          reportsAssigneeMenu.classList.add("hidden");
+          currentCategoryFilter = e.target.dataset.value;
+          if (reportsCatText) reportsCatText.textContent = e.target.textContent;
+          reportsCatMenu.classList.add("hidden");
           currentPage = 1;
           renderReportsTable();
         });
@@ -354,8 +353,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       districts.forEach(dist => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = dist;
-        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
+        optionDiv.dataset.value = dist; 
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
         reportsDistMenu.appendChild(optionDiv);
       });
       reportsDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
@@ -407,7 +406,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    // 5. Task Management View District Dropdown
+   // 5. Task Management View District Dropdown
     const taskDistMenu = document.getElementById("task-dropdown-district-menu");
     const taskDistText = document.getElementById("task-dropdown-district-text");
     if (taskDistMenu && taskDistMenu.children.length === 0) {
@@ -415,9 +414,45 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       districts.forEach(dist => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = dist;
-        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
+        optionDiv.dataset.value = dist; 
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
         taskDistMenu.appendChild(optionDiv);
+      });
+      taskDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          taskCurrentDistrict = e.target.dataset.value;
+          if (taskDistText) taskDistText.textContent = e.target.textContent;
+          taskDistMenu.classList.add("hidden");
+          taskCurrentPage = 1;
+          renderTaskManagement();
+        });
+      });
+    }
+
+    // 6. Reports View Assignee Dropdown
+    const reportsAssgnMenu = document.getElementById("reports-dropdown-assignee-menu");
+    const reportsAssgnText = document.getElementById("reports-dropdown-assignee-text");
+    if (reportsAssgnMenu) {
+      const uniques = [...new Set(reportsList.map(r => r.assignedToCode || "Unassigned"))];
+      reportsAssgnMenu.innerHTML = `<div class="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors" data-value="all">All Assignees</div>`;
+      uniques.forEach(v => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
+        optionDiv.dataset.value = v;
+        optionDiv.textContent = v;
+        reportsAssgnMenu.appendChild(optionDiv);
+      });
+      
+      reportsAssgnMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          currentAssigneeFilter = e.target.dataset.value;
+          if (reportsAssgnText) reportsAssgnText.textContent = e.target.textContent;
+          reportsAssgnMenu.classList.add("hidden");
+          currentPage = 1;
+          renderReportsTable();
+        });
       });
     }
   }
@@ -607,14 +642,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("stat-resolved")) document.getElementById("stat-resolved").textContent = String(resolvedCount);
 
     // 2. Dynamic Map View Stats (Active non-resolved alerts)
-    const activeAlerts = reports.filter(r => r.status !== "Resolved");
+    const activeAlerts = reports.filter(r => r.status !== "Resolved" && r.status !== "Dismissed");
     const totalActive = activeAlerts.length;
 
     // Calculate how many active reports were submitted TODAY
     const today = new Date();
     const newTodayCount = activeAlerts.filter(r => {
-      if (!r.reportedAt) return false;
-      return r.reportedAt.getDate() === today.getDate() &&
+    if (!r.reportedAt) return false; 
+    return r.reportedAt.getDate() === today.getDate() &&
         r.reportedAt.getMonth() === today.getMonth() &&
         r.reportedAt.getFullYear() === today.getFullYear();
     }).length;
@@ -637,7 +672,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // Severity Breakdown
     const lowCount = activeAlerts.filter(r => r.severity <= 2).length;
     const mediumCount = activeAlerts.filter(r => r.severity === 3).length;
-    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length;
+    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length; 
 
     if (document.getElementById("map-severity-low-val")) document.getElementById("map-severity-low-val").textContent = String(lowCount);
     if (document.getElementById("map-severity-medium-val")) document.getElementById("map-severity-medium-val").textContent = String(mediumCount);
@@ -684,9 +719,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   }
 
   function updateAnalyticsMetrics() {
-    const dateFilterEl = document.getElementById("analytics-date-filter");
+   const dateFilterEl = document.getElementById("analytics-date-filter");
     const distFilterEl = document.getElementById("analytics-district-filter");
-
+    
     const dateVal = dateFilterEl ? dateFilterEl.value : "7days";
     const distVal = distFilterEl ? distFilterEl.value : "all";
 
@@ -726,14 +761,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     // Execute Time Filtering
     if (dateVal !== "all") {
-      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
-      filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+        prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
+        filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
     } else {
-      prevFiltered = [...reports]; // Fallback for all time
+        prevFiltered = [...reports]; // Fallback for all time
     }
-
+    
     if (distVal !== "all" && dateVal !== "all") {
-      prevFiltered = prevFiltered.filter(r => r.district === distVal);
+        prevFiltered = prevFiltered.filter(r => r.district === distVal);
     }
 
     // 3. Compute Metrics
@@ -750,9 +785,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("analytics-stat-resolved")) document.getElementById("analytics-stat-resolved").textContent = String(resolvedCount);
     if (document.getElementById("analytics-stat-pending")) document.getElementById("analytics-stat-pending").textContent = String(pendingCount);
 
-    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false);
-    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true);
-    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false);
+    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); 
+    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); 
+    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); 
 
     // Text Sublabels
     const subtextTotalEl = document.getElementById("analytics-subtext-total");
@@ -762,8 +797,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("analytics-subtext-time")) document.getElementById("analytics-subtext-time").textContent = subtextLabel;
 
     // Simulated Average Response Time Logic
-    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18;
-    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20;
+    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18; 
+    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20; 
 
     if (document.getElementById("analytics-stat-time")) {
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
@@ -800,7 +835,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (!tbody || !chartContainer) return;
 
     // Get Top 5 by Total Reports
-    const top5 = [...dashboardMetrics.barangaySummary].sort((a, b) => b.total - a.total).slice(0, 5);
+    const top5 = [...dashboardMetrics.barangaySummary].sort((a,b) => b.total - a.total).slice(0, 5);
 
     // 1. Populate Table
     tbody.innerHTML = "";
@@ -827,17 +862,17 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       const maxBarHeight = 120; // px
       let maxHours = 0;
       const chartData = top5.map(b => {
-        const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
-        if (hours > maxHours) maxHours = hours;
-        return { name: b.name, hours: hours };
+          const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
+          if (hours > maxHours) maxHours = hours;
+          return { name: b.name, hours: hours };
       });
 
       chartData.forEach(d => {
-        const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
-        const finalHeight = Math.max(heightPx, 10);
-        const truncName = d.name.length > 8 ? d.name.substring(0, 6) + '...' : d.name;
+          const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
+          const finalHeight = Math.max(heightPx, 10);
+          const truncName = d.name.length > 8 ? d.name.substring(0,6) + '...' : d.name;
 
-        chartContainer.innerHTML += `
+          chartContainer.innerHTML += `
             <div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer" title="${d.name} (${d.hours}h avg)">
               <span class="text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity font-bold">${d.hours}h</span>
               <div class="w-7 bg-emerald-600/90 rounded-t-lg transition-all duration-500 group-hover:bg-emerald-700" style="height: ${finalHeight}px;"></div>
@@ -850,13 +885,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   function renderBarangayPerformance() {
     if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
-
+    
     // Top KPI Cards
     if (document.getElementById("brgy-kpi-resolved")) document.getElementById("brgy-kpi-resolved").textContent = dashboardMetrics.resolved7d.toLocaleString();
-
+    
     const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
     if (document.getElementById("brgy-kpi-response")) document.getElementById("brgy-kpi-response").textContent = `${mockHours}h`;
-
+    
     if (document.getElementById("brgy-kpi-flagged")) {
       document.getElementById("brgy-kpi-flagged").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
     }
@@ -869,27 +904,27 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     let filteredBrgy = [...dashboardMetrics.barangaySummary];
 
     if (activeBrgyDistrictFilter !== "all") {
-      filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
+        filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
     }
 
     if (activeBrgySearchQuery) {
-      filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
+        filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
     }
 
     let html = "";
-
+    
     // Handle empty state gracefully
     if (filteredBrgy.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
-      return;
+        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
+        return;
     }
 
     filteredBrgy.forEach((b, index) => {
       const rank = index + 1;
-
+      
       // Calculate 6-segment metrics
       const totalSeg = (b.segregation.nab + b.segregation.rec + b.segregation.non + b.segregation.mix + b.segregation.haz + b.segregation.heal) || 1;
-
+      
       const pNab = (b.segregation.nab / totalSeg) * 100;
       const pRec = (b.segregation.rec / totalSeg) * 100;
       const pNon = (b.segregation.non / totalSeg) * 100;
@@ -898,13 +933,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       const pHeal = (b.segregation.heal / totalSeg) * 100;
 
       const uiStatus = b.statusText === "Low" ? "Good" : b.statusText === "Medium" ? "Monitor" : "Critical";
-      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200"
-          : "bg-rose-100 text-rose-700 border border-rose-200";
+      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
+                        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200" 
+                        : "bg-rose-100 text-rose-700 border border-rose-200";
 
       const trendBars = b.history.map(val => {
-        const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
-        return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
+          const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
+          return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
       }).join('');
 
       html += `
@@ -953,270 +988,6 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     drawBarangayTrendChart();
   }
 
-  function renderTaskManagement() {
-    const tbody = document.getElementById('task-table-body');
-    const counter = document.getElementById('task-table-results-counter');
-    const pager = document.getElementById('task-pagination-controls');
-    if (!tbody || !reports) return;
-
-    // 1. Synthesize Tasks from live Reports
-    let allTasks = reports.map((r, i) => {
-      const sev = r.severity || 0;
-      const upvotes = r.upvotes || 1;
-
-      // Upvotes organically raise priority!
-      let priority = 'Low';
-      if (sev >= 4 || upvotes >= 10) priority = 'High';
-      else if (sev === 3 || upvotes >= 5) priority = 'Medium';
-
-      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
-      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
-
-      let status = 'Planning';
-      let isOverdue = false;
-      if (r.status === 'Resolved') status = 'Completed';
-      else if (r.status === 'Dismissed') status = 'Failed'; // Workflow C: Map Dismissed to Failed
-      else if (r.status === 'In Progress') status = 'In Progress';
-      else if (ageMs > (48 * 60 * 60 * 1000) && r.status === 'Pending Verification') {
-        status = 'Overdue';
-        isOverdue = true;
-      }
-      else status = 'Pending';
-
-      // Keep unassigned tasks cleanly separate for Workflow A mapping
-      let assignee = 'Unassigned';
-      let team = 'Pending Assignment';
-
-      if (status === 'Completed' && r.resolvedByCode) {
-        assignee = `Verified: ${r.resolvedByCode.split(' ')[0]}`; // Clean Admin ID
-        team = 'Admin Finalized';
-      } else if (status === 'In Progress' && r.assignedToCode) {
-        assignee = `${r.assignedToCode}`; // Clean Truck ID
-        team = 'Active Deployment';
-      } else if (status === 'Completed') {
-        assignee = 'Completed Unit';
-        team = 'Operations';
-      } else if (status === 'In Progress') {
-        assignee = 'Response Team';
-        team = 'Operations';
-      }
-
-      return {
-        id: `TSK-${new Date().getFullYear()}-${1000 + i}`,
-        refId: r.id,
-        docId: r.docId,
-        title: r.category === 'Uncategorized' ? 'Waste Clearing' : `${r.category} Collection`,
-        barangay: r.barangay,
-        district: r.district,
-        assignee: assignee,
-        team: team,
-        priority: priority,
-        status: status,
-        isOverdue: isOverdue,
-        due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        rawDate: targetDate.getTime()
-      };
-    });
-
-    // Update Top KPIs
-    document.getElementById('task-stat-total').textContent = allTasks.length;
-    document.getElementById('task-stat-assigned').textContent = allTasks.filter(t => t.status === 'In Progress').length;
-    document.getElementById('task-stat-overdue').textContent = allTasks.filter(t => t.isOverdue).length;
-    document.getElementById('task-stat-completed').textContent = allTasks.filter(t => t.status === 'Completed').length;
-
-    // Update Tab Counts
-    document.getElementById('task-count-all').textContent = `(${allTasks.length})`;
-    document.getElementById('task-count-mine').textContent = `(${allTasks.filter(t => t.assignee === 'Maria Santos').length})`;
-    document.getElementById('task-count-overdue').textContent = `(${allTasks.filter(t => t.isOverdue).length})`;
-    document.getElementById('task-count-completed').textContent = `(${allTasks.filter(t => t.status === 'Completed').length})`;
-
-    // 2. Apply Filters
-    let list = [...allTasks];
-    if (taskState.tab === 'mine') list = list.filter(t => t.assignee === 'Maria Santos');
-    if (taskState.tab === 'overdue') list = list.filter(t => t.isOverdue);
-    if (taskState.tab === 'completed') list = list.filter(t => t.status === 'Completed');
-
-    if (taskState.status !== 'all') list = list.filter(t => t.status === taskState.status);
-    if (taskState.priority !== 'all') list = list.filter(t => t.priority === taskState.priority);
-    if (taskState.assignee !== 'all') list = list.filter(t => t.assignee === taskState.assignee);
-
-    if (taskState.search.trim()) {
-      const q = taskState.search.trim().toLowerCase();
-      list = list.filter(t => t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.barangay.toLowerCase().includes(q));
-    }
-
-    list.sort((a, b) => a.rawDate - b.rawDate);
-
-    // 3. Render Table
-    const totalPages = Math.max(1, Math.ceil(list.length / TASK_PAGE_SIZE));
-    if (taskState.page > totalPages) taskState.page = totalPages;
-    const start = (taskState.page - 1) * TASK_PAGE_SIZE;
-    const pageItems = list.slice(start, start + TASK_PAGE_SIZE);
-
-    tbody.innerHTML = '';
-    const priorityStyle = { High: 'bg-rose-50 text-rose-600 border border-rose-100', Medium: 'bg-amber-50 text-amber-700 border border-amber-100', Low: 'bg-blue-50 text-blue-600 border border-blue-100' };
-    const statusStyle = {
-      Planning: { dot: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600' },
-      Assigned: { dot: 'bg-indigo-500', pill: 'bg-indigo-50 text-indigo-600' },
-      Pending: { dot: 'bg-amber-500', pill: 'bg-amber-50 text-amber-700' },
-      'In Progress': { dot: 'bg-blue-500', pill: 'bg-blue-50 text-blue-600' },
-      Overdue: { dot: 'bg-rose-500', pill: 'bg-rose-50 text-rose-600' },
-      Completed: { dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-600' },
-    };
-
-    if (pageItems.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks match your filters.</td></tr>`;
-    } else {
-      pageItems.forEach((t, i) => {
-        const st = statusStyle[t.status] || statusStyle.Planning;
-        // Extrapolate initials safely, handling "Ref: CODE" edge cases
-        const initArr = t.assignee.replace('Ref: ', '').replace('Verified: ', '').split(' ');
-        const initials = initArr.map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'NA';
-
-        tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-50" style="animation-delay: ${i * 30}ms;">
-                <td class="px-5 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">${t.id}</td>
-                <td class="px-5 py-3.5">
-                  <p class="font-semibold text-slate-800">${t.title}</p>
-                </td>
-                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.barangay}</td>
-                <td class="px-5 py-3.5">
-                  <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-[10px] font-black flex-shrink-0">${initials}</span>
-                    <div class="min-w-0">
-                      <p class="font-semibold text-slate-800 text-xs truncate">${t.assignee}</p>
-                      <p class="text-[10px] text-slate-400 truncate">${t.team}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-5 py-3.5">
-                  <span class="text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${priorityStyle[t.priority]}">${t.priority}</span>
-                </td>
-                <td class="px-5 py-3.5 text-slate-600 text-xs font-semibold whitespace-nowrap">${t.due}</td>
-                <td class="px-5 py-3.5">
-                  <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${st.pill}">
-                    <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
-                  </span>
-                </td>
-                <td class="px-5 py-3.5 text-right">
-                  <button onclick="window.openTaskModal('${t.docId}')" class="w-7 h-7 rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition-colors inline-flex items-center justify-center cursor-pointer">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
-                  </button>
-                </td>
-            </tr>`;
-      });
-    }
-
-    if (counter) counter.textContent = list.length ? `Showing ${start + 1} to ${Math.min(start + TASK_PAGE_SIZE, list.length)} of ${list.length} tasks` : 'Showing 0 tasks';
-
-    // Pagination render
-    if (pager) {
-      pager.innerHTML = '';
-      if (totalPages > 1) {
-        const mkBtn = (lbl, pg, active, disabled) => {
-          const b = document.createElement('button');
-          b.innerHTML = lbl; b.disabled = disabled;
-          b.className = `w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${active ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`;
-          if (!disabled) b.addEventListener('click', () => { taskState.page = pg; renderTaskManagement(); });
-          return b;
-        };
-        pager.appendChild(mkBtn('‹', Math.max(1, taskState.page - 1), false, taskState.page === 1));
-        for (let p = 1; p <= totalPages; p++) pager.appendChild(mkBtn(String(p), p, p === taskState.page, false));
-        pager.appendChild(mkBtn('›', Math.min(totalPages, taskState.page + 1), false, taskState.page === totalPages));
-      }
-    }
-
-    // 4. Update Assignee Dropdown Dynamically
-    const assgnMenu = document.getElementById("dd-task-assignee-menu");
-    if (assgnMenu && assgnMenu.children.length <= 1) {
-      const uniques = [...new Set(allTasks.map(t => t.assignee))];
-      assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
-      uniques.forEach(v => {
-        assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
-      });
-
-      assgnMenu.querySelectorAll('.dd-opt').forEach(opt => {
-        opt.addEventListener('click', (e) => {
-          e.stopPropagation();
-          taskState.assignee = opt.dataset.value;
-          document.getElementById('dd-task-assignee-text').textContent = opt.dataset.value === 'all' ? 'All Assignees' : opt.dataset.value;
-          assgnMenu.classList.add('hidden');
-          taskState.page = 1;
-          renderTaskManagement();
-        });
-      });
-    }
-
-    // 5. Sidebar: Service Queue
-    const brgyCounts = {};
-    allTasks.filter(t => t.status !== 'Completed').forEach(t => {
-      brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
-    });
-
-    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a, b) => b.count - a.count).slice(0, 5);
-    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
-
-    const queueContainer = document.getElementById("service-queue-list");
-    if (queueContainer) {
-      queueContainer.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Queue is empty.</p>` : "";
-      queueData.forEach(q => {
-        const pct = (q.count / maxQueue) * 100;
-        let c = 'bg-emerald-500'; let tc = 'text-emerald-600';
-        if (q.count > 10) { c = 'bg-rose-500'; tc = 'text-rose-600'; }
-        else if (q.count > 5) { c = 'bg-amber-500'; tc = 'text-amber-600'; }
-
-        queueContainer.innerHTML += `
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-bold text-slate-700">${q.name}</span>
-              <span class="text-xs font-black ${tc}">${q.count}</span>
-            </div>
-            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-full ${c} rounded-full" style="width:${pct}%"></div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    // 6. Sidebar: Donut Chart
-    const statusCounts = { 'In Progress': 0, 'Pending': 0, 'Overdue': 0, 'Planning': 0 };
-    allTasks.forEach(t => { if (statusCounts[t.status] !== undefined) statusCounts[t.status]++; });
-
-    document.getElementById("task-donut-total").textContent = allTasks.length;
-    const oData = [
-      { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
-      { label: 'Pending', val: statusCounts['Pending'], color: '#f59e0b' },
-      { label: 'Overdue', val: statusCounts['Overdue'], color: '#e11d48' },
-      { label: 'Planning', val: statusCounts['Planning'], color: '#94a3b8' }
-    ].filter(d => d.val > 0);
-
-    if (donutEl && legendEl) {
-      legendEl.innerHTML = oData.length === 0 ? `<p class="text-xs text-slate-400 italic py-4">No data</p>` : "";
-      let cursor = 0;
-      const stops = oData.map(o => {
-        const startPct = (cursor / allTasks.length) * 100;
-        cursor += o.val;
-        const endPct = (cursor / allTasks.length) * 100;
-        return `${o.color} ${startPct}% ${endPct}%`;
-      }).join(', ');
-      donutEl.style.background = `conic-gradient(${stops})`;
-
-      oData.forEach(o => {
-        const pct = Math.round((o.val / allTasks.length) * 100);
-        legendEl.innerHTML += `
-            <div class="flex items-center justify-between gap-2 mb-2.5">
-              <span class="flex items-center gap-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
-                <span class="truncate">${o.label}</span>
-              </span>
-              <span class="text-slate-400 font-semibold">${pct}%</span>
-            </div>
-          `;
-      });
-    }
-  }
-
   function drawBarangayTrendChart() {
     const container = document.getElementById("brgy-trend-chart");
     if (!container || !dashboardMetrics) return;
@@ -1227,8 +998,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const lastWeek = dashboardMetrics.trendLastWeek || [];
 
     if (labels.length === 0) {
-      container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
-      return;
+        container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
+        return;
     }
 
     // Dynamic Sizing
@@ -1236,7 +1007,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const height = container.clientHeight || 200;
     const paddingLeft = 35;
     const paddingRight = 15;
-    const paddingTop = 30;
+    const paddingTop = 30; 
     const paddingBottom = 25;
 
     const chartWidth = width - paddingLeft - paddingRight;
@@ -1279,13 +1050,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // 4. Draw Last Week Line & Nodes (Green)
     html += `<path d="${buildPath(lastWeek)}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
     lastWeek.forEach((val, idx) => {
-      html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
     });
 
     // 5. Draw This Week Line & Nodes (Blue)
     html += `<path d="${buildPath(thisWeek)}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
     thisWeek.forEach((val, idx) => {
-      html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
+        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
     });
 
     html += `</svg>`;
@@ -1314,7 +1085,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
   }
 
-  function drawReportsOverTimeChart(filtered, dateVal) {
+function drawReportsOverTimeChart(filtered, dateVal) {
     const container = document.getElementById("analytics-line-chart-container");
     if (!container) return;
     container.innerHTML = "";
@@ -1551,7 +1322,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     // Evaluate Status First (Base Color)
     if (report.status === "Resolved") {
-      pinColorClass = "text-slate-400";
+      pinColorClass = "text-emerald-500";
+    } else if (report.status === "Dismissed") {
+      pinColorClass = "text-slate-800 opacity-60"; 
     } else if (report.status === "In Progress") {
       pinColorClass = "text-blue-500";
       // If severe AND in progress -> Blue Pin, Blue Pulse
@@ -1628,7 +1401,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     }
   }
 
-  function updateRecentCriticalAlerts() {
+ function updateRecentCriticalAlerts() {
     const container = document.getElementById("recent-critical-alerts-container");
     if (!container) return;
 
@@ -1718,7 +1491,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         }
       });
     }
-
+    
 
     // Render dashboard map markers (all reports)
     reports.forEach((report) => {
@@ -1738,23 +1511,23 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     updateHeatmap();
 
     // Add this right below renderMapMarkers()
-    window.recenterMap = function () {
-      const mapReports = getFilteredReportsForMap();
-      if (mapReports.length === 0) return;
+  window.recenterMap = function() {
+    const mapReports = getFilteredReportsForMap();
+    if (mapReports.length === 0) return;
 
-      // Calculate a boundary box that includes all active report coordinates
-      const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
-
-      if (bounds.isValid()) {
-        // Smoothly fly the map to fit all pins with a nice 50px padding
-        if (window.mapInstance) {
-          window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-        }
-        if (window.dashboardMapInstance) {
-          window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
-        }
+    // Calculate a boundary box that includes all active report coordinates
+    const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
+    
+    if (bounds.isValid()) {
+      // Smoothly fly the map to fit all pins with a nice 50px padding
+      if (window.mapInstance) {
+        window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
       }
-    };
+      if (window.dashboardMapInstance) {
+        window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+      }
+    }
+  };
   }
 
   // ==========================================
@@ -1763,7 +1536,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   function switchView(viewName, pushState = true) {
     const navButtons = [
-      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn,
+      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, 
       navBarangayBtn, navTasksBtn, navRoutesBtn, navInsightsBtn, navSettingsBtn
     ];
 
@@ -1788,7 +1561,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (viewLiveSyncPanel) viewLiveSyncPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
-
+    
     // Ensure the top header is ALWAYS visible across all pages
     if (mainHeader) mainHeader.classList.remove("hidden");
 
@@ -1800,13 +1573,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       initLeafletMap();
       renderMapMarkers();
       refreshMapSizes(100);
-    }
+    } 
     else if (viewName === "reports") {
       if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
       if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Civic Reports Database";
       renderReportsTable();
-    }
+    } 
     else if (viewName === "map") {
       if (viewMapPanel) viewMapPanel.classList.remove("hidden");
       if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
@@ -1815,7 +1588,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
       renderMapMarkers();
       refreshMapSizes(100);
-    }
+    } 
     else if (viewName === "analytics") {
       if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
       if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
@@ -1837,7 +1610,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       // Highlight the parent Task Management nav button
       if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       // Hide the global view title since this specific page has its own breadcrumb header
-      if (mainHeader) mainHeader.classList.add("hidden");
+      if (mainHeader) mainHeader.classList.add("hidden"); 
     }
     else if (viewName === "collection-routes") {
       if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
@@ -1865,25 +1638,26 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   // 7. REPORTS TABLE LOGIC
   // ==========================================
 
-  // State globals for the Reports View Table
+ // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
   let currentDistrictFilter = "all";
   let currentAssigneeFilter = "all";
+  let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
 
-  let activeBrgyDistrictFilter = "all";
-  let activeBrgySearchQuery = "";
+let activeBrgyDistrictFilter = "all";
+let activeBrgySearchQuery = "";
 
-  // NEW: Task Management State Variables
+// NEW: Task Management State Variables
   let taskState = {
-    tab: 'all',
-    status: 'all',
-    priority: 'all',
-    assignee: 'all',
-    district: 'all', // Added district filter
-    search: '',
-    page: 1,
+      tab: 'all',
+      status: 'all',
+      priority: 'all',
+      assignee: 'all',
+      district: 'all', // Added district filter
+      search: '',
+      page: 1,
   };
   const TASK_PAGE_SIZE = 7;
 
@@ -1891,43 +1665,52 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (!reportsTableBody) return;
     const queryText = reportSearchInput ? reportSearchInput.value.toLowerCase().trim() : "";
 
-    // 1. Update live sub-tab totals indicator elements
+    // Update live sub-tab totals indicator elements
     const counts = {
       all: reports.length,
       pending: reports.filter(r => r.status === "Pending Verification").length,
       progress: reports.filter(r => r.status === "In Progress").length,
-      resolved: reports.filter(r => r.status === "Resolved").length
+      resolved: reports.filter(r => r.status === "Resolved").length,
+      dismissed: reports.filter(r => r.status === "Dismissed").length
     };
 
     if (document.getElementById("tab-count-all")) document.getElementById("tab-count-all").textContent = `(${counts.all})`;
     if (document.getElementById("tab-count-pending")) document.getElementById("tab-count-pending").textContent = `(${counts.pending})`;
     if (document.getElementById("tab-count-progress")) document.getElementById("tab-count-progress").textContent = `(${counts.progress})`;
     if (document.getElementById("tab-count-resolved")) document.getElementById("tab-count-resolved").textContent = `(${counts.resolved})`;
+    if (document.getElementById("tab-count-dismissed")) document.getElementById("tab-count-dismissed").textContent = `(${counts.dismissed})`;
 
-    // 2. Filter list based on selected state variables
+    // Filter list based on selected sub-tab
     let filteredList = [...reports];
-
-    // Status Filter (Ensure dropdown exact matches are used if not a tab default)
-    if (currentStatusFilter && currentStatusFilter !== "all") {
-      filteredList = filteredList.filter(r => r.status === currentStatusFilter);
+    if (currentStatusFilter === "pending") {
+      filteredList = filteredList.filter(r => r.status === "Pending Verification");
+    } else if (currentStatusFilter === "progress") {
+      filteredList = filteredList.filter(r => r.status === "In Progress");
+    } else if (currentStatusFilter === "resolved") {
+      filteredList = filteredList.filter(r => r.status === "Resolved");
+    } else if (currentStatusFilter === "dismissed") {
+      filteredList = filteredList.filter(r => r.status === "Dismissed");
     }
 
-    // Category Filter
+    // Apply secondary category filter from custom dropdown
     if (currentCategoryFilter && currentCategoryFilter !== "all") {
       filteredList = filteredList.filter(r => r.category === currentCategoryFilter);
     }
 
-    // District Filter
+    // ADD THIS: Apply District filter
     if (currentDistrictFilter && currentDistrictFilter !== "all") {
       filteredList = filteredList.filter(r => r.district === currentDistrictFilter);
     }
 
-    // Assignee Filter
+    // Apply Assignee filter
     if (currentAssigneeFilter && currentAssigneeFilter !== "all") {
-      filteredList = filteredList.filter(r => (r.assignedToCode || "Unassigned") === currentAssigneeFilter);
+      filteredList = filteredList.filter(r => {
+        const assignee = r.assignedToCode || "Unassigned";
+        return assignee === currentAssigneeFilter;
+      });
     }
 
-    // Text query filter
+    // Apply text query filter
     if (queryText) {
       filteredList = filteredList.filter((item) =>
         item.id.toLowerCase().includes(queryText) ||
@@ -1938,25 +1721,25 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       );
     }
 
-    // 3. Sorting (Date Newest/Oldest and Votes Highest)
+    // Sort processing based on "Reported At" (reportedAt timestamp)
     filteredList.sort((a, b) => {
-      const timeA = a.reportedAt ? a.reportedAt.getTime() : 0;
-      const timeB = b.reportedAt ? b.reportedAt.getTime() : 0;
+      // Fallback to 0 if time is missing, though Firebase provides the timestamp
+      const timeA = a.reportedAt ? a.reportedAt.getTime() : 0; // Changed from createdAt
+      const timeB = b.reportedAt ? b.reportedAt.getTime() : 0; // Changed from createdAt
 
       if (currentSortOrder === "date-desc") {
+        // Newest submitted forms first
         return timeB - timeA || b.docId.localeCompare(a.docId);
-      } else if (currentSortOrder === "date-asc") {
+      } else {
+        // Oldest submitted forms first
         return timeA - timeB || a.docId.localeCompare(b.docId);
-      } else if (currentSortOrder === "votes-desc") {
-        return (b.upvotes || 0) - (a.upvotes || 0) || timeB - timeA;
       }
-      return timeB - timeA;
     });
 
-    // Save filtered list for CSV export
+    // Save filtered and sorted list for CSV export
     lastFilteredReports = filteredList;
 
-    // 4. Pagination processing
+    // Pagination calculations
     const totalItems = filteredList.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
     if (currentPage > totalPages) {
@@ -1969,7 +1752,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     reportsTableBody.innerHTML = "";
 
     if (totalItems === 0) {
-      reportsTableBody.innerHTML = `<tr><td colspan="9" class="px-6 py-12 text-center text-slate-500 font-medium bg-slate-50/50">No matching reports found.</td></tr>`;
+      reportsTableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-slate-500 font-medium bg-slate-50/50">No matching reports found.</td></tr>`;
       if (tableResultsCounter) tableResultsCounter.textContent = "Showing 0 reports";
       const pagContainer = document.getElementById("pagination-controls");
       if (pagContainer) pagContainer.innerHTML = "";
@@ -1982,27 +1765,28 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     renderPaginationControls(totalPages);
 
-    // 5. Draw the table rows
     paginatedList.forEach((report, index) => {
       const tr = document.createElement("tr");
       tr.className = "animate-table-row hover:bg-slate-50/80 transition-colors border-b border-slate-100 align-middle";
       tr.style.animationDelay = `${index * 0.05}s`;
 
-      // Status Badge Style
+      // 1. Calculate Status Badge Styles
       let badgeColorClass = "bg-slate-100 text-slate-700 border border-slate-200";
-      if (report.status === "Resolved") badgeColorClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
-      else if (report.status === "In Progress") badgeColorClass = "bg-blue-50 text-blue-700 border border-blue-200";
-      else if (report.status === "Pending Verification") badgeColorClass = "bg-amber-50 text-amber-700 border border-amber-200";
-      else if (report.status === "Dismissed") badgeColorClass = "bg-rose-50 text-rose-700 border border-rose-200";
+      if (report.status === "Resolved") {
+        badgeColorClass = "bg-green-50 text-green-700 border border-green-200";
+      } else if (report.status === "In Progress") {
+        badgeColorClass = "bg-blue-50 text-blue-700 border border-blue-200";
+      } else if (report.status === "Pending Verification") {
+        badgeColorClass = "bg-amber-50 text-amber-700 border border-amber-200";
+      } else if (report.status === "Dismissed") {
+        badgeColorClass = "bg-rose-50 text-rose-700 border border-rose-200";
+      }
 
-      // Priority Badge Style (Calculated by Severity 0-5)
+      // 2. Calculate Priority Badge Styles
       let priorityText = "Low";
-      let priorityClass = "bg-blue-50 text-blue-700 font-semibold text-xs px-2.5 py-0.5 rounded border border-blue-100";
+      let priorityClass = "bg-slate-100 text-slate-600 font-semibold text-xs px-2.5 py-0.5 rounded";
 
-      if (report.severity >= 5) {
-        priorityText = "Critical";
-        priorityClass = "bg-rose-100 text-rose-800 font-bold text-xs px-2.5 py-0.5 rounded border border-rose-300";
-      } else if (report.severity === 4) {
+      if (report.severity >= 4) {
         priorityText = "High";
         priorityClass = "bg-rose-50 text-rose-700 font-bold text-xs px-2.5 py-0.5 rounded border border-rose-100";
       } else if (report.severity === 3) {
@@ -2010,32 +1794,32 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         priorityClass = "bg-amber-50 text-amber-700 font-semibold text-xs px-2.5 py-0.5 rounded border border-amber-100";
       }
 
-      // Due Date logic (+48 hrs)
-      let dueDateText = "N/A";
-      if (report.reportedAt) {
-        const dueDate = new Date(report.reportedAt.getTime() + (48 * 60 * 60 * 1000));
-        dueDateText = dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      }
-
-      const assigneeText = report.assignedToCode || '<span class="text-slate-400 italic">Unassigned</span>';
-      const upvotesText = report.upvotes || 1;
-
       tr.innerHTML = `
         <td class="px-6 py-4 font-mono font-semibold text-slate-900">#${report.id}</td>
         <td class="px-6 py-4">
-            <div class="font-semibold text-slate-800 capitalize">${report.category}</div>
-            <div class="text-[10px] text-slate-500 max-w-[150px] truncate" title="${report.location}">${report.location}</div>
+          <div class="font-semibold text-slate-800 capitalize">${report.category}</div>
+          <div class="text-[10px] text-slate-500 max-w-xs truncate mt-0.5">${report.location}</div>
         </td>
-        <td class="px-6 py-4"><span class="${priorityClass}">${priorityText}</span></td>
-        <td class="px-6 py-4 text-xs font-semibold text-slate-700">${assigneeText}</td>
-        <td class="px-6 py-4 text-xs font-semibold text-slate-600">${dueDateText}</td>
         <td class="px-6 py-4">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColorClass}">
+          <span class="${priorityClass}">
+            ${priorityText}
+          </span>
+        </td>
+        <td class="px-6 py-4 text-sm font-semibold whitespace-nowrap ${!report.assignedToCode ? 'text-slate-400 italic' : 'text-slate-700'}">
+          ${report.assignedToCode || 'Unassigned'}
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+          N/A
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeColorClass}">
             ${report.status}
           </span>
         </td>
-        <td class="px-6 py-4 text-xs font-bold text-slate-700">${upvotesText}</td>
-        <td class="px-6 py-4 text-xs text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
+        <td class="px-6 py-4 text-sm font-bold text-emerald-600">
+          ${report.upvotes || 0}
+        </td>
+        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">${formatReportedAt(report.reportedAt)}</td>
         <td class="px-6 py-4 text-right">
           <button data-doc-id="${report.docId}" class="action-view-btn text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors px-3 py-1.5 rounded bg-emerald-50 hover:bg-emerald-100 inline-flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -2058,13 +1842,15 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const queueList = document.getElementById("service-queue-list");
     const donutEl = document.getElementById("task-donut-chart");
     const legendEl = document.getElementById("task-donut-legend");
+    const counter = document.getElementById("task-table-results-counter");
+    const pager = document.getElementById("task-pagination-controls");
     if (!tbody || !queueList || !donutEl || !reports) return;
 
     // 1. Process Reports into "Tasks" applying Upvote Priority Logic
-    let allTasks = reports.map(r => {
+    let allTasks = reports.map((r, i) => {
       const sev = r.severity || 0;
       const upvotes = r.upvotes || 1;
-
+      
       // PRIORITY LOGIC: Community upvotes make it rise in urgency!
       let priority = 'Low';
       if (sev >= 4 || upvotes >= 10) priority = 'High';
@@ -2073,24 +1859,26 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       // Due Date: 48 Hours from reported time
       const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
       const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
-
+      
       let uiStatus = r.status;
       let isOverdue = false;
       if (r.status === 'Pending Verification' && ageMs > (48 * 60 * 60 * 1000)) {
-        uiStatus = 'Overdue';
-        isOverdue = true;
+          uiStatus = 'Overdue';
+          isOverdue = true;
       }
 
-      let assignee = 'Unassigned';
-      if (r.status === 'In Progress') assignee = 'Response Team';
-      else if (r.status === 'Resolved') assignee = 'Completed Unit';
+      // ASSIGNEE MAPPING: Pull exact code directly from the database record
+      let assignee = r.assignedToCode || 'Unassigned';
+      let team = r.assignedToCode ? 'Active Deployment' : 'Pending Assignment';
 
       return {
         id: r.id,
         docId: r.docId,
         title: `${r.category} Clearing`,
         barangay: r.barangay,
+        district: r.district,
         assignee: assignee,
+        team: team,
         priority: priority,
         status: uiStatus,
         isOverdue: isOverdue,
@@ -2106,34 +1894,38 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const assignedCount = allTasks.filter(t => t.status === 'In Progress').length;
     const overdueCount = allTasks.filter(t => t.isOverdue).length;
     const completedCount = allTasks.filter(t => t.status === 'Resolved').length;
+    const dismissedCount = allTasks.filter(t => t.status === 'Dismissed').length;
 
-    // Fixed IDs to match HTML
-    if (document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
-    if (document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
-    if (document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
-    if (document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
-
-    if (document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
-    if (document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
-    if (document.getElementById("task-count-completed")) document.getElementById("task-count-completed").textContent = `(${completedCount})`;
-
+    if(document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
+    if(document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
+    if(document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
+    if(document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
+    if(document.getElementById("task-stat-dismissed")) document.getElementById("task-stat-dismissed").textContent = dismissedCount;
+    
+    if(document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
+    if(document.getElementById("task-count-mine")) document.getElementById("task-count-mine").textContent = `(${assignedCount})`;
+    if(document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
+    if(document.getElementById("task-count-resolved")) document.getElementById("task-count-resolved").textContent = `(${completedCount})`;
+    if(document.getElementById("task-count-dismissed")) document.getElementById("task-count-dismissed").textContent = `(${dismissedCount})`;
     // 3. Apply Filters
     let filteredTasks = [...allTasks];
-
-    // Fix: Show ALL tasks in 'all' tab, don't restrict to activeTasks
-    if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+    
+   if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+    else if (taskCurrentTab === 'mine') filteredTasks = filteredTasks.filter(t => t.status === 'In Progress');
     else if (taskCurrentTab === 'overdue') filteredTasks = filteredTasks.filter(t => t.isOverdue);
-    else if (taskCurrentTab === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
-
-    if (taskCurrentPriority !== 'all') {
-      filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
-    }
+    else if (taskCurrentTab === 'resolved') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
+    else if (taskCurrentTab === 'dismissed') filteredTasks = filteredTasks.filter(t => t.status === 'Dismissed');
+    
+    if (taskCurrentPriority !== 'all') filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
+    if (taskCurrentStatus !== 'all') filteredTasks = filteredTasks.filter(t => t.status === taskCurrentStatus);
+    if (taskCurrentAssignee !== 'all') filteredTasks = filteredTasks.filter(t => t.assignee === taskCurrentAssignee);
+    if (taskCurrentDistrict !== 'all') filteredTasks = filteredTasks.filter(t => t.district === taskCurrentDistrict);
 
     if (taskSearchQuery) {
       const q = taskSearchQuery.toLowerCase();
-      filteredTasks = filteredTasks.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q) ||
+      filteredTasks = filteredTasks.filter(t => 
+        t.title.toLowerCase().includes(q) || 
+        t.id.toLowerCase().includes(q) || 
         t.barangay.toLowerCase().includes(q)
       );
     }
@@ -2148,7 +1940,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     tbody.innerHTML = "";
     if (pageItems.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-xs font-semibold bg-slate-50/50">No tasks currently match this filter.</td></tr>`;
     } else {
       pageItems.forEach((t, i) => {
         const priorityColors = {
@@ -2158,15 +1950,15 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         };
 
         const statusStyles = {
-          'Pending': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' },
+          'Pending Verification': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' },
           'In Progress': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>`, pill: 'bg-blue-50 text-blue-700 border-blue-200' },
           'Overdue': { icon: `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' },
-          'Completed': { icon: `<svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`, pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-          'Failed': { icon: `<svg class="w-2.5 h-2.5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' } // Workflow C UI
+          'Resolved': { icon: `<svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`, pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+          'Dismissed': { icon: `<svg class="w-2.5 h-2.5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`, pill: 'bg-rose-50 text-rose-700 border-rose-200' }
         };
 
-        const st = statusStyles[t.status] || statusStyles['Pending'];
-
+        const st = statusStyles[t.status] || { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' };
+        
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-100" style="animation-delay: ${i * 30}ms;">
             <td class="px-5 py-4 font-mono text-[11px] font-bold text-slate-500">#${t.id}</td>
@@ -2181,10 +1973,11 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
             <td class="px-5 py-4">
               <span class="text-[10px] font-bold px-2.5 py-1 rounded border ${priorityColors[t.priority]}">${t.priority}</span>
             </td>
+            <td class="px-5 py-4 text-sm font-semibold whitespace-nowrap ${t.assignee === 'Unassigned' ? 'text-slate-400 italic' : 'text-slate-700 font-bold'}">${t.assignee}</td>
             <td class="px-5 py-4 text-xs font-bold ${t.isOverdue ? 'text-rose-600' : 'text-slate-600'}">${t.due}</td>
             <td class="px-5 py-4">
               <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${st.pill}">
-                <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${t.status}
+                ${st.icon}${t.status}
               </span>
             </td>
             <td class="px-5 py-4 text-right">
@@ -2197,68 +1990,76 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    const counter = document.getElementById("task-table-counter");
-    if (counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
-
-    const pager = document.getElementById("task-pagination-controls");
+    if(counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
+   
     if (pager) {
-      pager.innerHTML = "";
-      if (totalPages > 1) {
-        const createBtn = (label, pageNum, disabled, isActive) => {
-          const b = document.createElement("button");
-          b.innerHTML = label;
-          b.disabled = disabled;
-          if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
-          else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
-          else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
-          if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
-          return b;
-        };
-        pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
-        for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
-        pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
-      }
+        pager.innerHTML = "";
+        if (totalPages > 1) {
+            const createBtn = (label, pageNum, disabled, isActive) => {
+                const b = document.createElement("button");
+                b.innerHTML = label;
+                b.disabled = disabled;
+                if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
+                else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
+                else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
+                if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
+                return b;
+            };
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
+            for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
+            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
+        }
     }
 
-    // 5. Sidebar: Service Queue
+    // 5. Update Assignee Dropdown Dynamically
+    const assgnMenu = document.getElementById("dd-task-assignee-menu");
+    if(assgnMenu) {
+        const uniques = [...new Set(allTasks.map(t => t.assignee))];
+        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
+        uniques.forEach(v => {
+            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
+        });
+    }
+
+    // 6. Sidebar: Service Queue
     const brgyCounts = {};
     activeTasks.forEach(t => {
       brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
     });
-
-    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a, b) => b.count - a.count).slice(0, 6);
+    
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 6);
     const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+    
+    if (queueList) {
+        queueList.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>` : "";
+        queueData.forEach(q => {
+          const pct = (q.count / maxQueue) * 100;
+          let barColor = 'bg-emerald-500';
+          if(q.count > 10) barColor = 'bg-rose-500';
+          else if(q.count > 4) barColor = 'bg-amber-500';
 
-    queueList.innerHTML = "";
-    if (queueData.length === 0) queueList.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>`;
+          queueList.innerHTML += `
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
+                <span class="text-[11px] font-black text-slate-900">${q.count}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+              </div>
+            </div>
+          `;
+        });
+    }
 
-    queueData.forEach(q => {
-      const pct = (q.count / maxQueue) * 100;
-      let barColor = 'bg-emerald-500';
-      if (q.count > 10) barColor = 'bg-rose-500';
-      else if (q.count > 4) barColor = 'bg-amber-500';
-
-      queueList.innerHTML += `
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
-            <span class="text-[11px] font-black text-slate-900">${q.count}</span>
-          </div>
-          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
-          </div>
-        </div>
-      `;
-    });
-
-    // 6. Sidebar: Donut Chart
+    // 7. Sidebar: Donut Chart
     const statusCounts = { 'Pending Verification': 0, 'In Progress': 0, 'Overdue': 0, 'Resolved': 0 };
     allTasks.forEach(t => {
-      if (statusCounts[t.status] !== undefined) statusCounts[t.status]++;
+      if(statusCounts[t.status] !== undefined) statusCounts[t.status]++;
     });
 
     const dTotal = allTasks.filter(t => t.status !== 'Dismissed').length;
-    if (document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
+    if(document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
 
     const oData = [
       { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
@@ -2267,32 +2068,34 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       { label: 'Completed', val: statusCounts['Resolved'], color: '#10b981' }
     ].filter(d => d.val > 0);
 
-    legendEl.innerHTML = "";
-    if (oData.length === 0) {
-      donutEl.style.background = "#e2e8f0";
-      legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
-    } else {
-      let cursor = 0;
-      const stops = oData.map(o => {
-        const startPct = (cursor / dTotal) * 100;
-        cursor += o.val;
-        const endPct = (cursor / dTotal) * 100;
-        return `${o.color} ${startPct}% ${endPct}%`;
-      }).join(', ');
-      donutEl.style.background = `conic-gradient(${stops})`;
+    if (legendEl && donutEl) {
+        legendEl.innerHTML = "";
+        if (oData.length === 0) {
+           donutEl.style.background = "#e2e8f0";
+           legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
+        } else {
+          let cursor = 0;
+          const stops = oData.map(o => {
+              const startPct = (cursor / dTotal) * 100;
+              cursor += o.val;
+              const endPct = (cursor / dTotal) * 100;
+              return `${o.color} ${startPct}% ${endPct}%`;
+          }).join(', ');
+          donutEl.style.background = `conic-gradient(${stops})`;
 
-      oData.forEach(o => {
-        const pct = Math.round((o.val / dTotal) * 100);
-        legendEl.innerHTML += `
-            <div class="flex items-center justify-between gap-2 mb-2">
-              <span class="flex items-center gap-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
-                <span class="truncate">${o.label}</span>
-              </span>
-              <span class="text-slate-500 font-bold">${pct}%</span>
-            </div>
-          `;
-      });
+          oData.forEach(o => {
+              const pct = Math.round((o.val / dTotal) * 100);
+              legendEl.innerHTML += `
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
+                    <span class="truncate">${o.label}</span>
+                  </span>
+                  <span class="text-slate-500 font-bold">${pct}%</span>
+                </div>
+              `;
+          });
+        }
     }
   }
 
@@ -2301,7 +2104,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       all: document.getElementById("filter-tab-all"),
       pending: document.getElementById("filter-tab-pending"),
       progress: document.getElementById("filter-tab-progress"),
-      resolved: document.getElementById("filter-tab-resolved")
+      resolved: document.getElementById("filter-tab-resolved"),
+      dismissed: document.getElementById("filter-tab-dismissed")
     };
     Object.keys(tabs).forEach(key => {
       const t = tabs[key];
@@ -2315,135 +2119,38 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
   }
 
-  // Tab Click Listener Rewrite (Ensures Sub-tabs set exact matches)
+  // Bind events for filter sub-tabs execution
   function setupTabFilters() {
     const tabs = {
       all: document.getElementById("filter-tab-all"),
       pending: document.getElementById("filter-tab-pending"),
       progress: document.getElementById("filter-tab-progress"),
-      resolved: document.getElementById("filter-tab-resolved")
-    };
-
-    const mapKeyToStatus = {
-      all: "all",
-      pending: "Pending Verification",
-      progress: "In Progress",
-      resolved: "Resolved"
+      resolved: document.getElementById("filter-tab-resolved"),
+      dismissed: document.getElementById("filter-tab-dismissed")
     };
 
     Object.keys(tabs).forEach(key => {
       if (!tabs[key]) return;
       tabs[key].addEventListener("click", function () {
-        currentStatusFilter = mapKeyToStatus[key];
+        currentStatusFilter = key;
+        updateTabHighlight(key);
 
-        Object.keys(tabs).forEach(k => {
-          if (tabs[k]) tabs[k].className = k === key ? "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-filter-tab transition-all" : "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
-        });
-
-        const rptStatusText = document.getElementById("reports-dropdown-status-text");
-        if (rptStatusText) rptStatusText.textContent = key === "all" ? "All Status" : currentStatusFilter;
-
-        currentPage = 1;
-        renderReportsTable();
-      });
-    });
-  }
-
-  // Custom Toolbar Listeners
-  const rptStatusBtn = document.getElementById("reports-dropdown-status-btn");
-  const rptStatusMenu = document.getElementById("reports-dropdown-status-menu");
-  const rptStatusText = document.getElementById("reports-dropdown-status-text");
-
-  if (rptStatusBtn && rptStatusMenu) {
-    rptStatusBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      rptStatusMenu.classList.toggle("hidden");
-      document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
-    });
-
-    rptStatusMenu.querySelectorAll("div[data-value]").forEach(opt => {
-      opt.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const val = e.target.dataset.value;
-        currentStatusFilter = val;
-        if (rptStatusText) rptStatusText.textContent = e.target.textContent;
-        rptStatusMenu.classList.add("hidden");
-
-        // Remove sub-tab highlights if an arbitrary status (like Dismissed) is selected
-        const mapStatusToKey = { "all": "all", "Pending Verification": "pending", "In Progress": "progress", "Resolved": "resolved" };
-        const activeKey = mapStatusToKey[val];
-        ["all", "pending", "progress", "resolved"].forEach(k => {
-          const t = document.getElementById(`filter-tab-${k}`);
-          if (t) t.className = k === activeKey ? "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-filter-tab transition-all" : "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
-        });
+        // Sync select dropdown
+        const statusSelect = document.getElementById("status-filter-select");
+        if (statusSelect) {
+          const selectVals = {
+            all: "all",
+            pending: "Pending Verification",
+            progress: "In Progress",
+            resolved: "Resolved",
+            dismissed: "Dismissed"
+          };
+          statusSelect.value = selectVals[key] || "all";
+        }
 
         currentPage = 1;
         renderReportsTable();
       });
-    });
-  }
-
-  // Assignee Dropdown Toggle
-  const rptAssigneeBtn = document.getElementById("reports-dropdown-assignee-btn");
-  const rptAssigneeMenu = document.getElementById("reports-dropdown-assignee-menu");
-  if (rptAssigneeBtn && rptAssigneeMenu) {
-    rptAssigneeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      rptAssigneeMenu.classList.toggle("hidden");
-      document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
-      document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
-    });
-  }
-
-  // Make sure clicks outside close the new menu
-  document.addEventListener("click", () => {
-    [
-      "reports-dropdown-status-menu",
-      "reports-dropdown-category-menu",
-      "reports-dropdown-district-menu",
-      "reports-dropdown-assignee-menu",
-      "reports-dropdown-sort-menu"
-    ].forEach(id => {
-      const menu = document.getElementById(id);
-      if (menu && !menu.classList.contains("hidden")) menu.classList.add("hidden");
-    });
-  });
-
-  // Update the Reset Button
-  const filterBtn = document.getElementById("filter-btn");
-  if (filterBtn) {
-    filterBtn.addEventListener("click", function () {
-      if (reportSearchInput) reportSearchInput.value = "";
-
-      currentStatusFilter = "all";
-      currentCategoryFilter = "all";
-      currentDistrictFilter = "all";
-      currentAssigneeFilter = "all";
-      currentSortOrder = "date-desc";
-
-      const rptStatusText = document.getElementById("reports-dropdown-status-text");
-      const rptSortText = document.getElementById("reports-dropdown-sort-text");
-      const rptAssigneeText = document.getElementById("reports-dropdown-assignee-text");
-
-      if (rptStatusText) rptStatusText.textContent = "All Status";
-      if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
-      if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts";
-      if (rptAssigneeText) rptAssigneeText.textContent = "All Assignees";
-      if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
-
-      // reset tabs highlighting
-      ["all", "pending", "progress", "resolved"].forEach(k => {
-        const t = document.getElementById(`filter-tab-${k}`);
-        if (t) t.className = k === "all" ? "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold active-filter-tab transition-all" : "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
-      });
-
-      currentPage = 1;
-      renderReportsTable();
     });
   }
 
@@ -2537,14 +2244,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     "default": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
   };
 
-  function populateModal(report) {
+function populateModal(report) {
     modalReportId.textContent = `Report #${report.id}`;
     modalCategory.textContent = report.category;
-
+    
     // Inject Category Icon dynamically
     const iconContainer = document.getElementById("modal-cat-icon-container");
     if (iconContainer) {
-      iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
+        iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
     }
 
     modalLocation.textContent = report.location;
@@ -2557,7 +2264,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     updateModalStatusBadge(report.status);
     modalReportImage.src = report.imageUrl || PLACEHOLDER_IMAGE;
 
-    // Hide all dynamic inputs first
+   // Hide all dynamic inputs first
     if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
     if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
     if (assigneeContainer) assigneeContainer.classList.add("hidden");
@@ -2593,7 +2300,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     document.body.classList.add("overflow-hidden");
   }
 
-  function updateModalStatusBadge(status) {
+function updateModalStatusBadge(status) {
     const editBox = document.getElementById("modal-status-edit-box");
     const titleText = document.getElementById("modal-status-title-text");
     const saveBtn = document.getElementById("modal-btn-save");
@@ -2610,41 +2317,57 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     }
 
     textEl.textContent = status;
-
+    
     // Reset Edit Box Base Classes
-    if (editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
-    if (titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
-
+    if(editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
+    if(titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
+    
     // Reset Save Button
-    if (saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+    if(saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
     // Show spacer by default, hide if Resolved (so Resolved UI takes the space)
-    if (footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
+    if(footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
 
     if (status === "Resolved") {
       dotEl.className = "w-2 h-2 rounded-full bg-emerald-500";
       modalStatusBadge.classList.add("text-emerald-700");
-      if (editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
-      if (titleText) titleText.classList.add("text-emerald-600");
-      if (saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
+      if(editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
+      if(titleText) titleText.classList.add("text-emerald-600");
+      if(saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
     } else if (status === "In Progress") {
       dotEl.className = "w-2 h-2 rounded-full bg-blue-500";
       modalStatusBadge.classList.add("text-blue-700");
-      if (editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
-      if (titleText) titleText.classList.add("text-blue-600");
-      if (saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
+      if(editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
+      if(titleText) titleText.classList.add("text-blue-600");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
     } else if (status === "Dismissed") {
       dotEl.className = "w-2 h-2 rounded-full bg-rose-500";
       modalStatusBadge.classList.add("text-rose-700");
-      if (editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
-      if (titleText) titleText.classList.add("text-rose-600");
-      if (saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
+      if(editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
+      if(titleText) titleText.classList.add("text-rose-600");
+      if(saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
     } else {
       dotEl.className = "w-2 h-2 rounded-full bg-slate-400";
-      if (editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
-      if (titleText) titleText.classList.add("text-slate-500");
-      if (saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
+      if(editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
+      if(titleText) titleText.classList.add("text-slate-500");
+      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
     }
+  }
+
+  function openFullscreenImage() {
+    const imgSrc = document.getElementById("modal-report-image").src;
+    if (!imgSrc || imgSrc === window.location.href) return;
+    const fsModal = document.getElementById("fullscreen-image-modal");
+    const fsContent = document.getElementById("fullscreen-image-content");
+    if (fsModal && fsContent) {
+      fsContent.src = imgSrc;
+      fsModal.classList.remove("hidden");
+    }
+  }
+
+  function closeFullscreenImage() {
+    const fsModal = document.getElementById("fullscreen-image-modal");
+    if (fsModal) fsModal.classList.add("hidden");
   }
 
   function closeModal() {
@@ -2659,24 +2382,24 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
 
     const updatePayload = { status: firestoreStatus };
-
+    
     // Safely structure payload based on Admin selection
     if (newStatus === "Dismissed") {
       updatePayload.dismissalReason = dismissalReasonInput ? dismissalReasonInput.value : "";
-    }
+    } 
     else if (newStatus === "Resolved") {
       const adminCode = resolvedByInput ? resolvedByInput.value : "";
       if (!adminCode) {
-        showToast("Validation Error", "Please verify using your Admin ID before saving.");
-        return;
+          showToast("Validation Error", "Please verify using your Admin ID before saving.");
+          return; 
       }
       updatePayload.resolvedByCode = adminCode;
-    }
+    } 
     else if (newStatus === "In Progress") {
       const truckCode = assigneeInput ? assigneeInput.value : "";
       if (!truckCode) {
-        showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
-        return;
+          showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
+          return; 
       }
       updatePayload.assignedToCode = truckCode;
     }
@@ -2703,7 +2426,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         category: selectedReport.category,
         lat: lat,
         lng: lng,
-        statusUpdate: firestoreStatus // Log the new status state
+        statusUpdate: firestoreStatus,
+        resolvedBy: updatePayload.resolvedByCode || "N/A" // Captures the admin ID
       };
 
       // --- 3. SEND TO HEDERA ---
@@ -2811,9 +2535,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     const headerCityBtn = document.getElementById("header-city-btn");
     if (headerCityBtn) {
-      headerCityBtn.addEventListener("click", () => {
-        showToast("Only Quezon City for now", "Future cities will be added in the next update.");
-      });
+        headerCityBtn.addEventListener("click", () => {
+            showToast("Only Quezon City for now", "Future cities will be added in the next update.");
+        });
     }
 
     const analyticsDistFilter = document.getElementById("analytics-district-filter");
@@ -2830,25 +2554,25 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
 
     const tSearchInput = document.getElementById("task-search-input");
-    if (tSearchInput) {
-      tSearchInput.addEventListener("input", function () {
+    if(tSearchInput) {
+      tSearchInput.addEventListener("input", function() {
         taskSearchQuery = this.value;
         taskCurrentPage = 1;
         renderTaskManagement();
       });
     }
 
-    const tTabs = ['all', 'overdue', 'completed'];
+    const tTabs = ['all', 'mine', 'overdue', 'resolved', 'dismissed'];
     tTabs.forEach(key => {
       const btn = document.getElementById(`task-tab-${key}`);
-      if (btn) {
+      if(btn) {
         btn.addEventListener('click', () => {
           taskCurrentTab = key;
           taskCurrentPage = 1;
-
+          
           tTabs.forEach(k => {
-            const b = document.getElementById(`task-tab-${k}`);
-            if (b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
+             const b = document.getElementById(`task-tab-${k}`);
+             if(b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
           });
           btn.className = "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold transition-all";
           renderTaskManagement();
@@ -2859,8 +2583,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const tPriBtn = document.getElementById("dd-task-priority-btn");
     const tPriMenu = document.getElementById("dd-task-priority-menu");
     const tPriText = document.getElementById("dd-task-priority-text");
-
-    if (tPriBtn && tPriMenu) {
+    
+    if(tPriBtn && tPriMenu) {
       tPriBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         tPriMenu.classList.toggle("hidden");
@@ -2869,7 +2593,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
           taskCurrentPriority = e.target.dataset.value;
-          if (tPriText) tPriText.textContent = e.target.textContent;
+          if(tPriText) tPriText.textContent = e.target.textContent;
           tPriMenu.classList.add("hidden");
           taskCurrentPage = 1;
           renderTaskManagement();
@@ -2877,20 +2601,91 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    document.addEventListener("click", () => {
-      if (tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+   // --- STATUS & ASSIGNEE DROPDOWNS ---
+    const tDistBtn = document.getElementById("task-dropdown-district-btn");
+    const tDistMenu = document.getElementById("task-dropdown-district-menu");
+    if (tDistBtn && tDistMenu) {
+      tDistBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tDistMenu.classList.toggle("hidden");
+      });
+    }
+
+    const tStatusBtn = document.getElementById("dd-task-status-btn");
+    const tStatusMenu = document.getElementById("dd-task-status-menu");
+    const tStatusText = document.getElementById("dd-task-status-text");
+    if (tStatusBtn && tStatusMenu) {
+      tStatusBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tStatusMenu.classList.toggle("hidden");
+      });
+      tStatusMenu.querySelectorAll("div[data-value]").forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          taskCurrentStatus = e.target.dataset.value;
+          if (tStatusText) tStatusText.textContent = e.target.textContent;
+          tStatusMenu.classList.add("hidden");
+          taskCurrentPage = 1;
+          renderTaskManagement();
+        });
+      });
+    }
+
+    const tAssgnBtn = document.getElementById("dd-task-assignee-btn");
+    const tAssgnMenu = document.getElementById("dd-task-assignee-menu");
+    if (tAssgnBtn && tAssgnMenu) {
+      tAssgnBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tAssgnMenu.classList.toggle("hidden");
+      });
+    }
+
+    // Dynamic listener for Assignee dropdown generated in renderTaskManagement
+    document.addEventListener("click", (e) => {
+        const option = e.target.closest('.dd-opt');
+        if (option && e.target.closest('#dd-task-assignee-menu')) {
+            e.stopPropagation();
+            taskCurrentAssignee = option.dataset.value; // Pull the dataset from the specific div clicked
+            const tAssgnText = document.getElementById('dd-task-assignee-text');
+            if (tAssgnText) tAssgnText.textContent = taskCurrentAssignee === 'all' ? 'All Assignees' : taskCurrentAssignee;
+            
+            if (tAssgnMenu) tAssgnMenu.classList.add('hidden');
+            taskCurrentPage = 1;
+            renderTaskManagement();
+        }
     });
 
-    const tResetBtn = document.getElementById("task-reset-btn");
+    document.addEventListener("click", () => {
+        const taskDistMenu = document.getElementById("task-dropdown-district-menu");
+        if(taskDistMenu && !taskDistMenu.classList.contains("hidden")) taskDistMenu.classList.add("hidden");
+        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+        if(tStatusMenu && !tStatusMenu.classList.contains("hidden")) tStatusMenu.classList.add("hidden");
+        if(tAssgnMenu && !tAssgnMenu.classList.contains("hidden")) tAssgnMenu.classList.add("hidden");
+    });
+
+    const tResetBtn = document.getElementById("task-reset-filters-btn");
     if (tResetBtn) {
-      tResetBtn.addEventListener("click", () => {
-        taskSearchQuery = '';
-        if (tSearchInput) tSearchInput.value = '';
-        taskCurrentPriority = 'all';
-        if (tPriText) tPriText.textContent = 'All Priorities';
-        taskCurrentPage = 1;
-        renderTaskManagement();
-      });
+       tResetBtn.addEventListener("click", () => {
+          taskSearchQuery = '';
+          if(tSearchInput) tSearchInput.value = '';
+          
+          taskCurrentPriority = 'all';
+          if(tPriText) tPriText.textContent = 'All Priorities';
+          
+          taskCurrentStatus = 'all';
+          if(tStatusText) tStatusText.textContent = 'All Status';
+          
+          taskCurrentAssignee = 'all';
+          const tAssgnText = document.getElementById('dd-task-assignee-text');
+          if(tAssgnText) tAssgnText.textContent = 'All Assignees';
+          
+          taskCurrentDistrict = 'all';
+          const tDistText = document.getElementById('task-dropdown-district-text');
+          if(tDistText) tDistText.textContent = 'All Districts';
+
+          taskCurrentPage = 1;
+          renderTaskManagement();
+       });
     }
 
     const responseTimeBars = document.querySelectorAll("#view-analytics-panel .lg\\:col-span-5 .flex-1.flex.items-end > div");
@@ -2930,31 +2725,43 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (modalStatusSelect) {
       modalStatusSelect.addEventListener("change", function () {
         updateModalStatusBadge(this.value);
-
+        
         if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
         if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
         if (assigneeContainer) assigneeContainer.classList.add("hidden");
 
         if (this.value === "Dismissed" && dismissalReasonContainer) {
-          dismissalReasonContainer.classList.remove("hidden");
+            dismissalReasonContainer.classList.remove("hidden");
         } else if (this.value === "Resolved" && resolvedByContainer) {
-          resolvedByContainer.classList.remove("hidden");
+            resolvedByContainer.classList.remove("hidden");
         } else if (this.value === "In Progress" && assigneeContainer) {
-          assigneeContainer.classList.remove("hidden");
+            assigneeContainer.classList.remove("hidden");
         }
+      });
+    }
+
+    const closeFsBtn = document.getElementById("close-fullscreen-btn");
+    if (closeFsBtn) closeFsBtn.addEventListener("click", closeFullscreenImage);
+
+    const fsModal = document.getElementById("fullscreen-image-modal");
+    if (fsModal) {
+      fsModal.addEventListener("click", (e) => {
+        if (e.target === fsModal) closeFullscreenImage();
       });
     }
 
     const backdrop = document.getElementById("modal-backdrop");
     if (backdrop) backdrop.addEventListener("click", closeModal);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" || e.key === "Esc") {
-        closeModal();
-        closeTaskModals();
-      }
+    document.addEventListener("keydown", (e) => { 
+        if (e.key === "Escape" || e.key === "Esc") {
+            closeFullscreenImage();
+            closeModal();
+            closeTaskModals();
+        }
     });
 
     // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
+   // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
     const rptStatusBtn = document.getElementById("reports-dropdown-status-btn");
     const rptStatusMenu = document.getElementById("reports-dropdown-status-menu");
     const rptStatusText = document.getElementById("reports-dropdown-status-text");
@@ -2965,13 +2772,15 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         rptStatusMenu.classList.toggle("hidden");
         document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
       });
 
       rptStatusMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
           const val = e.target.dataset.value;
-          const keys = { "all": "all", "Pending Verification": "pending", "In Progress": "progress", "Resolved": "resolved" };
+          const keys = { "all": "all", "Pending Verification": "pending", "In Progress": "progress", "Resolved": "resolved", "Dismissed": "dismissed" };
 
           currentStatusFilter = keys[val] || "all";
           if (rptStatusText) rptStatusText.textContent = e.target.textContent;
@@ -2981,56 +2790,19 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
           renderReportsTable();
         });
       });
+    }
 
-      const rptDistBtn = document.getElementById("reports-dropdown-district-btn");
-      const rptDistMenu = document.getElementById("reports-dropdown-district-menu");
-      if (rptDistBtn && rptDistMenu) {
-        rptDistBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          rptDistMenu.classList.toggle("hidden");
-          document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
-          document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
-          document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
-        });
-      }
-
-      document.addEventListener("click", () => {
-        [
-          "reports-dropdown-status-menu",
-          "reports-dropdown-category-menu",
-          "reports-dropdown-district-menu",
-          "reports-dropdown-sort-menu",
-          "dropdown-status-menu",
-          "dropdown-category-menu"
-        ].forEach(id => {
-          const menu = document.getElementById(id);
-          if (menu && !menu.classList.contains("hidden")) menu.classList.add("hidden");
-        });
+    const rptDistBtn = document.getElementById("reports-dropdown-district-btn");
+    const rptDistMenu = document.getElementById("reports-dropdown-district-menu");
+    if (rptDistBtn && rptDistMenu) {
+      rptDistBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptDistMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
       });
-
-      const filterBtn = document.getElementById("filter-btn");
-      if (filterBtn) {
-        filterBtn.addEventListener("click", function () {
-          if (reportSearchInput) reportSearchInput.value = "";
-
-          currentStatusFilter = "all";
-          currentCategoryFilter = "all";
-          currentDistrictFilter = "all";
-          currentSortOrder = "date-desc";
-
-          const rptStatusText = document.getElementById("reports-dropdown-status-text");
-          const rptSortText = document.getElementById("reports-dropdown-sort-text");
-
-          if (rptStatusText) rptStatusText.textContent = "All Status";
-          if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
-          if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts";
-          if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
-
-          updateTabHighlight("all");
-          currentPage = 1;
-          renderReportsTable();
-        });
-      }
     }
 
     const rptCatBtn = document.getElementById("reports-dropdown-category-btn");
@@ -3041,6 +2813,21 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         rptCatMenu.classList.toggle("hidden");
         document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
+      });
+    }
+
+    const rptAssgnBtn = document.getElementById("reports-dropdown-assignee-btn");
+    const rptAssgnMenu = document.getElementById("reports-dropdown-assignee-menu");
+    if (rptAssgnBtn && rptAssgnMenu) {
+      rptAssgnBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        rptAssgnMenu.classList.toggle("hidden");
+        document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-sort-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
       });
     }
 
@@ -3054,6 +2841,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         rptSortMenu.classList.toggle("hidden");
         document.getElementById("reports-dropdown-category-menu")?.classList.add("hidden");
         document.getElementById("reports-dropdown-status-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-district-menu")?.classList.add("hidden");
+        document.getElementById("reports-dropdown-assignee-menu")?.classList.add("hidden");
       });
 
       rptSortMenu.querySelectorAll("div[data-value]").forEach(opt => {
@@ -3068,10 +2857,20 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-    const rptBrgyBtn = document.getElementById("reports-dropdown-barangay-btn");
-    if (rptBrgyBtn) {
-      rptBrgyBtn.addEventListener("click", () => showToast("Barangay Mapping"));
-    }
+    document.addEventListener("click", () => {
+      [
+        "reports-dropdown-status-menu",
+        "reports-dropdown-category-menu",
+        "reports-dropdown-district-menu", 
+        "reports-dropdown-assignee-menu",
+        "reports-dropdown-sort-menu",
+        "dropdown-status-menu",
+        "dropdown-category-menu"
+      ].forEach(id => {
+        const menu = document.getElementById(id);
+        if (menu && !menu.classList.contains("hidden")) menu.classList.add("hidden");
+      });
+    });
 
     const filterBtn = document.getElementById("filter-btn");
     if (filterBtn) {
@@ -3080,10 +2879,17 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
         currentStatusFilter = "all";
         currentCategoryFilter = "all";
+        currentDistrictFilter = "all"; 
+        currentAssigneeFilter = "all";
         currentSortOrder = "date-desc";
+
+        const rptStatusText = document.getElementById("reports-dropdown-status-text");
+        const rptSortText = document.getElementById("reports-dropdown-sort-text");
 
         if (rptStatusText) rptStatusText.textContent = "All Status";
         if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
+        if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts"; 
+        if (document.getElementById("reports-dropdown-assignee-text")) document.getElementById("reports-dropdown-assignee-text").textContent = "All Assignees";
         if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
 
         updateTabHighlight("all");
@@ -3256,9 +3062,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     setupTabFilters();
 
     window.addEventListener("resize", () => {
-      if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
-        drawBarangayTrendChart();
-      }
+        if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
+            drawBarangayTrendChart();
+        }
     });
   }
 
@@ -3269,190 +3075,190 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   let selectedTaskReport = null;
 
   function openTaskModal(docId) {
-    selectedTaskReport = reports.find((r) => r.docId === docId);
-    if (!selectedTaskReport) return;
+      selectedTaskReport = reports.find((r) => r.docId === docId);
+      if (!selectedTaskReport) return;
 
-    if (selectedTaskReport.status === "Pending Verification" || selectedTaskReport.status === "Overdue") {
-      populateTaskCreateModal(selectedTaskReport);
-      document.getElementById("task-create-modal").classList.remove("hidden");
-    } else {
-      populateTaskDetailsModal(selectedTaskReport);
-      document.getElementById("task-details-modal").classList.remove("hidden");
-    }
-    document.body.classList.add("overflow-hidden");
+      if (selectedTaskReport.status === "Pending Verification" || selectedTaskReport.status === "Overdue") {
+          populateTaskCreateModal(selectedTaskReport);
+          document.getElementById("task-create-modal").classList.remove("hidden");
+      } else {
+          populateTaskDetailsModal(selectedTaskReport);
+          document.getElementById("task-details-modal").classList.remove("hidden");
+      }
+      document.body.classList.add("overflow-hidden");
   }
 
   function closeTaskModals() {
-    const tcModal = document.getElementById("task-create-modal");
-    const tdModal = document.getElementById("task-details-modal");
-    if (tcModal) tcModal.classList.add("hidden");
-    if (tdModal) tdModal.classList.add("hidden");
-    document.body.classList.remove("overflow-hidden");
-    selectedTaskReport = null;
+      const tcModal = document.getElementById("task-create-modal");
+      const tdModal = document.getElementById("task-details-modal");
+      if (tcModal) tcModal.classList.add("hidden");
+      if (tdModal) tdModal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+      selectedTaskReport = null;
   }
 
   async function submitNewTask() {
-    if (!selectedTaskReport) return;
+      if (!selectedTaskReport) return;
 
-    const assignToDrop = document.getElementById("tc-assign-to");
-    const assignTo = assignToDrop ? assignToDrop.value : "";
+      const assignToDrop = document.getElementById("tc-assign-to");
+      const assignTo = assignToDrop ? assignToDrop.value : "";
+      
+      const priorityElement = document.querySelector('input[name="tc-priority"]:checked');
+      const priority = priorityElement ? priorityElement.value : "Medium";
+      
+      const dueDate = document.getElementById("tc-due-date") ? document.getElementById("tc-due-date").value : "";
+      const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
+      const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
 
-    const priorityElement = document.querySelector('input[name="tc-priority"]:checked');
-    const priority = priorityElement ? priorityElement.value : "Medium";
-
-    const dueDate = document.getElementById("tc-due-date") ? document.getElementById("tc-due-date").value : "";
-    const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
-    const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
-
-    if (!assignTo) {
-      showToast("Validation Error", "Please select a team or truck to assign this task to.");
-      return;
-    }
-
-    try {
-      const btn = document.getElementById("tc-submit-btn");
-      if (btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
-
-      const updatePayload = {
-        status: "in_progress",
-        assignedToCode: assignTo,
-        taskPriority: priority,
-        taskDueDate: dueDate,
-        taskType: taskType,
-        taskDescription: desc
-      };
-
-      // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
-      let lat = null, lng = null;
-      if (selectedTaskReport.coordinates) {
-        if (selectedTaskReport.coordinates.lat != null) {
-          lat = selectedTaskReport.coordinates.lat;
-          lng = selectedTaskReport.coordinates.lng;
-        } else if (Array.isArray(selectedTaskReport.coordinates)) {
-          lat = selectedTaskReport.coordinates[0];
-          lng = selectedTaskReport.coordinates[1];
-        }
+      if (!assignTo) {
+          showToast("Validation Error", "Please select a team or truck to assign this task to.");
+          return;
       }
 
-      const hederaPayload = {
-        aiSeverityScore: selectedTaskReport.severity,
-        category: taskType || selectedTaskReport.category,
-        lat: lat,
-        lng: lng,
-        statusUpdate: "in_progress"
-      };
+      try {
+          const btn = document.getElementById("tc-submit-btn");
+          if(btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
 
-      const hashScanUrl = await logReportOnChain(hederaPayload);
-      if (hashScanUrl) {
-        updatePayload.hashScanUrl = hashScanUrl;
+          const updatePayload = {
+              status: "in_progress",
+              assignedToCode: assignTo,
+              taskPriority: priority,
+              taskDueDate: dueDate,
+              taskType: taskType,
+              taskDescription: desc
+          };
+
+          // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
+          let lat = null, lng = null;
+          if (selectedTaskReport.coordinates) {
+              if (selectedTaskReport.coordinates.lat != null) {
+                  lat = selectedTaskReport.coordinates.lat;
+                  lng = selectedTaskReport.coordinates.lng;
+              } else if (Array.isArray(selectedTaskReport.coordinates)) {
+                  lat = selectedTaskReport.coordinates[0];
+                  lng = selectedTaskReport.coordinates[1];
+              }
+          }
+
+          const hederaPayload = {
+              aiSeverityScore: selectedTaskReport.severity,
+              category: taskType || selectedTaskReport.category,
+              lat: lat,
+              lng: lng,
+              statusUpdate: "in_progress"
+          };
+
+          const hashScanUrl = await logReportOnChain(hederaPayload);
+          if (hashScanUrl) {
+              updatePayload.hashScanUrl = hashScanUrl;
+          }
+          
+          await updateDoc(doc(db, "reports", selectedTaskReport.docId), updatePayload);
+
+          closeTaskModals();
+          showToast("Task Assigned", "The task has been successfully created and assigned to the route.");
+      } catch (error) {
+          console.error("Task assignment failed:", error);
+          showToast("Error", "Could not assign task. Check console.");
+      } finally {
+          const btn = document.getElementById("tc-submit-btn");
+          if(btn) { btn.disabled = false; btn.textContent = "Create Task"; }
       }
-
-      await updateDoc(doc(db, "reports", selectedTaskReport.docId), updatePayload);
-
-      closeTaskModals();
-      showToast("Task Assigned", "The task has been successfully created and assigned to the route.");
-    } catch (error) {
-      console.error("Task assignment failed:", error);
-      showToast("Error", "Could not assign task. Check console.");
-    } finally {
-      const btn = document.getElementById("tc-submit-btn");
-      if (btn) { btn.disabled = false; btn.textContent = "Create Task"; }
-    }
   }
 
   function populateTaskCreateModal(report) {
-    const titleInput = document.getElementById("tc-title");
-    if (titleInput) titleInput.value = report.category + " Clearing";
-
-    const brgyDrop = document.getElementById("tc-barangay");
-    if (brgyDrop) {
-      if (![...brgyDrop.options].some(opt => opt.value === report.barangay)) {
-        brgyDrop.innerHTML += `<option value="${report.barangay}">${report.barangay}</option>`;
+      const titleInput = document.getElementById("tc-title");
+      if (titleInput) titleInput.value = report.category + " Clearing";
+      
+      const brgyDrop = document.getElementById("tc-barangay");
+      if(brgyDrop) {
+          if (![...brgyDrop.options].some(opt => opt.value === report.barangay)) {
+              brgyDrop.innerHTML += `<option value="${report.barangay}">${report.barangay}</option>`;
+          }
+          brgyDrop.value = report.barangay;
       }
-      brgyDrop.value = report.barangay;
-    }
 
-    const catDrop = document.getElementById("tc-task-type");
-    if (catDrop) {
-      if (![...catDrop.options].some(opt => opt.value === report.category)) {
-        catDrop.innerHTML += `<option value="${report.category}">${report.category}</option>`;
+      const catDrop = document.getElementById("tc-task-type");
+      if(catDrop) {
+           if (![...catDrop.options].some(opt => opt.value === report.category)) {
+               catDrop.innerHTML += `<option value="${report.category}">${report.category}</option>`;
+           }
+           catDrop.value = report.category;
       }
-      catDrop.value = report.category;
-    }
 
-    const descInput = document.getElementById("tc-desc");
-    if (descInput) descInput.value = report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+      const descInput = document.getElementById("tc-desc");
+      if (descInput) descInput.value = report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
 
-    const assignToDrop = document.getElementById("tc-assign-to");
-    if (assignToDrop) assignToDrop.value = "";
-
-    const dueDateInput = document.getElementById("tc-due-date");
-    if (dueDateInput) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      dueDateInput.value = tomorrow.toISOString().split('T')[0];
-    }
-
-    const pri = report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low";
-    const priRadio = document.querySelector(`input[name="tc-priority"][value="${pri}"]`);
-    if (priRadio) priRadio.checked = true;
+      const assignToDrop = document.getElementById("tc-assign-to");
+      if (assignToDrop) assignToDrop.value = "";
+      
+      const dueDateInput = document.getElementById("tc-due-date");
+      if (dueDateInput) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          dueDateInput.value = tomorrow.toISOString().split('T')[0]; 
+      }
+      
+      const pri = report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low";
+      const priRadio = document.querySelector(`input[name="tc-priority"][value="${pri}"]`);
+      if(priRadio) priRadio.checked = true;
   }
 
   function populateTaskDetailsModal(report) {
-    const idEl = document.getElementById("td-id");
-    if (idEl) idEl.textContent = `#${report.id}`;
+      const idEl = document.getElementById("td-id");
+      if (idEl) idEl.textContent = `#${report.id}`;
+      
+      const st = report.status;
+      const stColor = st === 'Resolved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+      const stEl = document.getElementById("td-status");
+      if(stEl) {
+          stEl.className = `text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border ${stColor}`;
+          stEl.textContent = st;
+      }
 
-    const st = report.status;
-    const stColor = st === 'Resolved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-    const stEl = document.getElementById("td-status");
-    if (stEl) {
-      stEl.className = `text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border ${stColor}`;
-      stEl.textContent = st;
-    }
+      const titleEl = document.getElementById("td-title");
+      if (titleEl) titleEl.textContent = report.taskType ? report.taskType + " Clearing" : report.category + " Clearing";
+      
+      const brgyEl = document.getElementById("td-barangay");
+      if (brgyEl) brgyEl.textContent = report.barangay;
+      
+      const descEl = document.getElementById("td-desc");
+      if (descEl) descEl.textContent = report.taskDescription || report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+      
+      const dueEl = document.getElementById("td-due");
+      if (dueEl) dueEl.textContent = report.taskDueDate ? new Date(report.taskDueDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}) : "Not set";
 
-    const titleEl = document.getElementById("td-title");
-    if (titleEl) titleEl.textContent = report.taskType ? report.taskType + " Clearing" : report.category + " Clearing";
+      const pri = report.taskPriority || (report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low");
+      const priColor = pri === 'High' ? 'text-rose-600 bg-rose-50 border-rose-200' : pri === 'Medium' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200';
+      const priEl = document.getElementById("td-priority");
+      if (priEl) priEl.innerHTML = `<span class="px-2.5 py-1 rounded border ${priColor} text-[10px] font-bold">${pri}</span>`;
 
-    const brgyEl = document.getElementById("td-barangay");
-    if (brgyEl) brgyEl.textContent = report.barangay;
+      const assignedToEl = document.getElementById("td-assigned-to");
+      if (assignedToEl) assignedToEl.textContent = report.assignedToCode || "Unassigned";
+      
+      const assignedOnEl = document.getElementById("td-assigned-on");
+      if (assignedOnEl) assignedOnEl.textContent = report.reportedAt ? report.reportedAt.toLocaleString('en-US', {month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : "N/A";
+      
+      const badgeEl = document.getElementById("td-assign-badge");
+      if(badgeEl) {
+          badgeEl.textContent = st === 'Resolved' ? "Completed" : st === 'Dismissed' ? "Halted" : "On Route";
+          badgeEl.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${st === 'Resolved' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-blue-100 text-blue-600 border-blue-200'}`;
+      }
 
-    const descEl = document.getElementById("td-desc");
-    if (descEl) descEl.textContent = report.taskDescription || report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+      // WORKFLOW C & GENERAL STEPPER RENDERING
+      const stepperContainer = document.getElementById("task-stepper-container");
+      if(!stepperContainer) return;
+      
+      const isDismissed = report.status === 'Dismissed';
+      const isResolved = report.status === 'Resolved';
+      const isAssigned = report.status === 'In Progress' || isResolved || isDismissed;
 
-    const dueEl = document.getElementById("td-due");
-    if (dueEl) dueEl.textContent = report.taskDueDate ? new Date(report.taskDueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Not set";
+      const chk = `<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+      const xx = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
 
-    const pri = report.taskPriority || (report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low");
-    const priColor = pri === 'High' ? 'text-rose-600 bg-rose-50 border-rose-200' : pri === 'Medium' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200';
-    const priEl = document.getElementById("td-priority");
-    if (priEl) priEl.innerHTML = `<span class="px-2.5 py-1 rounded border ${priColor} text-[10px] font-bold">${pri}</span>`;
+      let sHTML = '';
 
-    const assignedToEl = document.getElementById("td-assigned-to");
-    if (assignedToEl) assignedToEl.textContent = report.assignedToCode || "Unassigned";
-
-    const assignedOnEl = document.getElementById("td-assigned-on");
-    if (assignedOnEl) assignedOnEl.textContent = report.reportedAt ? report.reportedAt.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A";
-
-    const badgeEl = document.getElementById("td-assign-badge");
-    if (badgeEl) {
-      badgeEl.textContent = st === 'Resolved' ? "Completed" : st === 'Dismissed' ? "Halted" : "On Route";
-      badgeEl.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${st === 'Resolved' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-blue-100 text-blue-600 border-blue-200'}`;
-    }
-
-    // WORKFLOW C & GENERAL STEPPER RENDERING
-    const stepperContainer = document.getElementById("task-stepper-container");
-    if (!stepperContainer) return;
-
-    const isDismissed = report.status === 'Dismissed';
-    const isResolved = report.status === 'Resolved';
-    const isAssigned = report.status === 'In Progress' || isResolved || isDismissed;
-
-    const chk = `<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
-    const xx = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
-
-    let sHTML = '';
-
-    sHTML += `
+      sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 ${isAssigned ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'} shadow-sm ring-4 ring-white">
                   ${chk}
@@ -3462,7 +3268,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
           </div>
       `;
 
-    sHTML += `
+      sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isAssigned && !isDismissed && !isResolved ? 'border-blue-500 text-blue-500' : isResolved || isDismissed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved || isDismissed ? chk : '<div class="w-2 h-2 rounded-full bg-blue-500"></div>'}
@@ -3472,7 +3278,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
           </div>
       `;
 
-    sHTML += `
+      sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved ? 'border-emerald-500 bg-emerald-500 text-white' : isDismissed ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved ? chk : isDismissed ? xx : '<div class="w-2 h-2 rounded-full bg-slate-300"></div>'}
@@ -3482,7 +3288,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
           </div>
       `;
 
-    sHTML += `
+      sHTML += `
           <div class="flex flex-col items-center relative flex-1 pr-6">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved && report.resolvedByCode ? 'border-emerald-500 text-white bg-emerald-500' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved && report.resolvedByCode ? chk : '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>'}
@@ -3491,7 +3297,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
           </div>
       `;
 
-    stepperContainer.innerHTML = sHTML;
+      stepperContainer.innerHTML = sHTML;
   }
 
   // ==========================================
@@ -3500,4 +3306,5 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   document.addEventListener("DOMContentLoaded", init);
 
+  window.openFullscreenImage = openFullscreenImage;
 })();

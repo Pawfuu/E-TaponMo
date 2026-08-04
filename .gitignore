@@ -1,11 +1,11 @@
 # Environmental variables & secrets
 .env
-user-app/.env
+public/user-app/.env
 
 # Local configuration files containing live API keys
-user-app/config.js
-shared/firebase-config.js
-user-app/js/hedera-config.js
+public/user-app/config.js
+public/shared/firebase-config.js
+public/user-app/js/hedera-config.js
 
 # Firebase local caches and logs
 .firebase/

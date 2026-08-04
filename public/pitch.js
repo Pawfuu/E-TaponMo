@@ -1,4 +1,5 @@
-import { db } from "../shared/firebase-config.js";
+import { E_TAPON_TOPIC_ID } from "./user-app/js/hedera-config.js";
+import { db } from "./shared/firebase-config.js";
 import { collection, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Helper function to format timestamp
@@ -47,6 +48,10 @@ const totalReportsMetric = document.getElementById("network-total-reports");
 
 // Initialize listeners
 function initBlockchainData() {
+    const topicText = document.getElementById("network-topic-id");
+    const topicLink = document.getElementById("network-hashscan-link");
+    if (topicText) topicText.textContent = E_TAPON_TOPIC_ID;
+    if (topicLink) topicLink.href = "https://hashscan.io/testnet/topic/" + E_TAPON_TOPIC_ID;
     const reportsRef = collection(db, "reports");
 
     onSnapshot(reportsRef, (snapshot) => {
