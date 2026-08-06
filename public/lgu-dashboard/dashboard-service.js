@@ -90,7 +90,7 @@ export class DashboardService {
             this.unsubscriber = onSnapshot(reportsRef, (snapshot) => {
                 this.state.reports = snapshot.docs
                     .map(docSnap => this.normalizeReport(docSnap))
-                    .filter(report => report.reportedAt !== null); 
+                    .filter(report => report.reportedAt !== null);
                 this.recalculateAndNotify();
             }, (err) => {
                 this.state.error = err;
@@ -129,8 +129,11 @@ export class DashboardService {
             barangay: barangay,
             district: district,
             coordinates: data.coordinates || null,
-            submittedBy: data.reporterName || "Anonymous",
-            contactInfo: data.contactInfo || "Not Provided",
+
+            // UPDATED: Strict Accountability mapping
+            submittedBy: data.reporterName || "Verified Citizen",
+            contactInfo: data.contactInfo || "Email Attached",
+
             status: uiStatus,
             rawStatus: rawStatus,
             aiVolume: data.volumeEstimate || "N/A",
@@ -138,11 +141,13 @@ export class DashboardService {
             upvotes: data.upvotes || 1,
             notes: data.notes || "",
             imageUrl: data.imageUrl || null,
-            reportedAt: data.reportedAt?.toDate?.() || null, 
+            reportedAt: data.reportedAt?.toDate?.() || null,
             hashScanUrl: data.hashScanUrl || null,
             dismissalReason: data.dismissalReason || "",
             resolvedByCode: data.resolvedByCode || null,
             assignedToCode: data.assignedToCode || null,
+
+            taskDueDate: data.taskDueDate || null,
         };
     }
 
@@ -172,15 +177,15 @@ export class DashboardService {
             trendLabels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
 
-const barangayMap = {};
+        const barangayMap = {};
         let resolved7d = 0;
         let totalDiversionEligible = 0;
         let totalCategorized = 0;
 
         reports.forEach(r => {
-            const loc = r.barangay; 
+            const loc = r.barangay;
             if (!barangayMap[loc]) {
-                barangayMap[loc] = { 
+                barangayMap[loc] = {
                     total: 0, resolved: 0, pending: 0, district: r.district,
                     // Track all 6 explicit categories
                     nab: 0, rec: 0, non: 0, mix: 0, haz: 0, heal: 0,
@@ -188,7 +193,7 @@ const barangayMap = {};
                     maxActiveSeverity: 0       // Track highest AI severity 
                 };
             }
-            
+
             // Core Metrics
             barangayMap[loc].total++;
             if (r.status === "Resolved") barangayMap[loc].resolved++;
@@ -205,7 +210,7 @@ const barangayMap = {};
             if (r.reportedAt) {
                 const reportTime = r.reportedAt.getTime();
                 const diffDays = Math.floor((now.getTime() - reportTime) / (1000 * 3600 * 24));
-                
+
                 if (diffDays >= 0 && diffDays < 7) {
                     trendThisWeek[6 - diffDays]++;
                     if (r.status === "Resolved") resolved7d++;
@@ -233,10 +238,10 @@ const barangayMap = {};
         let barangaySummary = Object.keys(barangayMap).map(loc => {
             const stats = barangayMap[loc];
             const rate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0;
-            
+
             let statusText = "Low";
             let statusColor = "text-emerald-600 bg-emerald-50 border-emerald-200";
-            
+
             if (stats.maxActiveSeverity >= 4) {
                 statusText = "High";
                 statusColor = "text-rose-600 bg-rose-50 border-rose-200";

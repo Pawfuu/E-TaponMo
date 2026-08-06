@@ -15,6 +15,8 @@
 import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
 import { upvoteReport } from "../src/utils/db.js";
+// ADD AUTH SERVICE IMPORT HERE
+import { handleGoogleLogin } from "../shared/auth-service.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -42,6 +44,8 @@ const VALIDATOR_PROMPT_BASE =
 const photoInput = document.getElementById("trash-photo-input");
 const summaryEl = document.getElementById("ai-summary");
 const submitBtn = document.getElementById("submit-report-btn");
+// ADD LOGIN BUTTON HERE
+const loginBtn = document.getElementById("login-btn");
 const submitSpinner = document.getElementById("submit-spinner");
 const submitText = document.getElementById("submit-text");
 const reporterName = document.getElementById("reporter-name");
@@ -143,15 +147,19 @@ function setSubmitLoading(isLoading) {
 function updateStepper() {
   let activeStep = 1; // Default to step 1
 
-  const contactEl = document.getElementById("reporter-contact");
   const categoryEl = document.getElementById("waste-category");
+  // Look for the user profile badge instead of the contact form
+  const userProfileEl = document.getElementById("user-profile");
+  const isUserLoggedIn = userProfileEl && !userProfileEl.classList.contains("hidden");
 
   // Logic to determine the current step
   if (selectedFile) {
     activeStep = 2; // Photo uploaded
   }
-  if (selectedFile && categoryEl?.value && contactEl?.validity.valid) {
-    activeStep = 3; // Required details filled
+
+  // Step 3 is complete if they selected a category AND logged in
+  if (selectedFile && categoryEl?.value && isUserLoggedIn) {
+    activeStep = 3;
   }
 
   // Keep at step 4 if submitting OR if the report is finished
@@ -613,6 +621,14 @@ if (submitBtn) {
       return;
     }
 
+    const userProfileEl = document.getElementById("user-profile");
+    if (!userProfileEl || userProfileEl.classList.contains("hidden")) {
+      if (typeof window.showErrorModal === "function") {
+        window.showErrorModal("Please Sign In with Google in Step 3 to submit your report and receive $ECO tokens.");
+      }
+      return;
+    }
+
     const reportForm = getReportFormData();
     if (!reportForm.wasteType) {
       if (typeof window.showErrorModal === "function") {
@@ -870,6 +886,15 @@ if (submitBtn) {
   // ==========================================
   // 7. UI/UX EVENT LISTENERS
   // ==========================================
+
+  // Authentication Listener
+  loginBtn?.addEventListener("click", async () => {
+    const user = await handleGoogleLogin();
+    if (user) {
+      console.log("Logged in successfully:", user.displayName);
+      // You can trigger any UI updates here (like closing a login modal)
+    }
+  });
 
   const mapSearchInput = document.getElementById("map-search-input");
   const searchSuggestions = document.getElementById("search-suggestions");

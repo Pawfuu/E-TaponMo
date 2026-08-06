@@ -41,6 +41,18 @@ export async function submitTrashReport(reportData, imageFile) {
   const imageUrl = await getDownloadURL(storageRef);
   reportData.imageUrl = imageUrl;
 
+  // ==========================================
+  // NEW: INJECT GOOGLE AUTH DATA
+  // ==========================================
+  const activeUser = JSON.parse(localStorage.getItem("etaponmo_user"));
+  if (activeUser) {
+    reportData.userId = activeUser.uid;
+    reportData.reporterName = activeUser.displayName;
+    reportData.contactInfo = activeUser.email;
+  } else {
+    throw new Error("Critical Error: Unauthorized user attempted to submit a report.");
+  }
+
   // 4. Package metadata for Hedera and log it
   const severityScore = reportData.severityScore != null ? Number(reportData.severityScore) : 3;
   const hederaPayload = {

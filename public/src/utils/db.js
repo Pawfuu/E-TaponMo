@@ -79,7 +79,8 @@ export async function createReport(reportData) {
     const geohash6 = geohash.encode(reportData.coordinates.lat, reportData.coordinates.lng, 6);
 
     const newReport = {
-        userId: reportData.userId || 'anonymous_user',
+        // STRICT ACCOUNTABILITY: No more 'anonymous_user' fallbacks
+        userId: reportData.userId,
         coordinates: reportData.coordinates,
         geohash7: geohash7,
         geohash6: geohash6,
@@ -93,8 +94,9 @@ export async function createReport(reportData) {
         upvotes: 1,
         isDuplicate: false,
         severityScore: reportData.severityScore,
-        contactInfo: reportData.contactInfo || "Not Provided",
-        reporterName: reportData.reporterName || "Anonymous",
+        // STRICT ACCOUNTABILITY: Pulling directly from the injected payload
+        contactInfo: reportData.contactInfo,
+        reporterName: reportData.reporterName,
         notes: reportData.notes || "",
         hashScanUrl: reportData.hashScanUrl || null,
         reportedAt: serverTimestamp(),

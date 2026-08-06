@@ -161,7 +161,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   const viewInsightsPanel = document.getElementById("view-ai-insights-panel");
   const viewSettingsPanel = document.getElementById("view-settings-panel");
   const viewLiveSyncPanel = document.getElementById("view-live-sync-panel");
-  
+
   const viewTitle = document.getElementById("view-title");
   const mainHeader = document.getElementById("main-header");
 
@@ -268,9 +268,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
         // Auto-center the map on the first successful data load
         if (!window.hasAutoCentered && window.recenterMap) {
-          setTimeout(() => { 
-            window.recenterMap(); 
-            window.hasAutoCentered = true; 
+          setTimeout(() => {
+            window.recenterMap();
+            window.hasAutoCentered = true;
           }, 600); // Slight delay ensures Leaflet has finished painting
         }
 
@@ -287,10 +287,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         if (selectedTaskReport) {
           const freshTask = reports.find((r) => r.docId === selectedTaskReport.docId);
           if (freshTask) {
-              selectedTaskReport = freshTask;
-              if(!document.getElementById("task-details-modal").classList.contains("hidden")) {
-                  populateTaskDetailsModal(freshTask);
-              }
+            selectedTaskReport = freshTask;
+            if (!document.getElementById("task-details-modal").classList.contains("hidden")) {
+              populateTaskDetailsModal(freshTask);
+            }
           }
         }
       },
@@ -308,16 +308,16 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (dateEl) dateEl.textContent = new Date().toLocaleDateString("en-US", options);
   }
 
- function updateDropdowns(reportsList) {
+  function updateDropdowns(reportsList) {
     const categories = [
-      "Nabubulok", "Recyclable", "Non-recyclable", 
+      "Nabubulok", "Recyclable", "Non-recyclable",
       "Hazardous Waste", "Healthcare Waste", "Mixed Waste"
     ];
-    
+
     // Hardcode explicit districts for consistent UI
     const districts = [
-      "District 1", "District 2", "District 3", 
-      "District 4", "District 5", "District 6", 
+      "District 1", "District 2", "District 3",
+      "District 4", "District 5", "District 6",
       "Provincial / Outside QC"
     ];
 
@@ -353,8 +353,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       districts.forEach(dist => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = dist; 
-        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
+        optionDiv.dataset.value = dist;
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
         reportsDistMenu.appendChild(optionDiv);
       });
       reportsDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
@@ -406,7 +406,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       });
     }
 
-   // 5. Task Management View District Dropdown
+    // 5. Task Management View District Dropdown
     const taskDistMenu = document.getElementById("task-dropdown-district-menu");
     const taskDistText = document.getElementById("task-dropdown-district-text");
     if (taskDistMenu && taskDistMenu.children.length === 0) {
@@ -414,8 +414,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       districts.forEach(dist => {
         const optionDiv = document.createElement("div");
         optionDiv.className = "px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors";
-        optionDiv.dataset.value = dist; 
-        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist; 
+        optionDiv.dataset.value = dist;
+        optionDiv.textContent = dist.includes("District") ? `${dist} (QC)` : dist;
         taskDistMenu.appendChild(optionDiv);
       });
       taskDistMenu.querySelectorAll("div[data-value]").forEach(opt => {
@@ -443,7 +443,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
         optionDiv.textContent = v;
         reportsAssgnMenu.appendChild(optionDiv);
       });
-      
+
       reportsAssgnMenu.querySelectorAll("div[data-value]").forEach(opt => {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -648,8 +648,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // Calculate how many active reports were submitted TODAY
     const today = new Date();
     const newTodayCount = activeAlerts.filter(r => {
-    if (!r.reportedAt) return false; 
-    return r.reportedAt.getDate() === today.getDate() &&
+      if (!r.reportedAt) return false;
+      return r.reportedAt.getDate() === today.getDate() &&
         r.reportedAt.getMonth() === today.getMonth() &&
         r.reportedAt.getFullYear() === today.getFullYear();
     }).length;
@@ -672,7 +672,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // Severity Breakdown
     const lowCount = activeAlerts.filter(r => r.severity <= 2).length;
     const mediumCount = activeAlerts.filter(r => r.severity === 3).length;
-    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length; 
+    const highCountMap = activeAlerts.filter(r => r.severity >= 4).length;
 
     if (document.getElementById("map-severity-low-val")) document.getElementById("map-severity-low-val").textContent = String(lowCount);
     if (document.getElementById("map-severity-medium-val")) document.getElementById("map-severity-medium-val").textContent = String(mediumCount);
@@ -719,9 +719,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   }
 
   function updateAnalyticsMetrics() {
-   const dateFilterEl = document.getElementById("analytics-date-filter");
+    const dateFilterEl = document.getElementById("analytics-date-filter");
     const distFilterEl = document.getElementById("analytics-district-filter");
-    
+
     const dateVal = dateFilterEl ? dateFilterEl.value : "7days";
     const distVal = distFilterEl ? distFilterEl.value : "all";
 
@@ -761,14 +761,14 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     // Execute Time Filtering
     if (dateVal !== "all") {
-        prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
-        filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
+      prevFiltered = reports.filter(r => r.reportedAt && r.reportedAt >= prevStart && r.reportedAt < prevEnd);
+      filtered = filtered.filter(r => r.reportedAt && r.reportedAt >= currentStart);
     } else {
-        prevFiltered = [...reports]; // Fallback for all time
+      prevFiltered = [...reports]; // Fallback for all time
     }
-    
+
     if (distVal !== "all" && dateVal !== "all") {
-        prevFiltered = prevFiltered.filter(r => r.district === distVal);
+      prevFiltered = prevFiltered.filter(r => r.district === distVal);
     }
 
     // 3. Compute Metrics
@@ -785,9 +785,9 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("analytics-stat-resolved")) document.getElementById("analytics-stat-resolved").textContent = String(resolvedCount);
     if (document.getElementById("analytics-stat-pending")) document.getElementById("analytics-stat-pending").textContent = String(pendingCount);
 
-    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false); 
-    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true); 
-    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false); 
+    updateTrendUI("analytics-trend-total", totalCount, prevTotal, false);
+    updateTrendUI("analytics-trend-resolved", resolvedCount, prevResolved, true);
+    updateTrendUI("analytics-trend-pending", pendingCount, prevPending, false);
 
     // Text Sublabels
     const subtextTotalEl = document.getElementById("analytics-subtext-total");
@@ -797,8 +797,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (document.getElementById("analytics-subtext-time")) document.getElementById("analytics-subtext-time").textContent = subtextLabel;
 
     // Simulated Average Response Time Logic
-    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18; 
-    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20; 
+    let avgTimeCurrent = totalCount > 0 ? Math.max(4, Math.round(10 + (pendingCount * 0.8))) : 18;
+    let avgTimePrev = prevTotal > 0 ? Math.max(4, Math.round(10 + (prevPending * 0.8))) : 20;
 
     if (document.getElementById("analytics-stat-time")) {
       document.getElementById("analytics-stat-time").textContent = `${avgTimeCurrent}h`;
@@ -835,7 +835,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     if (!tbody || !chartContainer) return;
 
     // Get Top 5 by Total Reports
-    const top5 = [...dashboardMetrics.barangaySummary].sort((a,b) => b.total - a.total).slice(0, 5);
+    const top5 = [...dashboardMetrics.barangaySummary].sort((a, b) => b.total - a.total).slice(0, 5);
 
     // 1. Populate Table
     tbody.innerHTML = "";
@@ -862,17 +862,17 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       const maxBarHeight = 120; // px
       let maxHours = 0;
       const chartData = top5.map(b => {
-          const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
-          if (hours > maxHours) maxHours = hours;
-          return { name: b.name, hours: hours };
+        const hours = b.total > 0 ? Math.max(2, Math.round(8 + (b.pending * 0.8))) : 0;
+        if (hours > maxHours) maxHours = hours;
+        return { name: b.name, hours: hours };
       });
 
       chartData.forEach(d => {
-          const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
-          const finalHeight = Math.max(heightPx, 10);
-          const truncName = d.name.length > 8 ? d.name.substring(0,6) + '...' : d.name;
+        const heightPx = maxHours > 0 ? (d.hours / Math.max(maxHours, 24)) * maxBarHeight : 0;
+        const finalHeight = Math.max(heightPx, 10);
+        const truncName = d.name.length > 8 ? d.name.substring(0, 6) + '...' : d.name;
 
-          chartContainer.innerHTML += `
+        chartContainer.innerHTML += `
             <div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer" title="${d.name} (${d.hours}h avg)">
               <span class="text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity font-bold">${d.hours}h</span>
               <div class="w-7 bg-emerald-600/90 rounded-t-lg transition-all duration-500 group-hover:bg-emerald-700" style="height: ${finalHeight}px;"></div>
@@ -885,13 +885,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   function renderBarangayPerformance() {
     if (!dashboardMetrics || !dashboardMetrics.barangaySummary) return;
-    
+
     // Top KPI Cards
     if (document.getElementById("brgy-kpi-resolved")) document.getElementById("brgy-kpi-resolved").textContent = dashboardMetrics.resolved7d.toLocaleString();
-    
+
     const mockHours = dashboardMetrics.totalReports > 0 ? Math.max(2, Math.round(10 + (dashboardMetrics.pendingReports * 0.5))) : 0;
     if (document.getElementById("brgy-kpi-response")) document.getElementById("brgy-kpi-response").textContent = `${mockHours}h`;
-    
+
     if (document.getElementById("brgy-kpi-flagged")) {
       document.getElementById("brgy-kpi-flagged").innerHTML = `${dashboardMetrics.flaggedCount} <span class="text-sm font-normal text-slate-400">of ${dashboardMetrics.totalBarangays}</span>`;
     }
@@ -904,27 +904,27 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     let filteredBrgy = [...dashboardMetrics.barangaySummary];
 
     if (activeBrgyDistrictFilter !== "all") {
-        filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
+      filteredBrgy = filteredBrgy.filter(b => b.district === activeBrgyDistrictFilter);
     }
 
     if (activeBrgySearchQuery) {
-        filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
+      filteredBrgy = filteredBrgy.filter(b => b.name.toLowerCase().includes(activeBrgySearchQuery.toLowerCase()));
     }
 
     let html = "";
-    
+
     // Handle empty state gracefully
     if (filteredBrgy.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
-        return;
+      tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-sm text-slate-500 font-semibold bg-slate-50/50">No barangays match your filter criteria.</td></tr>`;
+      return;
     }
 
     filteredBrgy.forEach((b, index) => {
       const rank = index + 1;
-      
+
       // Calculate 6-segment metrics
       const totalSeg = (b.segregation.nab + b.segregation.rec + b.segregation.non + b.segregation.mix + b.segregation.haz + b.segregation.heal) || 1;
-      
+
       const pNab = (b.segregation.nab / totalSeg) * 100;
       const pRec = (b.segregation.rec / totalSeg) * 100;
       const pNon = (b.segregation.non / totalSeg) * 100;
@@ -933,13 +933,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       const pHeal = (b.segregation.heal / totalSeg) * 100;
 
       const uiStatus = b.statusText === "Low" ? "Good" : b.statusText === "Medium" ? "Monitor" : "Critical";
-      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
-                        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200" 
-                        : "bg-rose-100 text-rose-700 border border-rose-200";
+      const badgeClass = b.statusText === "Low" ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+        : b.statusText === "Medium" ? "bg-amber-100 text-amber-700 border border-amber-200"
+          : "bg-rose-100 text-rose-700 border border-rose-200";
 
       const trendBars = b.history.map(val => {
-          const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
-          return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
+        const h = val > 0 ? Math.max((val / Math.max(...b.history)) * 100, 20) : 10;
+        return `<div class="w-1 bg-slate-300 rounded-t-sm" style="height: ${h}%" title="${val} reports"></div>`;
       }).join('');
 
       html += `
@@ -998,8 +998,8 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const lastWeek = dashboardMetrics.trendLastWeek || [];
 
     if (labels.length === 0) {
-        container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
-        return;
+      container.innerHTML = `<div class="flex h-full items-center justify-center text-xs text-slate-400 italic">No trend data available</div>`;
+      return;
     }
 
     // Dynamic Sizing
@@ -1007,7 +1007,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const height = container.clientHeight || 200;
     const paddingLeft = 35;
     const paddingRight = 15;
-    const paddingTop = 30; 
+    const paddingTop = 30;
     const paddingBottom = 25;
 
     const chartWidth = width - paddingLeft - paddingRight;
@@ -1050,13 +1050,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     // 4. Draw Last Week Line & Nodes (Green)
     html += `<path d="${buildPath(lastWeek)}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
     lastWeek.forEach((val, idx) => {
-        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
+      html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />`;
     });
 
     // 5. Draw This Week Line & Nodes (Blue)
     html += `<path d="${buildPath(thisWeek)}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
     thisWeek.forEach((val, idx) => {
-        html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
+      html += `<circle cx="${getX(idx)}" cy="${getY(val)}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" />`;
     });
 
     html += `</svg>`;
@@ -1085,7 +1085,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     });
   }
 
-function drawReportsOverTimeChart(filtered, dateVal) {
+  function drawReportsOverTimeChart(filtered, dateVal) {
     const container = document.getElementById("analytics-line-chart-container");
     if (!container) return;
     container.innerHTML = "";
@@ -1324,7 +1324,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     if (report.status === "Resolved") {
       pinColorClass = "text-emerald-500";
     } else if (report.status === "Dismissed") {
-      pinColorClass = "text-slate-800 opacity-60"; 
+      pinColorClass = "text-slate-800 opacity-60";
     } else if (report.status === "In Progress") {
       pinColorClass = "text-blue-500";
       // If severe AND in progress -> Blue Pin, Blue Pulse
@@ -1401,7 +1401,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     }
   }
 
- function updateRecentCriticalAlerts() {
+  function updateRecentCriticalAlerts() {
     const container = document.getElementById("recent-critical-alerts-container");
     if (!container) return;
 
@@ -1491,7 +1491,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
         }
       });
     }
-    
+
 
     // Render dashboard map markers (all reports)
     reports.forEach((report) => {
@@ -1511,23 +1511,23 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     updateHeatmap();
 
     // Add this right below renderMapMarkers()
-  window.recenterMap = function() {
-    const mapReports = getFilteredReportsForMap();
-    if (mapReports.length === 0) return;
+    window.recenterMap = function () {
+      const mapReports = getFilteredReportsForMap();
+      if (mapReports.length === 0) return;
 
-    // Calculate a boundary box that includes all active report coordinates
-    const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
-    
-    if (bounds.isValid()) {
-      // Smoothly fly the map to fit all pins with a nice 50px padding
-      if (window.mapInstance) {
-        window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      // Calculate a boundary box that includes all active report coordinates
+      const bounds = L.latLngBounds(mapReports.map(r => getReportLatLng(r)));
+
+      if (bounds.isValid()) {
+        // Smoothly fly the map to fit all pins with a nice 50px padding
+        if (window.mapInstance) {
+          window.mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+        if (window.dashboardMapInstance) {
+          window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
+        }
       }
-      if (window.dashboardMapInstance) {
-        window.dashboardMapInstance.flyToBounds(bounds, { padding: [20, 20], maxZoom: 16 });
-      }
-    }
-  };
+    };
   }
 
   // ==========================================
@@ -1536,7 +1536,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
 
   function switchView(viewName, pushState = true) {
     const navButtons = [
-      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn, 
+      navDashboardBtn, navReportsBtn, navMapBtn, navAnalyticsBtn,
       navBarangayBtn, navTasksBtn, navRoutesBtn, navInsightsBtn, navSettingsBtn
     ];
 
@@ -1561,7 +1561,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
     if (viewLiveSyncPanel) viewLiveSyncPanel.classList.add("hidden");
 
     // 3. Activate selected view and apply correct emerald highlights
-    
+
     // Ensure the top header is ALWAYS visible across all pages
     if (mainHeader) mainHeader.classList.remove("hidden");
 
@@ -1573,13 +1573,13 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       initLeafletMap();
       renderMapMarkers();
       refreshMapSizes(100);
-    } 
+    }
     else if (viewName === "reports") {
       if (viewReportsPanel) viewReportsPanel.classList.remove("hidden");
       if (navReportsBtn) navReportsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       if (viewTitle) viewTitle.textContent = "Civic Reports Database";
       renderReportsTable();
-    } 
+    }
     else if (viewName === "map") {
       if (viewMapPanel) viewMapPanel.classList.remove("hidden");
       if (navMapBtn) navMapBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
@@ -1588,7 +1588,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       if (typeof updateRecentCriticalAlerts === "function") updateRecentCriticalAlerts();
       renderMapMarkers();
       refreshMapSizes(100);
-    } 
+    }
     else if (viewName === "analytics") {
       if (viewAnalyticsPanel) viewAnalyticsPanel.classList.remove("hidden");
       if (navAnalyticsBtn) navAnalyticsBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
@@ -1610,7 +1610,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
       // Highlight the parent Task Management nav button
       if (navTasksBtn) navTasksBtn.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-500", "font-bold");
       // Hide the global view title since this specific page has its own breadcrumb header
-      if (mainHeader) mainHeader.classList.add("hidden"); 
+      if (mainHeader) mainHeader.classList.add("hidden");
     }
     else if (viewName === "collection-routes") {
       if (viewRoutesPanel) viewRoutesPanel.classList.remove("hidden");
@@ -1638,7 +1638,7 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   // 7. REPORTS TABLE LOGIC
   // ==========================================
 
- // Track active sub-filter tab and dropdown states globally
+  // Track active sub-filter tab and dropdown states globally
   let currentStatusFilter = "all";
   let currentCategoryFilter = "all";
   let currentDistrictFilter = "all";
@@ -1646,18 +1646,18 @@ function drawReportsOverTimeChart(filtered, dateVal) {
   let currentBarangayFilter = "all";
   let currentSortOrder = "date-desc"; // Default sorting by newest submitted time
 
-let activeBrgyDistrictFilter = "all";
-let activeBrgySearchQuery = "";
+  let activeBrgyDistrictFilter = "all";
+  let activeBrgySearchQuery = "";
 
-// NEW: Task Management State Variables
+  // NEW: Task Management State Variables
   let taskState = {
-      tab: 'all',
-      status: 'all',
-      priority: 'all',
-      assignee: 'all',
-      district: 'all', // Added district filter
-      search: '',
-      page: 1,
+    tab: 'all',
+    status: 'all',
+    priority: 'all',
+    assignee: 'all',
+    district: 'all', // Added district filter
+    search: '',
+    page: 1,
   };
   const TASK_PAGE_SIZE = 7;
 
@@ -1794,6 +1794,24 @@ let activeBrgySearchQuery = "";
         priorityClass = "bg-amber-50 text-amber-700 font-semibold text-xs px-2.5 py-0.5 rounded border border-amber-100";
       }
 
+      let dueDateText = "N/A";
+      let dueDateClass = "text-slate-400 italic";
+
+      if (report.taskDueDate) {
+        // 1. If an Admin has officially assigned a date, use it (Bold styling)
+        const dateParts = report.taskDueDate.split('-');
+        if (dateParts.length === 3) {
+          const d = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+          dueDateText = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dueDateClass = "text-slate-900 font-bold";
+        }
+      } else if (report.reportedAt) {
+        // 2. If unassigned, auto-calculate 48-hour suggested target (Standard styling)
+        const suggestedDate = new Date(report.reportedAt.getTime() + (48 * 60 * 60 * 1000));
+        dueDateText = suggestedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dueDateClass = "text-slate-600 font-medium";
+      }
+
       tr.innerHTML = `
         <td class="px-6 py-4 font-mono font-semibold text-slate-900">#${report.id}</td>
         <td class="px-6 py-4">
@@ -1808,8 +1826,9 @@ let activeBrgySearchQuery = "";
         <td class="px-6 py-4 text-sm font-semibold whitespace-nowrap ${!report.assignedToCode ? 'text-slate-400 italic' : 'text-slate-700'}">
           ${report.assignedToCode || 'Unassigned'}
         </td>
-        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
-          N/A
+
+        <td class="px-6 py-4 text-sm whitespace-nowrap ${dueDateClass}">
+          ${dueDateText}
         </td>
         <td class="px-6 py-4">
           <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeColorClass}">
@@ -1850,21 +1869,40 @@ let activeBrgySearchQuery = "";
     let allTasks = reports.map((r, i) => {
       const sev = r.severity || 0;
       const upvotes = r.upvotes || 1;
-      
+
       // PRIORITY LOGIC: Community upvotes make it rise in urgency!
       let priority = 'Low';
       if (sev >= 4 || upvotes >= 10) priority = 'High';
       else if (sev === 3 || upvotes >= 5) priority = 'Medium';
 
-      // Due Date: 48 Hours from reported time
-      const targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
-      const ageMs = r.reportedAt ? (new Date() - r.reportedAt) : 0;
-      
+      // --- DATE CALCULATION ---
+      let targetDate;
+      let isCustomDue = false;
+
+      // 1. Check if an official assigned due date exists
+      if (r.taskDueDate) {
+        const dateParts = r.taskDueDate.split('-');
+        if (dateParts.length === 3) {
+          // Set to 23:59:59 so the driver has the entire day to finish it
+          targetDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 23, 59, 59);
+          isCustomDue = true;
+        }
+      }
+
+      // 2. Fallback to 48-hour suggested target
+      if (!targetDate) {
+        targetDate = r.reportedAt ? new Date(r.reportedAt.getTime() + (48 * 60 * 60 * 1000)) : new Date();
+      }
+
+      // --- OVERDUE LOGIC ---
       let uiStatus = r.status;
       let isOverdue = false;
-      if (r.status === 'Pending Verification' && ageMs > (48 * 60 * 60 * 1000)) {
-          uiStatus = 'Overdue';
-          isOverdue = true;
+      const now = new Date();
+
+      // If the task is NOT done, and we are past the target date, flag it!
+      if (r.status !== 'Resolved' && r.status !== 'Dismissed' && now > targetDate) {
+        uiStatus = 'Overdue';
+        isOverdue = true;
       }
 
       // ASSIGNEE MAPPING: Pull exact code directly from the database record
@@ -1882,6 +1920,7 @@ let activeBrgySearchQuery = "";
         priority: priority,
         status: uiStatus,
         isOverdue: isOverdue,
+        isCustomDue: isCustomDue,
         upvotes: upvotes,
         due: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         rawDate: targetDate.getTime()
@@ -1896,26 +1935,26 @@ let activeBrgySearchQuery = "";
     const completedCount = allTasks.filter(t => t.status === 'Resolved').length;
     const dismissedCount = allTasks.filter(t => t.status === 'Dismissed').length;
 
-    if(document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
-    if(document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
-    if(document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
-    if(document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
-    if(document.getElementById("task-stat-dismissed")) document.getElementById("task-stat-dismissed").textContent = dismissedCount;
-    
-    if(document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
-    if(document.getElementById("task-count-mine")) document.getElementById("task-count-mine").textContent = `(${assignedCount})`;
-    if(document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
-    if(document.getElementById("task-count-resolved")) document.getElementById("task-count-resolved").textContent = `(${completedCount})`;
-    if(document.getElementById("task-count-dismissed")) document.getElementById("task-count-dismissed").textContent = `(${dismissedCount})`;
+    if (document.getElementById("task-stat-total")) document.getElementById("task-stat-total").textContent = totalActive;
+    if (document.getElementById("task-stat-assigned")) document.getElementById("task-stat-assigned").textContent = assignedCount;
+    if (document.getElementById("task-stat-overdue")) document.getElementById("task-stat-overdue").textContent = overdueCount;
+    if (document.getElementById("task-stat-completed")) document.getElementById("task-stat-completed").textContent = completedCount;
+    if (document.getElementById("task-stat-dismissed")) document.getElementById("task-stat-dismissed").textContent = dismissedCount;
+
+    if (document.getElementById("task-count-all")) document.getElementById("task-count-all").textContent = `(${totalActive})`;
+    if (document.getElementById("task-count-mine")) document.getElementById("task-count-mine").textContent = `(${assignedCount})`;
+    if (document.getElementById("task-count-overdue")) document.getElementById("task-count-overdue").textContent = `(${overdueCount})`;
+    if (document.getElementById("task-count-resolved")) document.getElementById("task-count-resolved").textContent = `(${completedCount})`;
+    if (document.getElementById("task-count-dismissed")) document.getElementById("task-count-dismissed").textContent = `(${dismissedCount})`;
     // 3. Apply Filters
     let filteredTasks = [...allTasks];
-    
-   if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
+
+    if (taskCurrentTab === 'all') filteredTasks = [...allTasks];
     else if (taskCurrentTab === 'mine') filteredTasks = filteredTasks.filter(t => t.status === 'In Progress');
     else if (taskCurrentTab === 'overdue') filteredTasks = filteredTasks.filter(t => t.isOverdue);
     else if (taskCurrentTab === 'resolved') filteredTasks = filteredTasks.filter(t => t.status === 'Resolved');
     else if (taskCurrentTab === 'dismissed') filteredTasks = filteredTasks.filter(t => t.status === 'Dismissed');
-    
+
     if (taskCurrentPriority !== 'all') filteredTasks = filteredTasks.filter(t => t.priority === taskCurrentPriority);
     if (taskCurrentStatus !== 'all') filteredTasks = filteredTasks.filter(t => t.status === taskCurrentStatus);
     if (taskCurrentAssignee !== 'all') filteredTasks = filteredTasks.filter(t => t.assignee === taskCurrentAssignee);
@@ -1923,9 +1962,9 @@ let activeBrgySearchQuery = "";
 
     if (taskSearchQuery) {
       const q = taskSearchQuery.toLowerCase();
-      filteredTasks = filteredTasks.filter(t => 
-        t.title.toLowerCase().includes(q) || 
-        t.id.toLowerCase().includes(q) || 
+      filteredTasks = filteredTasks.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q) ||
         t.barangay.toLowerCase().includes(q)
       );
     }
@@ -1958,7 +1997,7 @@ let activeBrgySearchQuery = "";
         };
 
         const st = statusStyles[t.status] || { icon: `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`, pill: 'bg-amber-50 text-amber-700 border-amber-200' };
-        
+
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 transition-colors animate-table-row border-b border-slate-100" style="animation-delay: ${i * 30}ms;">
             <td class="px-5 py-4 font-mono text-[11px] font-bold text-slate-500">#${t.id}</td>
@@ -1974,7 +2013,7 @@ let activeBrgySearchQuery = "";
               <span class="text-[10px] font-bold px-2.5 py-1 rounded border ${priorityColors[t.priority]}">${t.priority}</span>
             </td>
             <td class="px-5 py-4 text-sm font-semibold whitespace-nowrap ${t.assignee === 'Unassigned' ? 'text-slate-400 italic' : 'text-slate-700 font-bold'}">${t.assignee}</td>
-            <td class="px-5 py-4 text-xs font-bold ${t.isOverdue ? 'text-rose-600' : 'text-slate-600'}">${t.due}</td>
+           <td class="px-5 py-4 text-xs ${t.isOverdue ? 'text-rose-600 font-bold' : (t.isCustomDue ? 'text-slate-900 font-bold' : 'text-slate-600 font-medium')}">${t.due}</td>
             <td class="px-5 py-4">
               <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${st.pill}">
                 ${st.icon}${t.status}
@@ -1990,35 +2029,35 @@ let activeBrgySearchQuery = "";
       });
     }
 
-    if(counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
-   
+    if (counter) counter.textContent = filteredTasks.length > 0 ? `Showing ${start + 1} to ${Math.min(start + tasksPerPage, filteredTasks.length)} of ${filteredTasks.length} tasks` : `Showing 0 tasks`;
+
     if (pager) {
-        pager.innerHTML = "";
-        if (totalPages > 1) {
-            const createBtn = (label, pageNum, disabled, isActive) => {
-                const b = document.createElement("button");
-                b.innerHTML = label;
-                b.disabled = disabled;
-                if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
-                else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
-                else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
-                if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
-                return b;
-            };
-            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
-            for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
-            pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
-        }
+      pager.innerHTML = "";
+      if (totalPages > 1) {
+        const createBtn = (label, pageNum, disabled, isActive) => {
+          const b = document.createElement("button");
+          b.innerHTML = label;
+          b.disabled = disabled;
+          if (isActive) b.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition-colors";
+          else if (disabled) b.className = "p-1 text-slate-300 pointer-events-none";
+          else b.className = "px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer";
+          if (!disabled && !isActive) { b.addEventListener("click", () => { taskCurrentPage = pageNum; renderTaskManagement(); }); }
+          return b;
+        };
+        pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>`, taskCurrentPage - 1, taskCurrentPage === 1, false));
+        for (let p = 1; p <= totalPages; p++) pager.appendChild(createBtn(p.toString(), p, false, p === taskCurrentPage));
+        pager.appendChild(createBtn(`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`, taskCurrentPage + 1, taskCurrentPage === totalPages, false));
+      }
     }
 
     // 5. Update Assignee Dropdown Dynamically
     const assgnMenu = document.getElementById("dd-task-assignee-menu");
-    if(assgnMenu) {
-        const uniques = [...new Set(allTasks.map(t => t.assignee))];
-        assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
-        uniques.forEach(v => {
-            assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
-        });
+    if (assgnMenu) {
+      const uniques = [...new Set(allTasks.map(t => t.assignee))];
+      assgnMenu.innerHTML = `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="all">All Assignees</div>`;
+      uniques.forEach(v => {
+        assgnMenu.innerHTML += `<div class="dd-opt px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer" data-value="${v}">${v}</div>`;
+      });
     }
 
     // 6. Sidebar: Service Queue
@@ -2026,19 +2065,19 @@ let activeBrgySearchQuery = "";
     activeTasks.forEach(t => {
       brgyCounts[t.barangay] = (brgyCounts[t.barangay] || 0) + 1;
     });
-    
-    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a,b) => b.count - a.count).slice(0, 6);
-    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
-    
-    if (queueList) {
-        queueList.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>` : "";
-        queueData.forEach(q => {
-          const pct = (q.count / maxQueue) * 100;
-          let barColor = 'bg-emerald-500';
-          if(q.count > 10) barColor = 'bg-rose-500';
-          else if(q.count > 4) barColor = 'bg-amber-500';
 
-          queueList.innerHTML += `
+    const queueData = Object.keys(brgyCounts).map(k => ({ name: k, count: brgyCounts[k] })).sort((a, b) => b.count - a.count).slice(0, 6);
+    const maxQueue = Math.max(...queueData.map(q => q.count), 1);
+
+    if (queueList) {
+      queueList.innerHTML = queueData.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">No active queue.</p>` : "";
+      queueData.forEach(q => {
+        const pct = (q.count / maxQueue) * 100;
+        let barColor = 'bg-emerald-500';
+        if (q.count > 10) barColor = 'bg-rose-500';
+        else if (q.count > 4) barColor = 'bg-amber-500';
+
+        queueList.innerHTML += `
             <div>
               <div class="flex items-center justify-between mb-1.5">
                 <span class="text-[11px] font-bold text-slate-700">${q.name}</span>
@@ -2049,17 +2088,17 @@ let activeBrgySearchQuery = "";
               </div>
             </div>
           `;
-        });
+      });
     }
 
     // 7. Sidebar: Donut Chart
     const statusCounts = { 'Pending Verification': 0, 'In Progress': 0, 'Overdue': 0, 'Resolved': 0 };
     allTasks.forEach(t => {
-      if(statusCounts[t.status] !== undefined) statusCounts[t.status]++;
+      if (statusCounts[t.status] !== undefined) statusCounts[t.status]++;
     });
 
     const dTotal = allTasks.filter(t => t.status !== 'Dismissed').length;
-    if(document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
+    if (document.getElementById("task-donut-total")) document.getElementById("task-donut-total").textContent = dTotal;
 
     const oData = [
       { label: 'In Progress', val: statusCounts['In Progress'], color: '#3b82f6' },
@@ -2069,23 +2108,23 @@ let activeBrgySearchQuery = "";
     ].filter(d => d.val > 0);
 
     if (legendEl && donutEl) {
-        legendEl.innerHTML = "";
-        if (oData.length === 0) {
-           donutEl.style.background = "#e2e8f0";
-           legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
-        } else {
-          let cursor = 0;
-          const stops = oData.map(o => {
-              const startPct = (cursor / dTotal) * 100;
-              cursor += o.val;
-              const endPct = (cursor / dTotal) * 100;
-              return `${o.color} ${startPct}% ${endPct}%`;
-          }).join(', ');
-          donutEl.style.background = `conic-gradient(${stops})`;
+      legendEl.innerHTML = "";
+      if (oData.length === 0) {
+        donutEl.style.background = "#e2e8f0";
+        legendEl.innerHTML = `<p class="text-xs text-slate-400 italic py-4">No data</p>`;
+      } else {
+        let cursor = 0;
+        const stops = oData.map(o => {
+          const startPct = (cursor / dTotal) * 100;
+          cursor += o.val;
+          const endPct = (cursor / dTotal) * 100;
+          return `${o.color} ${startPct}% ${endPct}%`;
+        }).join(', ');
+        donutEl.style.background = `conic-gradient(${stops})`;
 
-          oData.forEach(o => {
-              const pct = Math.round((o.val / dTotal) * 100);
-              legendEl.innerHTML += `
+        oData.forEach(o => {
+          const pct = Math.round((o.val / dTotal) * 100);
+          legendEl.innerHTML += `
                 <div class="flex items-center justify-between gap-2 mb-2">
                   <span class="flex items-center gap-2 truncate">
                     <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${o.color}"></span>
@@ -2094,8 +2133,8 @@ let activeBrgySearchQuery = "";
                   <span class="text-slate-500 font-bold">${pct}%</span>
                 </div>
               `;
-          });
-        }
+        });
+      }
     }
   }
 
@@ -2244,19 +2283,30 @@ let activeBrgySearchQuery = "";
     "default": `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
   };
 
-function populateModal(report) {
+  function populateModal(report) {
     modalReportId.textContent = `Report #${report.id}`;
     modalCategory.textContent = report.category;
-    
+
     // Inject Category Icon dynamically
     const iconContainer = document.getElementById("modal-cat-icon-container");
     if (iconContainer) {
-        iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
+      iconContainer.innerHTML = CATEGORY_ICONS[report.category] || CATEGORY_ICONS["default"];
     }
 
     modalLocation.textContent = report.location;
-    modalSubmitter.textContent = report.submittedBy;
-    if (modalContactInfo) modalContactInfo.textContent = report.contactInfo || "Not Provided";
+
+    // UPDATED: Add a "Verified" Badge to the LGU view
+    if (modalSubmitter) {
+      modalSubmitter.innerHTML = `
+            ${report.submittedBy} 
+            <span class="ml-2 inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[9px] font-black px-1.5 py-0.5 rounded border border-emerald-200 uppercase tracking-widest translate-y-[-1px]">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Verified
+            </span>
+        `;
+    }
+
+    if (modalContactInfo) modalContactInfo.textContent = report.contactInfo;
     modalAiVolume.textContent = report.aiVolume || "N/A";
     modalSeverityScore.textContent = String(report.severity || 0);
     modalNotes.textContent = report.notes ? `"${report.notes}"` : '"No additional comments provided."';
@@ -2264,7 +2314,7 @@ function populateModal(report) {
     updateModalStatusBadge(report.status);
     modalReportImage.src = report.imageUrl || PLACEHOLDER_IMAGE;
 
-   // Hide all dynamic inputs first
+    // Hide all dynamic inputs first
     if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
     if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
     if (assigneeContainer) assigneeContainer.classList.add("hidden");
@@ -2300,7 +2350,7 @@ function populateModal(report) {
     document.body.classList.add("overflow-hidden");
   }
 
-function updateModalStatusBadge(status) {
+  function updateModalStatusBadge(status) {
     const editBox = document.getElementById("modal-status-edit-box");
     const titleText = document.getElementById("modal-status-title-text");
     const saveBtn = document.getElementById("modal-btn-save");
@@ -2317,40 +2367,40 @@ function updateModalStatusBadge(status) {
     }
 
     textEl.textContent = status;
-    
+
     // Reset Edit Box Base Classes
-    if(editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
-    if(titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
-    
+    if (editBox) editBox.className = "mt-8 p-6 rounded-2xl border transition-colors duration-300";
+    if (titleText) titleText.className = "text-[10px] font-bold uppercase tracking-widest mb-1.5";
+
     // Reset Save Button
-    if(saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+    if (saveBtn) saveBtn.className = "px-6 py-2.5 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
     // Show spacer by default, hide if Resolved (so Resolved UI takes the space)
-    if(footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
+    if (footerSpacer) footerSpacer.style.display = status === "Resolved" ? "none" : "block";
 
     if (status === "Resolved") {
       dotEl.className = "w-2 h-2 rounded-full bg-emerald-500";
       modalStatusBadge.classList.add("text-emerald-700");
-      if(editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
-      if(titleText) titleText.classList.add("text-emerald-600");
-      if(saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
+      if (editBox) editBox.classList.add("bg-emerald-50", "border-emerald-200");
+      if (titleText) titleText.classList.add("text-emerald-600");
+      if (saveBtn) saveBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "shadow-emerald-500/30");
     } else if (status === "In Progress") {
       dotEl.className = "w-2 h-2 rounded-full bg-blue-500";
       modalStatusBadge.classList.add("text-blue-700");
-      if(editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
-      if(titleText) titleText.classList.add("text-blue-600");
-      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
+      if (editBox) editBox.classList.add("bg-blue-50", "border-blue-200");
+      if (titleText) titleText.classList.add("text-blue-600");
+      if (saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30");
     } else if (status === "Dismissed") {
       dotEl.className = "w-2 h-2 rounded-full bg-rose-500";
       modalStatusBadge.classList.add("text-rose-700");
-      if(editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
-      if(titleText) titleText.classList.add("text-rose-600");
-      if(saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
+      if (editBox) editBox.classList.add("bg-rose-50", "border-rose-200");
+      if (titleText) titleText.classList.add("text-rose-600");
+      if (saveBtn) saveBtn.classList.add("bg-rose-600", "hover:bg-rose-700", "shadow-rose-500/30");
     } else {
       dotEl.className = "w-2 h-2 rounded-full bg-slate-400";
-      if(editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
-      if(titleText) titleText.classList.add("text-slate-500");
-      if(saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
+      if (editBox) editBox.classList.add("bg-slate-50", "border-slate-200");
+      if (titleText) titleText.classList.add("text-slate-500");
+      if (saveBtn) saveBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "shadow-blue-500/30"); // Default save color
     }
   }
 
@@ -2382,24 +2432,24 @@ function updateModalStatusBadge(status) {
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
 
     const updatePayload = { status: firestoreStatus };
-    
+
     // Safely structure payload based on Admin selection
     if (newStatus === "Dismissed") {
       updatePayload.dismissalReason = dismissalReasonInput ? dismissalReasonInput.value : "";
-    } 
+    }
     else if (newStatus === "Resolved") {
       const adminCode = resolvedByInput ? resolvedByInput.value : "";
       if (!adminCode) {
-          showToast("Validation Error", "Please verify using your Admin ID before saving.");
-          return; 
+        showToast("Validation Error", "Please verify using your Admin ID before saving.");
+        return;
       }
       updatePayload.resolvedByCode = adminCode;
-    } 
+    }
     else if (newStatus === "In Progress") {
       const truckCode = assigneeInput ? assigneeInput.value : "";
       if (!truckCode) {
-          showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
-          return; 
+        showToast("Validation Error", "Please assign a Truck or Team before marking as In Progress.");
+        return;
       }
       updatePayload.assignedToCode = truckCode;
     }
@@ -2535,9 +2585,9 @@ function updateModalStatusBadge(status) {
 
     const headerCityBtn = document.getElementById("header-city-btn");
     if (headerCityBtn) {
-        headerCityBtn.addEventListener("click", () => {
-            showToast("Only Quezon City for now", "Future cities will be added in the next update.");
-        });
+      headerCityBtn.addEventListener("click", () => {
+        showToast("Only Quezon City for now", "Future cities will be added in the next update.");
+      });
     }
 
     const analyticsDistFilter = document.getElementById("analytics-district-filter");
@@ -2554,8 +2604,8 @@ function updateModalStatusBadge(status) {
     });
 
     const tSearchInput = document.getElementById("task-search-input");
-    if(tSearchInput) {
-      tSearchInput.addEventListener("input", function() {
+    if (tSearchInput) {
+      tSearchInput.addEventListener("input", function () {
         taskSearchQuery = this.value;
         taskCurrentPage = 1;
         renderTaskManagement();
@@ -2565,14 +2615,14 @@ function updateModalStatusBadge(status) {
     const tTabs = ['all', 'mine', 'overdue', 'resolved', 'dismissed'];
     tTabs.forEach(key => {
       const btn = document.getElementById(`task-tab-${key}`);
-      if(btn) {
+      if (btn) {
         btn.addEventListener('click', () => {
           taskCurrentTab = key;
           taskCurrentPage = 1;
-          
+
           tTabs.forEach(k => {
-             const b = document.getElementById(`task-tab-${k}`);
-             if(b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
+            const b = document.getElementById(`task-tab-${k}`);
+            if (b) b.className = "px-4 py-2.5 border-b-2 border-transparent hover:text-slate-800 transition-all";
           });
           btn.className = "px-4 py-2.5 border-b-2 border-emerald-600 text-emerald-600 font-bold transition-all";
           renderTaskManagement();
@@ -2583,8 +2633,8 @@ function updateModalStatusBadge(status) {
     const tPriBtn = document.getElementById("dd-task-priority-btn");
     const tPriMenu = document.getElementById("dd-task-priority-menu");
     const tPriText = document.getElementById("dd-task-priority-text");
-    
-    if(tPriBtn && tPriMenu) {
+
+    if (tPriBtn && tPriMenu) {
       tPriBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         tPriMenu.classList.toggle("hidden");
@@ -2593,7 +2643,7 @@ function updateModalStatusBadge(status) {
         opt.addEventListener("click", (e) => {
           e.stopPropagation();
           taskCurrentPriority = e.target.dataset.value;
-          if(tPriText) tPriText.textContent = e.target.textContent;
+          if (tPriText) tPriText.textContent = e.target.textContent;
           tPriMenu.classList.add("hidden");
           taskCurrentPage = 1;
           renderTaskManagement();
@@ -2601,7 +2651,7 @@ function updateModalStatusBadge(status) {
       });
     }
 
-   // --- STATUS & ASSIGNEE DROPDOWNS ---
+    // --- STATUS & ASSIGNEE DROPDOWNS ---
     const tDistBtn = document.getElementById("task-dropdown-district-btn");
     const tDistMenu = document.getElementById("task-dropdown-district-menu");
     if (tDistBtn && tDistMenu) {
@@ -2642,50 +2692,50 @@ function updateModalStatusBadge(status) {
 
     // Dynamic listener for Assignee dropdown generated in renderTaskManagement
     document.addEventListener("click", (e) => {
-        const option = e.target.closest('.dd-opt');
-        if (option && e.target.closest('#dd-task-assignee-menu')) {
-            e.stopPropagation();
-            taskCurrentAssignee = option.dataset.value; // Pull the dataset from the specific div clicked
-            const tAssgnText = document.getElementById('dd-task-assignee-text');
-            if (tAssgnText) tAssgnText.textContent = taskCurrentAssignee === 'all' ? 'All Assignees' : taskCurrentAssignee;
-            
-            if (tAssgnMenu) tAssgnMenu.classList.add('hidden');
-            taskCurrentPage = 1;
-            renderTaskManagement();
-        }
+      const option = e.target.closest('.dd-opt');
+      if (option && e.target.closest('#dd-task-assignee-menu')) {
+        e.stopPropagation();
+        taskCurrentAssignee = option.dataset.value; // Pull the dataset from the specific div clicked
+        const tAssgnText = document.getElementById('dd-task-assignee-text');
+        if (tAssgnText) tAssgnText.textContent = taskCurrentAssignee === 'all' ? 'All Assignees' : taskCurrentAssignee;
+
+        if (tAssgnMenu) tAssgnMenu.classList.add('hidden');
+        taskCurrentPage = 1;
+        renderTaskManagement();
+      }
     });
 
     document.addEventListener("click", () => {
-        const taskDistMenu = document.getElementById("task-dropdown-district-menu");
-        if(taskDistMenu && !taskDistMenu.classList.contains("hidden")) taskDistMenu.classList.add("hidden");
-        if(tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
-        if(tStatusMenu && !tStatusMenu.classList.contains("hidden")) tStatusMenu.classList.add("hidden");
-        if(tAssgnMenu && !tAssgnMenu.classList.contains("hidden")) tAssgnMenu.classList.add("hidden");
+      const taskDistMenu = document.getElementById("task-dropdown-district-menu");
+      if (taskDistMenu && !taskDistMenu.classList.contains("hidden")) taskDistMenu.classList.add("hidden");
+      if (tPriMenu && !tPriMenu.classList.contains("hidden")) tPriMenu.classList.add("hidden");
+      if (tStatusMenu && !tStatusMenu.classList.contains("hidden")) tStatusMenu.classList.add("hidden");
+      if (tAssgnMenu && !tAssgnMenu.classList.contains("hidden")) tAssgnMenu.classList.add("hidden");
     });
 
     const tResetBtn = document.getElementById("task-reset-filters-btn");
     if (tResetBtn) {
-       tResetBtn.addEventListener("click", () => {
-          taskSearchQuery = '';
-          if(tSearchInput) tSearchInput.value = '';
-          
-          taskCurrentPriority = 'all';
-          if(tPriText) tPriText.textContent = 'All Priorities';
-          
-          taskCurrentStatus = 'all';
-          if(tStatusText) tStatusText.textContent = 'All Status';
-          
-          taskCurrentAssignee = 'all';
-          const tAssgnText = document.getElementById('dd-task-assignee-text');
-          if(tAssgnText) tAssgnText.textContent = 'All Assignees';
-          
-          taskCurrentDistrict = 'all';
-          const tDistText = document.getElementById('task-dropdown-district-text');
-          if(tDistText) tDistText.textContent = 'All Districts';
+      tResetBtn.addEventListener("click", () => {
+        taskSearchQuery = '';
+        if (tSearchInput) tSearchInput.value = '';
 
-          taskCurrentPage = 1;
-          renderTaskManagement();
-       });
+        taskCurrentPriority = 'all';
+        if (tPriText) tPriText.textContent = 'All Priorities';
+
+        taskCurrentStatus = 'all';
+        if (tStatusText) tStatusText.textContent = 'All Status';
+
+        taskCurrentAssignee = 'all';
+        const tAssgnText = document.getElementById('dd-task-assignee-text');
+        if (tAssgnText) tAssgnText.textContent = 'All Assignees';
+
+        taskCurrentDistrict = 'all';
+        const tDistText = document.getElementById('task-dropdown-district-text');
+        if (tDistText) tDistText.textContent = 'All Districts';
+
+        taskCurrentPage = 1;
+        renderTaskManagement();
+      });
     }
 
     const responseTimeBars = document.querySelectorAll("#view-analytics-panel .lg\\:col-span-5 .flex-1.flex.items-end > div");
@@ -2725,17 +2775,17 @@ function updateModalStatusBadge(status) {
     if (modalStatusSelect) {
       modalStatusSelect.addEventListener("change", function () {
         updateModalStatusBadge(this.value);
-        
+
         if (dismissalReasonContainer) dismissalReasonContainer.classList.add("hidden");
         if (resolvedByContainer) resolvedByContainer.classList.add("hidden");
         if (assigneeContainer) assigneeContainer.classList.add("hidden");
 
         if (this.value === "Dismissed" && dismissalReasonContainer) {
-            dismissalReasonContainer.classList.remove("hidden");
+          dismissalReasonContainer.classList.remove("hidden");
         } else if (this.value === "Resolved" && resolvedByContainer) {
-            resolvedByContainer.classList.remove("hidden");
+          resolvedByContainer.classList.remove("hidden");
         } else if (this.value === "In Progress" && assigneeContainer) {
-            assigneeContainer.classList.remove("hidden");
+          assigneeContainer.classList.remove("hidden");
         }
       });
     }
@@ -2752,16 +2802,16 @@ function updateModalStatusBadge(status) {
 
     const backdrop = document.getElementById("modal-backdrop");
     if (backdrop) backdrop.addEventListener("click", closeModal);
-    document.addEventListener("keydown", (e) => { 
-        if (e.key === "Escape" || e.key === "Esc") {
-            closeFullscreenImage();
-            closeModal();
-            closeTaskModals();
-        }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" || e.key === "Esc") {
+        closeFullscreenImage();
+        closeModal();
+        closeTaskModals();
+      }
     });
 
     // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
-   // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
+    // --- Toolbar Filters Setup (Reports Tab Custom Dropdowns) ---
     const rptStatusBtn = document.getElementById("reports-dropdown-status-btn");
     const rptStatusMenu = document.getElementById("reports-dropdown-status-menu");
     const rptStatusText = document.getElementById("reports-dropdown-status-text");
@@ -2861,7 +2911,7 @@ function updateModalStatusBadge(status) {
       [
         "reports-dropdown-status-menu",
         "reports-dropdown-category-menu",
-        "reports-dropdown-district-menu", 
+        "reports-dropdown-district-menu",
         "reports-dropdown-assignee-menu",
         "reports-dropdown-sort-menu",
         "dropdown-status-menu",
@@ -2879,7 +2929,7 @@ function updateModalStatusBadge(status) {
 
         currentStatusFilter = "all";
         currentCategoryFilter = "all";
-        currentDistrictFilter = "all"; 
+        currentDistrictFilter = "all";
         currentAssigneeFilter = "all";
         currentSortOrder = "date-desc";
 
@@ -2888,7 +2938,7 @@ function updateModalStatusBadge(status) {
 
         if (rptStatusText) rptStatusText.textContent = "All Status";
         if (document.getElementById("reports-dropdown-category-text")) document.getElementById("reports-dropdown-category-text").textContent = "All Categories";
-        if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts"; 
+        if (document.getElementById("reports-dropdown-district-text")) document.getElementById("reports-dropdown-district-text").textContent = "All Districts";
         if (document.getElementById("reports-dropdown-assignee-text")) document.getElementById("reports-dropdown-assignee-text").textContent = "All Assignees";
         if (rptSortText) rptSortText.textContent = "Reported At (Newest)";
 
@@ -3062,9 +3112,9 @@ function updateModalStatusBadge(status) {
     setupTabFilters();
 
     window.addEventListener("resize", () => {
-        if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
-            drawBarangayTrendChart();
-        }
+      if (!document.getElementById("view-barangay-performance-panel").classList.contains("hidden")) {
+        drawBarangayTrendChart();
+      }
     });
   }
 
@@ -3075,190 +3125,190 @@ function updateModalStatusBadge(status) {
   let selectedTaskReport = null;
 
   function openTaskModal(docId) {
-      selectedTaskReport = reports.find((r) => r.docId === docId);
-      if (!selectedTaskReport) return;
+    selectedTaskReport = reports.find((r) => r.docId === docId);
+    if (!selectedTaskReport) return;
 
-      if (selectedTaskReport.status === "Pending Verification" || selectedTaskReport.status === "Overdue") {
-          populateTaskCreateModal(selectedTaskReport);
-          document.getElementById("task-create-modal").classList.remove("hidden");
-      } else {
-          populateTaskDetailsModal(selectedTaskReport);
-          document.getElementById("task-details-modal").classList.remove("hidden");
-      }
-      document.body.classList.add("overflow-hidden");
+    if (selectedTaskReport.status === "Pending Verification" || selectedTaskReport.status === "Overdue") {
+      populateTaskCreateModal(selectedTaskReport);
+      document.getElementById("task-create-modal").classList.remove("hidden");
+    } else {
+      populateTaskDetailsModal(selectedTaskReport);
+      document.getElementById("task-details-modal").classList.remove("hidden");
+    }
+    document.body.classList.add("overflow-hidden");
   }
 
   function closeTaskModals() {
-      const tcModal = document.getElementById("task-create-modal");
-      const tdModal = document.getElementById("task-details-modal");
-      if (tcModal) tcModal.classList.add("hidden");
-      if (tdModal) tdModal.classList.add("hidden");
-      document.body.classList.remove("overflow-hidden");
-      selectedTaskReport = null;
+    const tcModal = document.getElementById("task-create-modal");
+    const tdModal = document.getElementById("task-details-modal");
+    if (tcModal) tcModal.classList.add("hidden");
+    if (tdModal) tdModal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+    selectedTaskReport = null;
   }
 
   async function submitNewTask() {
-      if (!selectedTaskReport) return;
+    if (!selectedTaskReport) return;
 
-      const assignToDrop = document.getElementById("tc-assign-to");
-      const assignTo = assignToDrop ? assignToDrop.value : "";
-      
-      const priorityElement = document.querySelector('input[name="tc-priority"]:checked');
-      const priority = priorityElement ? priorityElement.value : "Medium";
-      
-      const dueDate = document.getElementById("tc-due-date") ? document.getElementById("tc-due-date").value : "";
-      const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
-      const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
+    const assignToDrop = document.getElementById("tc-assign-to");
+    const assignTo = assignToDrop ? assignToDrop.value : "";
 
-      if (!assignTo) {
-          showToast("Validation Error", "Please select a team or truck to assign this task to.");
-          return;
+    const priorityElement = document.querySelector('input[name="tc-priority"]:checked');
+    const priority = priorityElement ? priorityElement.value : "Medium";
+
+    const dueDate = document.getElementById("tc-due-date") ? document.getElementById("tc-due-date").value : "";
+    const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
+    const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
+
+    if (!assignTo) {
+      showToast("Validation Error", "Please select a team or truck to assign this task to.");
+      return;
+    }
+
+    try {
+      const btn = document.getElementById("tc-submit-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
+
+      const updatePayload = {
+        status: "in_progress",
+        assignedToCode: assignTo,
+        taskPriority: priority,
+        taskDueDate: dueDate,
+        taskType: taskType,
+        taskDescription: desc
+      };
+
+      // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
+      let lat = null, lng = null;
+      if (selectedTaskReport.coordinates) {
+        if (selectedTaskReport.coordinates.lat != null) {
+          lat = selectedTaskReport.coordinates.lat;
+          lng = selectedTaskReport.coordinates.lng;
+        } else if (Array.isArray(selectedTaskReport.coordinates)) {
+          lat = selectedTaskReport.coordinates[0];
+          lng = selectedTaskReport.coordinates[1];
+        }
       }
 
-      try {
-          const btn = document.getElementById("tc-submit-btn");
-          if(btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
+      const hederaPayload = {
+        aiSeverityScore: selectedTaskReport.severity,
+        category: taskType || selectedTaskReport.category,
+        lat: lat,
+        lng: lng,
+        statusUpdate: "in_progress"
+      };
 
-          const updatePayload = {
-              status: "in_progress",
-              assignedToCode: assignTo,
-              taskPriority: priority,
-              taskDueDate: dueDate,
-              taskType: taskType,
-              taskDescription: desc
-          };
-
-          // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
-          let lat = null, lng = null;
-          if (selectedTaskReport.coordinates) {
-              if (selectedTaskReport.coordinates.lat != null) {
-                  lat = selectedTaskReport.coordinates.lat;
-                  lng = selectedTaskReport.coordinates.lng;
-              } else if (Array.isArray(selectedTaskReport.coordinates)) {
-                  lat = selectedTaskReport.coordinates[0];
-                  lng = selectedTaskReport.coordinates[1];
-              }
-          }
-
-          const hederaPayload = {
-              aiSeverityScore: selectedTaskReport.severity,
-              category: taskType || selectedTaskReport.category,
-              lat: lat,
-              lng: lng,
-              statusUpdate: "in_progress"
-          };
-
-          const hashScanUrl = await logReportOnChain(hederaPayload);
-          if (hashScanUrl) {
-              updatePayload.hashScanUrl = hashScanUrl;
-          }
-          
-          await updateDoc(doc(db, "reports", selectedTaskReport.docId), updatePayload);
-
-          closeTaskModals();
-          showToast("Task Assigned", "The task has been successfully created and assigned to the route.");
-      } catch (error) {
-          console.error("Task assignment failed:", error);
-          showToast("Error", "Could not assign task. Check console.");
-      } finally {
-          const btn = document.getElementById("tc-submit-btn");
-          if(btn) { btn.disabled = false; btn.textContent = "Create Task"; }
+      const hashScanUrl = await logReportOnChain(hederaPayload);
+      if (hashScanUrl) {
+        updatePayload.hashScanUrl = hashScanUrl;
       }
+
+      await updateDoc(doc(db, "reports", selectedTaskReport.docId), updatePayload);
+
+      closeTaskModals();
+      showToast("Task Assigned", "The task has been successfully created and assigned to the route.");
+    } catch (error) {
+      console.error("Task assignment failed:", error);
+      showToast("Error", "Could not assign task. Check console.");
+    } finally {
+      const btn = document.getElementById("tc-submit-btn");
+      if (btn) { btn.disabled = false; btn.textContent = "Create Task"; }
+    }
   }
 
   function populateTaskCreateModal(report) {
-      const titleInput = document.getElementById("tc-title");
-      if (titleInput) titleInput.value = report.category + " Clearing";
-      
-      const brgyDrop = document.getElementById("tc-barangay");
-      if(brgyDrop) {
-          if (![...brgyDrop.options].some(opt => opt.value === report.barangay)) {
-              brgyDrop.innerHTML += `<option value="${report.barangay}">${report.barangay}</option>`;
-          }
-          brgyDrop.value = report.barangay;
-      }
+    const titleInput = document.getElementById("tc-title");
+    if (titleInput) titleInput.value = report.category + " Clearing";
 
-      const catDrop = document.getElementById("tc-task-type");
-      if(catDrop) {
-           if (![...catDrop.options].some(opt => opt.value === report.category)) {
-               catDrop.innerHTML += `<option value="${report.category}">${report.category}</option>`;
-           }
-           catDrop.value = report.category;
+    const brgyDrop = document.getElementById("tc-barangay");
+    if (brgyDrop) {
+      if (![...brgyDrop.options].some(opt => opt.value === report.barangay)) {
+        brgyDrop.innerHTML += `<option value="${report.barangay}">${report.barangay}</option>`;
       }
+      brgyDrop.value = report.barangay;
+    }
 
-      const descInput = document.getElementById("tc-desc");
-      if (descInput) descInput.value = report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
-
-      const assignToDrop = document.getElementById("tc-assign-to");
-      if (assignToDrop) assignToDrop.value = "";
-      
-      const dueDateInput = document.getElementById("tc-due-date");
-      if (dueDateInput) {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          dueDateInput.value = tomorrow.toISOString().split('T')[0]; 
+    const catDrop = document.getElementById("tc-task-type");
+    if (catDrop) {
+      if (![...catDrop.options].some(opt => opt.value === report.category)) {
+        catDrop.innerHTML += `<option value="${report.category}">${report.category}</option>`;
       }
-      
-      const pri = report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low";
-      const priRadio = document.querySelector(`input[name="tc-priority"][value="${pri}"]`);
-      if(priRadio) priRadio.checked = true;
+      catDrop.value = report.category;
+    }
+
+    const descInput = document.getElementById("tc-desc");
+    if (descInput) descInput.value = report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
+
+    const assignToDrop = document.getElementById("tc-assign-to");
+    if (assignToDrop) assignToDrop.value = "";
+
+    const dueDateInput = document.getElementById("tc-due-date");
+    if (dueDateInput) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dueDateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+
+    const pri = report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low";
+    const priRadio = document.querySelector(`input[name="tc-priority"][value="${pri}"]`);
+    if (priRadio) priRadio.checked = true;
   }
 
   function populateTaskDetailsModal(report) {
-      const idEl = document.getElementById("td-id");
-      if (idEl) idEl.textContent = `#${report.id}`;
-      
-      const st = report.status;
-      const stColor = st === 'Resolved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-      const stEl = document.getElementById("td-status");
-      if(stEl) {
-          stEl.className = `text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border ${stColor}`;
-          stEl.textContent = st;
-      }
+    const idEl = document.getElementById("td-id");
+    if (idEl) idEl.textContent = `#${report.id}`;
 
-      const titleEl = document.getElementById("td-title");
-      if (titleEl) titleEl.textContent = report.taskType ? report.taskType + " Clearing" : report.category + " Clearing";
-      
-      const brgyEl = document.getElementById("td-barangay");
-      if (brgyEl) brgyEl.textContent = report.barangay;
-      
-      const descEl = document.getElementById("td-desc");
-      if (descEl) descEl.textContent = report.taskDescription || report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
-      
-      const dueEl = document.getElementById("td-due");
-      if (dueEl) dueEl.textContent = report.taskDueDate ? new Date(report.taskDueDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'}) : "Not set";
+    const st = report.status;
+    const stColor = st === 'Resolved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+    const stEl = document.getElementById("td-status");
+    if (stEl) {
+      stEl.className = `text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border ${stColor}`;
+      stEl.textContent = st;
+    }
 
-      const pri = report.taskPriority || (report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low");
-      const priColor = pri === 'High' ? 'text-rose-600 bg-rose-50 border-rose-200' : pri === 'Medium' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200';
-      const priEl = document.getElementById("td-priority");
-      if (priEl) priEl.innerHTML = `<span class="px-2.5 py-1 rounded border ${priColor} text-[10px] font-bold">${pri}</span>`;
+    const titleEl = document.getElementById("td-title");
+    if (titleEl) titleEl.textContent = report.taskType ? report.taskType + " Clearing" : report.category + " Clearing";
 
-      const assignedToEl = document.getElementById("td-assigned-to");
-      if (assignedToEl) assignedToEl.textContent = report.assignedToCode || "Unassigned";
-      
-      const assignedOnEl = document.getElementById("td-assigned-on");
-      if (assignedOnEl) assignedOnEl.textContent = report.reportedAt ? report.reportedAt.toLocaleString('en-US', {month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : "N/A";
-      
-      const badgeEl = document.getElementById("td-assign-badge");
-      if(badgeEl) {
-          badgeEl.textContent = st === 'Resolved' ? "Completed" : st === 'Dismissed' ? "Halted" : "On Route";
-          badgeEl.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${st === 'Resolved' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-blue-100 text-blue-600 border-blue-200'}`;
-      }
+    const brgyEl = document.getElementById("td-barangay");
+    if (brgyEl) brgyEl.textContent = report.barangay;
 
-      // WORKFLOW C & GENERAL STEPPER RENDERING
-      const stepperContainer = document.getElementById("task-stepper-container");
-      if(!stepperContainer) return;
-      
-      const isDismissed = report.status === 'Dismissed';
-      const isResolved = report.status === 'Resolved';
-      const isAssigned = report.status === 'In Progress' || isResolved || isDismissed;
+    const descEl = document.getElementById("td-desc");
+    if (descEl) descEl.textContent = report.taskDescription || report.notes || `Clearing of ${report.category.toLowerCase()} waste at ${report.location}.`;
 
-      const chk = `<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
-      const xx = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+    const dueEl = document.getElementById("td-due");
+    if (dueEl) dueEl.textContent = report.taskDueDate ? new Date(report.taskDueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Not set";
 
-      let sHTML = '';
+    const pri = report.taskPriority || (report.severity >= 4 ? "High" : report.severity === 3 ? "Medium" : "Low");
+    const priColor = pri === 'High' ? 'text-rose-600 bg-rose-50 border-rose-200' : pri === 'Medium' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-blue-600 bg-blue-50 border-blue-200';
+    const priEl = document.getElementById("td-priority");
+    if (priEl) priEl.innerHTML = `<span class="px-2.5 py-1 rounded border ${priColor} text-[10px] font-bold">${pri}</span>`;
 
-      sHTML += `
+    const assignedToEl = document.getElementById("td-assigned-to");
+    if (assignedToEl) assignedToEl.textContent = report.assignedToCode || "Unassigned";
+
+    const assignedOnEl = document.getElementById("td-assigned-on");
+    if (assignedOnEl) assignedOnEl.textContent = report.reportedAt ? report.reportedAt.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A";
+
+    const badgeEl = document.getElementById("td-assign-badge");
+    if (badgeEl) {
+      badgeEl.textContent = st === 'Resolved' ? "Completed" : st === 'Dismissed' ? "Halted" : "On Route";
+      badgeEl.className = `text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider border ${st === 'Resolved' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'Dismissed' ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-blue-100 text-blue-600 border-blue-200'}`;
+    }
+
+    // WORKFLOW C & GENERAL STEPPER RENDERING
+    const stepperContainer = document.getElementById("task-stepper-container");
+    if (!stepperContainer) return;
+
+    const isDismissed = report.status === 'Dismissed';
+    const isResolved = report.status === 'Resolved';
+    const isAssigned = report.status === 'In Progress' || isResolved || isDismissed;
+
+    const chk = `<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+    const xx = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+
+    let sHTML = '';
+
+    sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 ${isAssigned ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'} shadow-sm ring-4 ring-white">
                   ${chk}
@@ -3268,7 +3318,7 @@ function updateModalStatusBadge(status) {
           </div>
       `;
 
-      sHTML += `
+    sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isAssigned && !isDismissed && !isResolved ? 'border-blue-500 text-blue-500' : isResolved || isDismissed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved || isDismissed ? chk : '<div class="w-2 h-2 rounded-full bg-blue-500"></div>'}
@@ -3278,7 +3328,7 @@ function updateModalStatusBadge(status) {
           </div>
       `;
 
-      sHTML += `
+    sHTML += `
           <div class="flex flex-col items-center relative flex-1">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved ? 'border-emerald-500 bg-emerald-500 text-white' : isDismissed ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved ? chk : isDismissed ? xx : '<div class="w-2 h-2 rounded-full bg-slate-300"></div>'}
@@ -3288,7 +3338,7 @@ function updateModalStatusBadge(status) {
           </div>
       `;
 
-      sHTML += `
+    sHTML += `
           <div class="flex flex-col items-center relative flex-1 pr-6">
               <div class="w-6 h-6 rounded-full flex items-center justify-center z-10 bg-white border-[2.5px] ${isResolved && report.resolvedByCode ? 'border-emerald-500 text-white bg-emerald-500' : 'border-slate-200 text-slate-400'} ring-4 ring-white shadow-sm">
                   ${isResolved && report.resolvedByCode ? chk : '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>'}
@@ -3297,7 +3347,7 @@ function updateModalStatusBadge(status) {
           </div>
       `;
 
-      stepperContainer.innerHTML = sHTML;
+    stepperContainer.innerHTML = sHTML;
   }
 
   // ==========================================

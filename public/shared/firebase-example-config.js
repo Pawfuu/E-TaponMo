@@ -25,4 +25,23 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { db, storage };
+export { auth, db, storage };
+
+// ==========================================
+// DEMO MODE CONFIGURATION
+// ==========================================
+export const APP_CONFIG = {
+  // Set to TRUE for live stage pitch (instant 0.5s demo login)
+  // Set to FALSE when deploying public links (forces real Google Auth)
+  IS_DEMO_MODE: true,
+
+  // Pre-configured test user for stage demos
+  DEMO_USER: {
+    uid: "demo_citizen_qc_001",
+    displayName: "Juan Dela Cruz",
+    email: "juan.delacruz.demo@gmail.com",
+    photoURL: "https://lh3.googleusercontent.com/a/default-user",
+    isVerified: true,
+    barangay: "Brgy. Maligaya"
+  }
+};

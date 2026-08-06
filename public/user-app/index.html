@@ -163,7 +163,6 @@
           Bayan • Kalikasan • Kinabukasan
         </p>
       </div>
-
     </header>
 
     <div class="p-6 space-y-8">
@@ -279,7 +278,7 @@
                 </svg>
               </button>
 
-              <!-- Map Modal Trigger (The right arrow button) -->
+              <!-- Map Modal Trigger -->
               <button type="button" id="open-map-btn"
                 class="p-3 text-green-700 hover:text-green-800 border-l border-gray-200 transition"
                 title="Open Map to Pin Location">
@@ -294,7 +293,6 @@
             <!-- Autocomplete Dropdown Container -->
             <ul id="search-suggestions"
               class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto divide-y divide-gray-100">
-              <!-- Suggestions injected here via JS -->
             </ul>
           </div>
 
@@ -322,32 +320,96 @@
                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-1 focus:ring-green-500"></textarea>
             </div>
 
-            <div class="mb-4">
-              <label for="reporter-name" class="block text-xs font-bold text-gray-700 dark:text-zinc-300 mb-1">
-                Full Name (Optional)
-              </label>
-              <input type="text" id="reporter-name" placeholder="e.g., Juan Dela Cruz"
-                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-1 focus:ring-green-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                autocomplete="name" />
+            <!-- MANDATORY AUTHENTICATION SECTION -->
+            <div
+              class="py-4 mt-2 flex flex-col items-center gap-2 rounded-xl border border-green-200 bg-green-50/50 p-5 shadow-inner">
+              <span class="text-xs text-green-900 font-extrabold uppercase tracking-wide">Identity Verification</span>
+              <span class="text-[11px] text-gray-500 text-center px-2 mb-2 leading-relaxed">Sign in to securely submit
+                your report and map your account to receive <b>$ECO Tokens</b>.</span>
+
+              <!-- ALL Buttons Wrapped Together -->
+              <div id="auth-buttons-wrapper" class="w-full space-y-3">
+                <!-- Login Button -->
+                <button id="login-btn" type="button"
+                  class="flex items-center gap-3 bg-white text-gray-800 px-6 py-3 rounded-full shadow border border-gray-200 hover:bg-gray-50 transition-all text-sm font-bold w-full justify-center">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fill="#4285F4" />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      fill="#34A853" />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      fill="#FBBC05" />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      fill="#EA4335" />
+                  </svg>
+                  Sign in with Google
+                </button>
+
+                <!-- Divider -->
+                <div class="flex items-center gap-3 w-full py-1">
+                  <div class="h-px bg-green-200/60 flex-1"></div>
+                  <span class="text-[9px] text-green-800/60 font-bold uppercase tracking-widest">Or</span>
+                  <div class="h-px bg-green-200/60 flex-1"></div>
+                </div>
+
+                <!-- Secondary: Yahoo & Phone (Clean Outline Design) -->
+                <div class="grid grid-cols-2 gap-3 w-full">
+                  <button type="button"
+                    onclick="alert('Yahoo OAuth is configured for Production V2. Please use Google for this MVP demo.')"
+                    class="flex items-center justify-center gap-2 bg-white text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-all">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M22.44 2.02L13.8 11.23v10.75h-3.6v-10.75L1.56 2.02h4.32l6.12 7.08 6.12-7.08h4.32z" />
+                    </svg>
+                    Yahoo
+                  </button>
+
+                  <button type="button"
+                    onclick="alert('SMS OTP Verification is configured for Production V2. Please use Google for this MVP demo.')"
+                    class="flex items-center justify-center gap-2 bg-white text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
+                    Phone
+                  </button>
+                </div>
+              </div>
+
+              <!-- Profile Display (Redesigned as a sleek ID Badge) -->
+              <div id="user-profile"
+                class="hidden w-full bg-white border border-emerald-200 p-1 rounded-2xl shadow-sm mt-1 transition-all">
+                <div class="flex items-center justify-between bg-emerald-50/50 rounded-xl px-3 py-2.5">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                    </div>
+                    <div class="flex flex-col text-left min-w-0">
+                      <span id="user-name"
+                        class="font-extrabold text-sm text-emerald-950 leading-tight truncate"></span>
+                      <span
+                        class="text-[9px] text-emerald-600 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Verified
+                      </span>
+                      <span id="user-email" class="hidden"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <!-- Combined Contact Information (Required) -->
-            <div>
-              <label for="reporter-contact" class="block text-xs font-bold text-gray-700 mb-1">Contact Information <span
-                  class="text-red-500">*</span></label>
-              <input type="text" id="reporter-contact" required
-                pattern="^([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}|(09|\+639)\d{9})$"
-                placeholder="juan@example.com OR 09171234567"
-                class="peer block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-1 focus:ring-green-500 invalid:[&:not(:placeholder-shown)]:border-red-500 invalid:[&:not(:placeholder-shown)]:focus:border-red-500 invalid:[&:not(:placeholder-shown)]:focus:ring-red-500"
-                autocomplete="on" />
-              <!-- Error Message (Hidden until invalid) -->
-              <p class="mt-1 hidden text-xs text-red-500 peer-[&:not(:placeholder-shown):invalid]:block">
-                Please enter a valid email address OR a valid PH mobile number (e.g., 09123456789).
-              </p>
-            </div>
-
-
           </div>
+        </div>
       </section>
 
       <!-- Step 4: Submit -->
