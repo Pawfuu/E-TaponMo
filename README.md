@@ -109,14 +109,17 @@ Our platform is divided into two seamless experiences: a public-facing reporting
 
 |                            ✅ Successful Report                            |                        ❌ Invalid Submission                        |
 | :------------------------------------------------------------------------: | :-----------------------------------------------------------------: |
-| <img src="user-app/assets/success.gif" width="100%" alt="Successful Flow"> | <img src="user-app/assets/Error.gif" width="100%" alt="Error Flow"> |
+| <img src="/public/user-app/assets/success.gif" width="100%" alt="Successful Flow"> | <img src="/public/user-app/assets/Error.gif" width="100%" alt="Error Flow"> |
+
+| Duplication Handler |
+|:------------------------------------------------------------------------------:|
+| <img src="/public/user-app/assets/duplication.gif" width="50%" alt="Duplication Handler"> |
 
 ### 🏛️ LGU Dashboard
 
-
 |                               Dashboard Overview                                |
 | :-----------------------------------------------------------------------------: |
-| <img src="user-app/assets/dashboard.gif" width="100%" alt="Dashboard Overview"> |
+| <img src="/public/user-app/assets/dashboard.gif" width="100%" alt="Dashboard Overview"> |
 
 
 > [!IMPORTANT]
