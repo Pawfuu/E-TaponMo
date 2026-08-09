@@ -1,6 +1,7 @@
 <div align="center">
   
-<img width="2048" height="413" alt="banner" src="https://github.com/user-attachments/assets/91ef5d63-e34f-44c9-89fc-1714d72f4fa1" />
+<img width="2048" height="413" alt="E-TaponBanner" src="https://github.com/user-attachments/assets/bca4e4a8-df8e-4273-9965-3143f8eaf58f" />
+
 
 <p align="center">
   A frictionless, AI-assisted, and Hedera blockchain-powered community waste reporting platform connecting citizens with Local Government Units (LGUs) for transparent, real-time waste management.
@@ -233,6 +234,6 @@ This project uses native ES Modules (`import`/`export`), so it **must be served 
 The app is deployed and publicly accessible via **Firebase Hosting**:
 | Page                     | URL                                                      |
 | ------------------------ | -------------------------------------------------------- |
-| 👤 Citizen Reporting App | https://sparkpish-eco-mvp.web.app/user-app/index.html    |
-| 🏛️ LGU Admin Dashboard   | https://sparkpish-eco-mvp.web.app/lgu-dashboard/lgu.html |
-| 📊 Pitch Presentation    | https://sparkpish-eco-mvp.web.app/pitch/pitch.html       | 
+| 👤 Citizen Reporting App | https://e-taponmo-ph.web.app/lgu-dashboard/lgu.html    |
+| 🏛️ LGU Admin Dashboard   | https://e-taponmo-ph.web.app/user-app/index.html |
+| 📊 Pitch Presentation    | https://e-taponmo-ph.web.app/   | 
