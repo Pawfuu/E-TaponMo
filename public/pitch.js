@@ -99,4 +99,4 @@ function initBlockchainData() {
 }
 
 // Start fetching data
-document.addEventListener("DOMContentLoaded", initBlockchainData);
+initBlockchainData();

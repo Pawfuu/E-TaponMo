@@ -16,7 +16,7 @@ import { GEMINI_API_KEY } from "./config.js";
 import { submitTrashReport } from "../shared/report-service.js";
 import { upvoteReport } from "../src/utils/db.js";
 // ADD AUTH SERVICE IMPORT HERE
-import { handleGoogleLogin } from "../shared/auth-service.js";
+import { initializeGoogleAuth } from "../shared/auth-service.js";
 
 // ---------------------------------------------------------------------------
 // API configuration
@@ -44,8 +44,6 @@ const VALIDATOR_PROMPT_BASE =
 const photoInput = document.getElementById("trash-photo-input");
 const summaryEl = document.getElementById("ai-summary");
 const submitBtn = document.getElementById("submit-report-btn");
-// ADD LOGIN BUTTON HERE
-const loginBtn = document.getElementById("login-btn");
 const submitSpinner = document.getElementById("submit-spinner");
 const submitText = document.getElementById("submit-text");
 const reporterName = document.getElementById("reporter-name");
@@ -887,14 +885,8 @@ if (submitBtn) {
   // 7. UI/UX EVENT LISTENERS
   // ==========================================
 
-  // Authentication Listener
-  loginBtn?.addEventListener("click", async () => {
-    const user = await handleGoogleLogin();
-    if (user) {
-      console.log("Logged in successfully:", user.displayName);
-      // You can trigger any UI updates here (like closing a login modal)
-    }
-  });
+  // Initialize the native Google GIS Button
+  initializeGoogleAuth();
 
   const mapSearchInput = document.getElementById("map-search-input");
   const searchSuggestions = document.getElementById("search-suggestions");

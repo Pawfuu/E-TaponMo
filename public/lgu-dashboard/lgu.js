@@ -14,8 +14,10 @@ import { E_TAPON_TOPIC_ID } from "../user-app/js/hedera-config.js";
 import { db } from "../shared/firebase-config.js";
 import {
   doc,
+  setDoc,
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { subscribeDashboard } from "./dashboard-service.js";
 import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
@@ -101,6 +103,79 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       toast.classList.add("translate-y-10", "opacity-0");
       setTimeout(() => toast.remove(), 300);
     }, 3000);
+  }
+
+  function isAuthorizedAdmin() {
+    // Instead of checking an email, we just check for a generic secure token
+    const token = localStorage.getItem("etaponmo_admin_token") || "";
+    return token === "verified_admin_active";
+  }
+
+  function renderViewOnlyBanner() {
+    if (!isAuthorizedAdmin()) {
+      const mainWrapper = document.getElementById("main-content-wrapper");
+      if (mainWrapper) {
+        const banner = document.createElement("div");
+        banner.className = "bg-amber-100 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between text-amber-800 text-xs font-bold w-full shadow-sm z-50 sticky top-0";
+        banner.innerHTML = `
+          <div class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 13.33 1.924 3 3.464 3z" />
+              </svg>
+              <span>Public Demo Mode: You are viewing this dashboard as a guest. Status changes and task assignments cannot be saved.</span>
+          </div>
+          <button id="override-login-btn" class="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-md transition-colors cursor-pointer shrink-0 shadow-sm">
+              Admin Override
+          </button>
+        `;
+        mainWrapper.insertBefore(banner, mainWrapper.firstChild);
+
+        // Google Popup & Demo Request Routing
+        document.getElementById("override-login-btn").addEventListener("click", async () => {
+          try {
+            const auth = getAuth();
+            const provider = new GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: 'select_account' });
+
+            // Trigger Google Sign-In Popup
+            const result = await signInWithPopup(auth, provider);
+            const userEmail = result.user.email.toLowerCase();
+
+            // Obfuscated email check (prevents CTRL+F scraping)
+            const target = "magtibay" + "keziah" + "@" + "gmail.com";
+
+            if (userEmail === target) {
+              // 1. Grant Admin Access
+              localStorage.setItem("etaponmo_admin_token", "verified_admin_active");
+              alert("Identity Confirmed. Welcome back, Admin.");
+              window.location.reload();
+            } else {
+              // 2. Record Demo Request and Log Them Out
+              await setDoc(doc(db, "demo_requests", result.user.uid), {
+                email: userEmail,
+                name: result.user.displayName || "Unknown",
+                requestedAt: new Date()
+              });
+
+              await signOut(auth);
+              alert(`Demo request submitted for ${userEmail}. Our team will review your application shortly!`);
+            }
+
+          } catch (error) {
+            console.error("Auth error:", error);
+            if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+              alert("Authentication failed. Please ensure popups are allowed.");
+            }
+          }
+        });
+
+        const header = document.getElementById("main-header");
+        if (header) {
+          header.classList.remove("top-0");
+          header.style.top = banner.offsetHeight + "px";
+        }
+      }
+    }
   }
 
   // ==========================================
@@ -213,6 +288,7 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
     setupEventListeners();
     updateDateDisplay();
+    renderViewOnlyBanner();
     initLeafletMap();
     refreshMapSizes(100);
     subscribeToReports();
@@ -2428,6 +2504,13 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
 
   async function saveStatusChange() {
     if (!selectedReport) return;
+
+    // SECURITY BLOCK
+    if (!isAuthorizedAdmin()) {
+      showToast("View-Only Mode", "Public accounts cannot modify database records.");
+      return;
+    }
+
     const newStatus = modalStatusSelect.value;
     const firestoreStatus = STATUS_TO_FIRESTORE[newStatus] || "pending";
 
@@ -2552,6 +2635,25 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   }
 
   function setupEventListeners() {
+
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          const auth = getAuth();
+          await signOut(auth); // Sign out of Firebase session
+        } catch (err) {
+          console.error("Sign out error:", err);
+        }
+        // Wipe all tokens and session data from Local Storage
+        localStorage.removeItem("etaponmo_admin_token");
+        localStorage.removeItem("etaponmo_admin_email");
+        localStorage.removeItem("etaponmo_user");
+
+        window.location.href = "../index.html";
+      });
+    }
+
     const brgyDistrictFilter = document.getElementById("brgy-district-filter");
     if (brgyDistrictFilter) {
       brgyDistrictFilter.addEventListener("change", function () {
@@ -3150,6 +3252,12 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
   async function submitNewTask() {
     if (!selectedTaskReport) return;
 
+    // SECURITY BLOCK
+    if (!isAuthorizedAdmin()) {
+      showToast("View-Only Mode", "Public accounts cannot assign or create new tasks.");
+      return;
+    }
+
     const assignToDrop = document.getElementById("tc-assign-to");
     const assignTo = assignToDrop ? assignToDrop.value : "";
 
@@ -3160,6 +3268,10 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
     const taskType = document.getElementById("tc-task-type") ? document.getElementById("tc-task-type").value : "";
     const desc = document.getElementById("tc-desc") ? document.getElementById("tc-desc").value : "";
 
+    // ADDED: Grab the new barangay selection
+    const brgyDrop = document.getElementById("tc-barangay");
+    const barangayVal = brgyDrop ? brgyDrop.value : selectedTaskReport.barangay;
+
     if (!assignTo) {
       showToast("Validation Error", "Please select a team or truck to assign this task to.");
       return;
@@ -3169,13 +3281,18 @@ import { logReportOnChain } from "../user-app/js/hedera-logger.js";
       const btn = document.getElementById("tc-submit-btn");
       if (btn) { btn.disabled = true; btn.textContent = "Assigning..."; }
 
+      // UPDATED: Unified payload syncs Task fields AND original Report fields
       const updatePayload = {
         status: "in_progress",
         assignedToCode: assignTo,
         taskPriority: priority,
         taskDueDate: dueDate,
         taskType: taskType,
-        taskDescription: desc
+        taskDescription: desc,
+        // The synchronization bridge:
+        category: taskType,
+        barangay: barangayVal,
+        notes: desc
       };
 
       // --- FIX: ADD HEDERA BLOCKCHAIN LOGGING ---
